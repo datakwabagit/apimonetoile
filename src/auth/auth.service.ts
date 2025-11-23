@@ -1,0 +1,183 @@
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
+import { User, UserDocument } from '../users/schemas/user.schema';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { Role } from '../common/enums/role.enum';
+import { JwtPayload } from './strategies/jwt.strategy';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
+
+  /**
+   * Inscription d'un nouvel utilisateur
+   */
+  async register(registerDto: RegisterDto) {
+    const { email, password, firstName, lastName } = registerDto;
+
+    // Vérifier si l'email existe déjà
+    const existingUser = await this.userModel.findOne({ email }).exec();
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
+    }
+
+    // Hasher le password
+    const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Créer l'utilisateur
+    const user = new this.userModel({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role: Role.USER, // Par défaut USER
+      isActive: true,
+    });
+
+    await user.save();
+
+    // Générer les tokens
+    const tokens = await this.generateTokens(user);
+
+    // Retourner l'utilisateur sans le password
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    return {
+      user: userObject,
+      ...tokens,
+    };
+  }
+
+  /**
+   * Connexion d'un utilisateur
+   */
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    // Valider les credentials
+    const user = await this.validateUser(email, password);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Mettre à jour lastLogin
+    await this.userModel.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+    // Générer les tokens
+    const tokens = await this.generateTokens(user);
+
+    // Retourner l'utilisateur sans le password
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    return {
+      user: userObject,
+      ...tokens,
+    };
+  }
+
+  /**
+   * Valider les credentials d'un utilisateur
+   * Utilisé par LocalStrategy
+   */
+  async validateUser(email: string, password: string): Promise<any> {
+    const user = await this.userModel.findOne({ email }).exec();
+
+    if (!user) {
+      return null;
+    }
+
+    // Vérifier si le compte est actif
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+
+    // Vérifier le password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return null;
+    }
+
+    return user;
+  }
+
+  /**
+   * Générer les tokens JWT (access + refresh)
+   */
+  async generateTokens(user: UserDocument) {
+    const payload: JwtPayload = {
+      sub: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRATION', '7d'),
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION', '30d'),
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  /**
+   * Rafraîchir le token d'accès avec un refresh token
+   */
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const user = await this.userModel.findById(payload.sub).exec();
+
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      return this.generateTokens(user);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  /**
+   * Récupérer le profil de l'utilisateur connecté
+   */
+  async getProfile(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('-password -emailVerificationToken -resetPasswordToken')
+      .exec();
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return user;
+  }
+}
