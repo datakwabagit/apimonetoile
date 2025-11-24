@@ -83,6 +83,9 @@ export class User {
 
   @Prop({ default: 0 })
   totalConsultations: number; // Nombre total de consultations effectuées
+
+  @Prop({ default: 0 })
+  credits: number; // Solde de crédits utilisateur
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
