@@ -6,91 +6,115 @@ import { Permission } from '../../common/enums/permission.enum';
 export type UserDocument = User & Document;
 
 /**
- * Schéma MongoDB pour les utilisateurs
+ * Schéma MongoDB optimisé pour les utilisateurs
  */
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true, trim: true })
-  firstName: string;
+  @Prop({ trim: true })
+  firstName?: string;
 
-  @Prop({ required: true, trim: true })
-  lastName: string;
+  @Prop({ trim: true })
+  lastName?: string;
 
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
+  @Prop({
+    required: true,
+    unique: true,
+    trim: true,
+    index: true,
+  })
   email: string;
 
   @Prop({ required: true })
   password: string;
 
-  @Prop({ type: String, enum: Role, default: Role.USER })
-  role: Role;
+  @Prop({
+    type: String,
+    enum: Role,
+    default: Role.USER,
+  })
+  role?: Role;
 
-  @Prop({ type: [String], enum: Permission, default: [] })
-  customPermissions: Permission[];
+  @Prop({
+    type: [String],
+    enum: Permission,
+    default: [],
+  })
+  customPermissions?: Permission[];
 
   @Prop({ default: '0758385387' })
-  phoneNumber: string;
+  phoneNumber?: string;
 
-  @Prop({ default: () => new Date() })
-  dateOfBirth: Date;
+  @Prop()
+  dateOfBirth?: Date;
 
-  @Prop({ default: null })
-  address: string;
+  @Prop()
+  address?: string;
 
-  @Prop({ default: null })
-  city: string;
+  @Prop()
+  city?: string;
 
-  @Prop({ default: null })
-  country: string;
+  @Prop()
+  country?: string;
 
-  @Prop({ default: null })
-  profilePicture: string;
+  @Prop()
+  profilePicture?: string;
 
   @Prop({ default: true })
-  isActive: boolean;
+  isActive?: boolean;
 
   @Prop({ default: false })
-  emailVerified: boolean;
+  emailVerified?: boolean;
 
-  @Prop({ default: null })
-  emailVerificationToken: string;
+  @Prop()
+  emailVerificationToken?: string;
 
-  @Prop({ default: null })
-  resetPasswordToken: string;
+  @Prop()
+  resetPasswordToken?: string;
 
-  @Prop({ default: null })
-  resetPasswordExpires: Date;
+  @Prop()
+  resetPasswordExpires?: Date;
 
-  @Prop({ default: null })
-  lastLogin: Date;
+  @Prop()
+  lastLogin?: Date;
 
-  @Prop({ type: Object, default: {} })
-  preferences: {
+  @Prop({
+    type: {
+      language: { type: String, default: 'fr' },
+      notifications: { type: Boolean, default: true },
+      newsletter: { type: Boolean, default: false },
+    },
+    default: {},
+  })
+  preferences?: {
     language?: string;
     notifications?: boolean;
     newsletter?: boolean;
   };
 
-  // Métadonnées pour les consultants
-  @Prop({ default: null })
-  specialties: string[]; // Spécialités du consultant
+  // Métadonnées consultant
+  @Prop({ type: [String], default: [] })
+  specialties?: string[];
 
-  @Prop({ default: null })
-  bio: string; // Biographie du consultant
+  @Prop()
+  bio?: string;
 
-  @Prop({ default: 0 })
-  rating: number; // Note moyenne (0-5)
+  @Prop({ default: 0, min: 0, max: 5 })
+  rating?: number;
 
-  @Prop({ default: 0 })
-  totalConsultations: number; // Nombre total de consultations effectuées
+  @Prop({ default: 0, min: 0 })
+  totalConsultations?: number;
 
-  @Prop({ default: 0 })
-  credits: number; // Solde de crédits utilisateur
+  @Prop({ default: 0, min: 0 })
+  credits?: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-// Indexes pour optimiser les recherches
+// Indexes supplémentaires pour optimiser les requêtes fréquentes
 UserSchema.index({ role: 1 });
 UserSchema.index({ isActive: 1 });
 UserSchema.index({ createdAt: -1 });
+UserSchema.index({ emailVerified: 1 });
+UserSchema.index({ specialties: 1 });
+UserSchema.index({ rating: -1 });
+
