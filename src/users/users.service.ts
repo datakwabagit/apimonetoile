@@ -16,6 +16,12 @@ import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class UsersService {
+    /**
+     * Retourne le nombre total d'utilisateurs inscrits
+     */
+    async getSubscribersCount(): Promise<number> {
+      return this.userModel.countDocuments().exec();
+    }
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private configService: ConfigService,

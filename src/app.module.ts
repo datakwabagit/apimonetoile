@@ -53,8 +53,8 @@ import { AppService } from './app.service';
     ConsultationsModule,
     ServicesModule,
     PaymentsModule,
-    // Intégration du module MoneyFusion
     require('./moneyfusion/moneyfusion.module').MoneyfusionModule,
+    require('./common/site-metrics.module').SiteMetricsModule,
   ],
   controllers: [AppController],
   providers: [

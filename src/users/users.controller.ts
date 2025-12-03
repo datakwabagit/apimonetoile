@@ -32,10 +32,13 @@ import { UserDocument } from './schemas/user.schema';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  /**
-   * POST /users
-   * Créer un nouvel utilisateur (admin only)
-   */
+  @Get('count')
+  @ApiOperation({ summary: "Nombre d'abonnés", description: "Retourne le nombre total d'utilisateurs inscrits." })
+  @ApiResponse({ status: 200, description: "Nombre d'abonnés." })
+  async getSubscribersCount() {
+    return { count: await this.usersService.getSubscribersCount() };
+  }
+ 
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
@@ -46,10 +49,6 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  /**
-   * GET /users
-   * Récupérer tous les utilisateurs (admin only)
-   */
   @Get()
   @UseGuards(PermissionsGuard)
   @ApiOperation({ summary: 'Lister les utilisateurs', description: 'Retourne la liste de tous les utilisateurs (admin seulement).' })
@@ -65,28 +64,16 @@ export class UsersController {
     return this.usersService.findAll({ page, limit, role, isActive, search });
   }
 
-  /**
-   * GET /users/me
-   * Récupérer son propre profil
-   */
   @Get('me')
   getMyProfile(@CurrentUser() user: UserDocument) {
     return this.usersService.findOne(user._id.toString());
   }
 
-  /**
-   * PATCH /users/me
-   * Mettre à jour son propre profil
-   */
   @Patch('me')
   updateMyProfile(@CurrentUser() user: UserDocument, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(user._id.toString(), updateUserDto);
   }
 
-  /**
-   * PATCH /users/me/password
-   * Changer son propre password
-   */
   @Patch('me/password')
   @HttpCode(HttpStatus.NO_CONTENT)
   async changeMyPassword(
@@ -96,10 +83,6 @@ export class UsersController {
     await this.usersService.changePassword(user._id.toString(), changePasswordDto);
   }
 
-  /**
-   * GET /users/statistics
-   * Obtenir les statistiques des utilisateurs (admin only)
-   */
   @Get('statistics')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.VIEW_STATISTICS)
@@ -107,10 +90,6 @@ export class UsersController {
     return this.usersService.getStatistics();
   }
 
-  /**
-   * GET /users/:id
-   * Récupérer un utilisateur par ID
-   */
   @Get(':id')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.READ_ANY_USER)
@@ -118,10 +97,6 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  /**
-   * PATCH /users/:id
-   * Mettre à jour un utilisateur (admin only)
-   */
   @Patch(':id')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.UPDATE_ANY_USER)
@@ -129,10 +104,6 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  /**
-   * PATCH /users/:id/role
-   * Assigner un rôle à un utilisateur (admin only)
-   */
   @Patch(':id/role')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.MANAGE_ROLES)
@@ -140,10 +111,6 @@ export class UsersController {
     return this.usersService.assignRole(id, role);
   }
 
-  /**
-   * DELETE /users/:id
-   * Supprimer un utilisateur (soft delete)
-   */
   @Delete(':id')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.DELETE_ANY_USER)
@@ -152,10 +119,6 @@ export class UsersController {
     await this.usersService.remove(id);
   }
 
-  /**
-   * DELETE /users/:id/hard
-   * Supprimer définitivement un utilisateur (super admin only)
-   */
   @Delete(':id/hard')
   @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN)
@@ -163,4 +126,5 @@ export class UsersController {
   async hardDelete(@Param('id') id: string) {
     await this.usersService.hardDelete(id);
   }
+  // ...existing code...
 }
