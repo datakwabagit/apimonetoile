@@ -10,6 +10,18 @@ export type UserDocument = User & Document;
  */
 @Schema({ timestamps: true })
 export class User {
+  @Prop({ required: true, unique: true, trim: true, index: true })
+  username: string;
+
+  @Prop({ required: true, enum: ['male', 'female', 'other'] })
+  gender: string;
+
+  @Prop({ required: true })
+  country: string;
+
+  @Prop({ required: true })
+  phone: string;
+  
   @Prop({ trim: true })
   firstName?: string;
 
@@ -41,8 +53,6 @@ export class User {
   })
   customPermissions?: Permission[];
 
-  @Prop({ default: '0758385387' })
-  phoneNumber?: string;
 
   @Prop()
   dateOfBirth?: Date;
@@ -53,8 +63,6 @@ export class User {
   @Prop()
   city?: string;
 
-  @Prop()
-  country?: string;
 
   @Prop()
   profilePicture?: string;

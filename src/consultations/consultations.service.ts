@@ -29,6 +29,19 @@ export class ConsultationsService {
   }
 
   /**
+   * Créer une consultation personnelle
+   */
+  async createPersonalConsultation(data: any) {
+    const consultation = new this.consultationModel({
+      ...data,
+      type: 'personal',
+      createdAt: new Date(),
+    });
+    await consultation.save();
+    return consultation;
+  }
+
+  /**
    * Récupérer toutes les consultations avec pagination et filtres
    */
   async findAll(query: {

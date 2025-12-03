@@ -26,13 +26,25 @@ export class UsersService {
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
     console.log('Creating user with DTO:', createUserDto);
-    const { email, password } = createUserDto;
+    const { username, password, gender, phone, phoneNumber, ...rest } = createUserDto;
 
-    // Vérifier si l'email existe déjà
-    const existingUser = await this.userModel.findOne({ email }).exec();
+    // Générer l'email automatiquement
+    const email = `${username}@monetoile.org`;
+
+    // Vérifier si le username ou l'email existe déjà
+    const existingUser = await this.userModel.findOne({ $or: [ { email }, { username } ] }).exec();
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Username or email already exists');
     }
+
+    // Mapper le genre français vers anglais
+    let mappedGender = gender;
+    if (gender === 'Homme') mappedGender = 'male';
+    else if (gender === 'Femme') mappedGender = 'female';
+    else if (gender === 'Autre') mappedGender = 'other';
+
+    // Prendre phone ou phoneNumber
+    const finalPhone = phone || phoneNumber;
 
     // Hasher le password
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
@@ -40,7 +52,11 @@ export class UsersService {
 
     // Créer l'utilisateur
     const user = new this.userModel({
-      ...createUserDto,
+      ...rest,
+      username,
+      gender: mappedGender,
+      phoneNumber: finalPhone,
+      email,
       password: hashedPassword,
     });
 

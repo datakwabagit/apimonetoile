@@ -14,6 +14,21 @@ import { Role } from '../../common/enums/role.enum';
 import { Permission } from '../../common/enums/permission.enum';
 
 export class CreateUserDto {
+    @IsString()
+    @MinLength(3)
+    @MaxLength(30)
+    username: string;
+
+  @IsString()
+  gender: string; // Peut être 'male', 'female', 'other', 'Homme', 'Femme', 'Autre'
+
+  @IsString()
+  country: string;
+
+  @IsString()
+  phone?: string;
+  @IsString()
+  phoneNumber?: string;
   @IsString()
   @MinLength(2, { message: 'First name must be at least 2 characters long' })
   @MaxLength(50, { message: 'First name must not exceed 50 characters' })
@@ -26,8 +41,8 @@ export class CreateUserDto {
   @IsOptional()
   lastName?: string;
 
-  @IsEmail({}, { message: 'Invalid email format' })
-  email: string;
+  // L'email sera généré automatiquement à partir du username côté service
+  email?: string;
 
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
@@ -43,9 +58,6 @@ export class CreateUserDto {
   customPermissions?: Permission[];
 
 
-  @IsString()
-  @IsOptional()
-  phoneNumber?: string;
 
  
 
@@ -61,9 +73,6 @@ export class CreateUserDto {
   @IsOptional()
   city?: string;
 
-  @IsString()
-  @IsOptional()
-  country?: string;
 
   @IsString()
   @IsOptional()

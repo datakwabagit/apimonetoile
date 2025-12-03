@@ -9,6 +9,7 @@ async function bootstrap() {
     origin: [
       'https://www.monetoile.org',
       'https://monetoile.org',
+      'http://localhost:3000',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,

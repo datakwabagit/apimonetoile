@@ -11,6 +11,9 @@ import {
 import { ConsultationType } from '../../common/enums/consultation-status.enum';
 
 export class CreateConsultationDto {
+    /**
+     * AVERTISSEMENT : L’analyse spirituelle, astrologique et numérologique sera réalisée uniquement à partir des informations que vous fournissez dans ce formulaire. Vous pouvez demander une consultation pour un tiers.
+     */
   @IsString()
   serviceId: string;
 

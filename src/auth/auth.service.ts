@@ -27,22 +27,37 @@ export class AuthService {
    * Inscription d'un nouvel utilisateur
    */
   async register(registerDto: RegisterDto) {
-    const { email, password, firstName, lastName } = registerDto;
+console.log('Register DTO:', registerDto);
 
-    // Vérifier si l'email existe déjà
-    const existingUser = await this.userModel.findOne({ email }).exec();
+    // Nouveau RegisterDto : username, gender, country, phone, password, autres champs optionnels
+    const { username, gender, country, phone, password, ...optionals } = registerDto;
+
+    // Générer l'email automatiquement à partir du username
+    const email = `${username}@monetoile.org`;
+
+    // Vérifier si le username ou l'email existe déjà
+    const existingUser = await this.userModel.findOne({ $or: [ { email }, { username } ] }).exec();
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Username or email already exists');
     }
+
+    // Mapper le genre français vers anglais
+    let mappedGender = gender;
+    if (gender === 'Homme') mappedGender = 'male';
+    else if (gender === 'Femme') mappedGender = 'female';
+    else if (gender === 'Autre') mappedGender = 'other';
 
     // Hasher le password
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Créer l'utilisateur
+    // Créer l'utilisateur avec tous les champs reçus
     const user = new this.userModel({
-      firstName,
-      lastName,
+      ...optionals,
+      username,
+      gender: mappedGender,
+      country,
+      phone,
       email,
       password: hashedPassword,
       role: Role.USER, // Par défaut USER
@@ -68,10 +83,10 @@ export class AuthService {
    * Connexion d'un utilisateur
    */
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const { username, password } = loginDto;
 
     // Valider les credentials
-    const user = await this.validateUser(email, password);
+    const user = await this.validateUser(username, password);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -97,8 +112,8 @@ export class AuthService {
    * Valider les credentials d'un utilisateur
    * Utilisé par LocalStrategy
    */
-  async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.userModel.findOne({ email }).exec();
+  async validateUser(username: string, password: string): Promise<any> {
+    const user = await this.userModel.findOne({ username }).exec();
 
     if (!user) {
       return null;

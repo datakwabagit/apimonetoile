@@ -44,6 +44,18 @@ export class ConsultationsController {
   }
 
   /**
+   * POST /consultations/personal
+   * Créer une consultation personnelle
+   */
+  @Post('personal')
+  async createPersonalConsultation(@Body() body: any) {
+    // body contiendra tous les champs du formulaire
+    // Exemples de champs attendus :
+    // nom, prenoms, genre, dateNaissance, paysNaissance, villeNaissance, heureNaissance, choixConsultation
+    return this.consultationsService.createPersonalConsultation(body);
+  }
+
+  /**
    * GET /consultations
    * Récupérer toutes les consultations (admin/consultant)
    */
