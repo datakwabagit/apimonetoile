@@ -5,15 +5,18 @@ import { ConsultationsController } from './consultations.controller';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
 import { DeepseekService } from './deepseek.service';
 import { EmailService } from '../common/services/email.service';
-import { NotificationsModule } from '../notifications/notifications.module';
+import { NotificationsService } from '../notifications/notifications.service';
+import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Consultation.name, schema: ConsultationSchema }]),
-    NotificationsModule,
+    MongooseModule.forFeature([
+      { name: Consultation.name, schema: ConsultationSchema },
+      { name: Notification.name, schema: NotificationSchema },
+    ]),
   ],
   controllers: [ConsultationsController],
-  providers: [ConsultationsService, DeepseekService, EmailService],
+  providers: [ConsultationsService, DeepseekService, EmailService, NotificationsService],
   exports: [ConsultationsService, DeepseekService, EmailService],
 })
 export class ConsultationsModule {}
