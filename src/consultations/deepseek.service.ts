@@ -51,7 +51,7 @@ export class DeepseekService {
   }
 
   /**
-   * Appelle l'API DeepSeek
+   * Appelle l'API DeepSeek avec timeout étendu
    */
   private async callDeepSeek(messages: DeepSeekMessage[]): Promise<string> {
     if (!this.DEEPSEEK_API_KEY) {
@@ -65,30 +65,55 @@ export class DeepseekService {
       max_tokens: 4000,
     };
 
-    const response = await fetch(this.DEEPSEEK_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify(request),
-    });
+    console.log('[DeepSeek] Envoi requête API...');
+    const startTime = Date.now();
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new HttpException(
-        `Erreur DeepSeek API: ${response.status} - ${errorText}`,
-        HttpStatus.BAD_GATEWAY,
-      );
+    // Utiliser AbortController pour timeout personnalisé
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
+
+    try {
+      const response = await fetch(this.DEEPSEEK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new HttpException(
+          `Erreur DeepSeek API: ${response.status} - ${errorText}`,
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      const data: DeepSeekResponse = await response.json();
+
+      if (!data.choices || data.choices.length === 0) {
+        throw new HttpException('Aucune réponse de DeepSeek', HttpStatus.BAD_GATEWAY);
+      }
+
+      const duration = Date.now() - startTime;
+      console.log(`[DeepSeek] Réponse reçue en ${duration}ms`);
+
+      return data.choices[0].message.content;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw new HttpException(
+          'Timeout DeepSeek API (120s dépassé)',
+          HttpStatus.REQUEST_TIMEOUT,
+        );
+      }
+      throw error;
     }
-
-    const data: DeepSeekResponse = await response.json();
-
-    if (!data.choices || data.choices.length === 0) {
-      throw new HttpException('Aucune réponse de DeepSeek', HttpStatus.BAD_GATEWAY);
-    }
-
-    return data.choices[0].message.content;
   }
 
   /**
