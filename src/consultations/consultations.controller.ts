@@ -58,7 +58,7 @@ export class ConsultationsController {
 
     // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
-    
+
     console.log('[ConsultationController] ✅ Consultation créée avec clientId:', {
       id: consultation.id,
       clientId: user._id.toString(),
@@ -331,16 +331,29 @@ export class ConsultationsController {
       try {
         console.log('[API] 🔍 Recherche consultation pour sauvegarde...');
         const consultation = await this.consultationsService.findOne(id);
+
+        // Extraire le userId correctement (peut être un objet populé ou un ObjectId)
+        let userId: string | undefined;
+        if (consultation.clientId) {
+          // Si clientId est un objet populé (a une propriété _id)
+          if (typeof consultation.clientId === 'object' && 'email' in consultation.clientId) {
+            userId = (consultation.clientId as any)._id.toString();
+          } else {
+            // Si clientId est juste un ObjectId
+            userId = consultation.clientId.toString();
+          }
+        }
+
         console.log('[API] 📊 Consultation trouvée:', {
           id: consultation._id,
           hasClientId: !!consultation.clientId,
-          clientId: consultation.clientId?.toString(),
+          userId: userId,
         });
 
-        if (consultation && consultation.clientId) {
+        if (consultation && userId) {
           console.log('[API] 💾 Sauvegarde analyse dans AstrologicalAnalysis...');
           const savedAnalysis = await this.consultationsService.saveAstrologicalAnalysis(
-            consultation.clientId.toString(),
+            userId,
             id,
             analyseComplete,
           );
@@ -353,9 +366,7 @@ export class ConsultationsController {
           message: saveError.message,
           stack: saveError.stack,
         });
-      }
-
-      // Envoyer l'email de notification (non-bloquant)
+      }      // Envoyer l'email de notification (non-bloquant)
       if (birthData.email) {
         this.emailService
           .sendAnalysisReadyEmail(birthData.email, birthData.prenoms, birthData.nom, id)
