@@ -18,6 +18,7 @@ import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { DeepseekService, BirthData } from './deepseek.service';
+import { EmailService } from '../common/services/email.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -34,6 +35,7 @@ export class ConsultationsController {
   constructor(
     private readonly consultationsService: ConsultationsService,
     private readonly deepseekService: DeepseekService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -260,6 +262,24 @@ export class ConsultationsController {
       };
 
       console.log('[API] Analyse générée avec succès');
+
+      // Envoyer l'email de notification (non-bloquant)
+      if (birthData.email) {
+        this.emailService
+          .sendAnalysisReadyEmail(birthData.email, birthData.prenoms, birthData.nom, id)
+          .then((result) => {
+            if (result.success) {
+              console.log('[API] Email de notification envoyé à:', birthData.email);
+            } else {
+              console.error('[API] Échec envoi email:', result.error);
+            }
+          })
+          .catch((err) => {
+            console.error('[API] Erreur envoi email:', err);
+          });
+      } else {
+        console.warn('[API] Pas d\'email fourni - notification non envoyée');
+      }
 
       return {
         success: true,

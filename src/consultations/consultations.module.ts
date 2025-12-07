@@ -5,6 +5,7 @@ import { ConsultationsController } from './consultations.controller';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DeepseekService } from './deepseek.service';
+import { EmailService } from '../common/services/email.service';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { DeepseekService } from './deepseek.service';
     NotificationsModule,
   ],
   controllers: [ConsultationsController],
-  providers: [ConsultationsService, DeepseekService],
-  exports: [ConsultationsService, DeepseekService],
+  providers: [ConsultationsService, DeepseekService, EmailService],
+  exports: [ConsultationsService, DeepseekService, EmailService],
 })
 export class ConsultationsModule {}
