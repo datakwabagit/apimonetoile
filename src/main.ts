@@ -6,7 +6,7 @@ async function bootstrap() {
     bodyParser: true,
     rawBody: true,
   });
-  
+
   app.setGlobalPrefix('api/v1');
 
   app.enableCors({

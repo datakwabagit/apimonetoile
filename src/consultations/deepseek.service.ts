@@ -105,12 +105,9 @@ export class DeepseekService {
       return data.choices[0].message.content;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error.name === 'AbortError') {
-        throw new HttpException(
-          'Timeout DeepSeek API (120s dépassé)',
-          HttpStatus.REQUEST_TIMEOUT,
-        );
+        throw new HttpException('Timeout DeepSeek API (120s dépassé)', HttpStatus.REQUEST_TIMEOUT);
       }
       throw error;
     }

@@ -2,7 +2,10 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
-import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from './schemas/astrological-analysis.schema';
+import {
+  AstrologicalAnalysis,
+  AstrologicalAnalysisDocument,
+} from './schemas/astrological-analysis.schema';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
@@ -14,7 +17,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 export class ConsultationsService {
   constructor(
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
-    @InjectModel(AstrologicalAnalysis.name) private analysisModel: Model<AstrologicalAnalysisDocument>,
+    @InjectModel(AstrologicalAnalysis.name)
+    private analysisModel: Model<AstrologicalAnalysisDocument>,
     private notificationsService: NotificationsService,
   ) {}
 
@@ -229,8 +233,13 @@ export class ConsultationsService {
    * Sauvegarder l'analyse générée
    */
   async saveAnalysis(id: string, saveAnalysisDto: SaveAnalysisDto) {
-    console.log('[ConsultationService] Sauvegarde analyse pour:', id, 'statut:', saveAnalysisDto.statut);
-    
+    console.log(
+      '[ConsultationService] Sauvegarde analyse pour:',
+      id,
+      'statut:',
+      saveAnalysisDto.statut,
+    );
+
     const consultation = await this.consultationModel.findById(id).exec();
 
     if (!consultation) {
@@ -255,7 +264,10 @@ export class ConsultationsService {
             id,
             consultation.title,
           );
-          console.log('[ConsultationService] Notification créée pour client:', consultation.clientId);
+          console.log(
+            '[ConsultationService] Notification créée pour client:',
+            consultation.clientId,
+          );
         } catch (error) {
           console.error('[ConsultationService] Erreur création notification:', error);
         }

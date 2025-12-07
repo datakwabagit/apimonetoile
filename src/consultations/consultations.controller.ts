@@ -227,7 +227,9 @@ export class ConsultationsController {
         analyse = astroAnalysis.toObject();
       }
     } catch (error) {
-      console.log('[API] Pas d\'analyse trouvée dans AstrologicalAnalysis, utilisation de resultData');
+      console.log(
+        "[API] Pas d'analyse trouvée dans AstrologicalAnalysis, utilisation de resultData",
+      );
     }
 
     return {
