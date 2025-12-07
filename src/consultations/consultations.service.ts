@@ -49,10 +49,11 @@ export class ConsultationsService {
       description: data.description,
       formData: data.formData,
       status: ConsultationStatus.PENDING,
-      createdAt: new Date(),
     });
 
     await consultation.save();
+
+    console.log('[ConsultationService] Consultation publique créée:', consultation._id);
 
     // Retourner avec l'ID explicitement dans la réponse
     return {
@@ -226,6 +227,8 @@ export class ConsultationsService {
    * Sauvegarder l'analyse générée
    */
   async saveAnalysis(id: string, saveAnalysisDto: SaveAnalysisDto) {
+    console.log('[ConsultationService] Sauvegarde analyse pour:', id, 'statut:', saveAnalysisDto.statut);
+    
     const consultation = await this.consultationModel.findById(id).exec();
 
     if (!consultation) {
@@ -242,19 +245,25 @@ export class ConsultationsService {
     if (saveAnalysisDto.statut === 'completed') {
       consultation.completedDate = new Date();
 
-      // Créer une notification pour le client
-      try {
-        await this.notificationsService.createConsultationResultNotification(
-          consultation.clientId.toString(),
-          id,
-          consultation.title,
-        );
-      } catch (error) {
-        console.error('Erreur lors de la création de la notification:', error);
+      // Créer une notification pour le client (uniquement si clientId existe)
+      if (consultation.clientId) {
+        try {
+          await this.notificationsService.createConsultationResultNotification(
+            consultation.clientId.toString(),
+            id,
+            consultation.title,
+          );
+          console.log('[ConsultationService] Notification créée pour client:', consultation.clientId);
+        } catch (error) {
+          console.error('[ConsultationService] Erreur création notification:', error);
+        }
+      } else {
+        console.log('[ConsultationService] Pas de clientId, notification ignorée');
       }
     }
 
     await consultation.save();
+    console.log('[ConsultationService] Analyse sauvegardée avec succès');
     return consultation;
   }
 
