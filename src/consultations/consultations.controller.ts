@@ -144,6 +144,38 @@ export class ConsultationsController {
   }
 
   /**
+   * GET /consultations/user/:userId
+   * Récupérer les consultations d'un utilisateur spécifique (Admin only)
+   */
+  @Get('user/:userId')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_ANY_CONSULTATION)
+  @ApiOperation({
+    summary: "Récupérer les consultations d'un utilisateur",
+    description:
+      "Retourne toutes les consultations d'un utilisateur spécifique (réservé aux admins).",
+  })
+  @ApiResponse({ status: 200, description: "Liste des consultations de l'utilisateur." })
+  @ApiResponse({ status: 403, description: 'Accès refusé.' })
+  async getUserConsultations(
+    @Param('userId') userId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.consultationsService.findByClient(userId, { page, limit });
+
+    return {
+      success: true,
+      userId,
+      consultations: result.consultations,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
+  }
+
+  /**
    * GET /consultations/my-analyses
    * Récupérer toutes les analyses astrologiques de l'utilisateur connecté
    */
