@@ -56,19 +56,17 @@ export class ConsultationsController {
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
     console.log('[ConsultationController] Création consultation pour utilisateur:', user._id);
 
-    // Ajouter automatiquement le clientId depuis l'utilisateur connecté
-    const consultationData = {
-      ...body,
+    // Utiliser la méthode create() qui enregistre correctement le clientId
+    const consultation = await this.consultationsService.create(user._id.toString(), body);
+    
+    console.log('[ConsultationController] ✅ Consultation créée avec clientId:', {
+      id: consultation.id,
       clientId: user._id.toString(),
-    };
+    });
 
-    const consultation = await this.consultationsService.createPublicConsultation(consultationData);
     return {
       success: true,
       message: 'Consultation créée avec succès',
-      id: consultation.id,
-      consultationId: consultation.consultationId,
-      clientId: user._id.toString(),
       ...consultation,
     };
   }
@@ -333,7 +331,6 @@ export class ConsultationsController {
       try {
         console.log('[API] 🔍 Recherche consultation pour sauvegarde...');
         const consultation = await this.consultationsService.findOne(id);
-        
         console.log('[API] 📊 Consultation trouvée:', {
           id: consultation._id,
           hasClientId: !!consultation.clientId,
