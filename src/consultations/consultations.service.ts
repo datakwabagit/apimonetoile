@@ -48,7 +48,7 @@ export class ConsultationsService {
       title: data.title,
       description: data.description,
       formData: data.formData,
-      status: data.status || ConsultationStatus.PENDING,
+      status: ConsultationStatus.PENDING,
       createdAt: new Date(),
     });
 

@@ -9,7 +9,7 @@ export type ConsultationDocument = Consultation & Document;
  */
 @Schema({ timestamps: true })
 export class Consultation {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false })
   clientId: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
