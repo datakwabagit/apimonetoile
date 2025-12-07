@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
+import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from './schemas/astrological-analysis.schema';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
@@ -13,6 +14,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 export class ConsultationsService {
   constructor(
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
+    @InjectModel(AstrologicalAnalysis.name) private analysisModel: Model<AstrologicalAnalysisDocument>,
     private notificationsService: NotificationsService,
   ) {}
 
@@ -334,5 +336,93 @@ export class ConsultationsService {
    */
   async findByConsultant(consultantId: string, query: { page?: number; limit?: number }) {
     return this.findAll({ ...query, consultantId });
+  }
+
+  /**
+   * Sauvegarder une analyse astrologique complète
+   */
+  async saveAstrologicalAnalysis(userId: string, consultationId: string, analysisData: any) {
+    console.log('[ConsultationService] Sauvegarde analyse astrologique pour user:', userId);
+
+    // Vérifier si une analyse existe déjà pour cette consultation
+    const existingAnalysis = await this.analysisModel.findOne({ consultationId }).exec();
+
+    if (existingAnalysis) {
+      // Mettre à jour l'analyse existante
+      Object.assign(existingAnalysis, {
+        userId,
+        carteDuCiel: analysisData.carteDuCiel,
+        missionDeVie: analysisData.missionDeVie,
+        talentsNaturels: analysisData.talentsNaturels,
+        defisViePersonnelle: analysisData.defisViePersonnelle,
+        relations: analysisData.relations,
+        carriereVocation: analysisData.carriereVocation,
+        spiritualiteCroissance: analysisData.spiritualiteCroissance,
+        dateGeneration: new Date(),
+      });
+
+      await existingAnalysis.save();
+      console.log('[ConsultationService] Analyse mise à jour:', existingAnalysis._id);
+      return existingAnalysis;
+    }
+
+    // Créer une nouvelle analyse
+    const analysis = new this.analysisModel({
+      userId,
+      consultationId,
+      carteDuCiel: analysisData.carteDuCiel,
+      missionDeVie: analysisData.missionDeVie,
+      talentsNaturels: analysisData.talentsNaturels,
+      defisViePersonnelle: analysisData.defisViePersonnelle,
+      relations: analysisData.relations,
+      carriereVocation: analysisData.carriereVocation,
+      spiritualiteCroissance: analysisData.spiritualiteCroissance,
+      dateGeneration: new Date(),
+    });
+
+    await analysis.save();
+    console.log('[ConsultationService] Nouvelle analyse créée:', analysis._id);
+    return analysis;
+  }
+
+  /**
+   * Récupérer l'analyse astrologique d'une consultation
+   */
+  async getAstrologicalAnalysis(consultationId: string) {
+    const analysis = await this.analysisModel.findOne({ consultationId }).exec();
+
+    if (!analysis) {
+      throw new NotFoundException('Analyse non trouvée');
+    }
+
+    return analysis;
+  }
+
+  /**
+   * Récupérer toutes les analyses d'un utilisateur
+   */
+  async getUserAnalyses(userId: string, query: { page?: number; limit?: number }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [analyses, total] = await Promise.all([
+      this.analysisModel
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('consultationId')
+        .exec(),
+      this.analysisModel.countDocuments({ userId }).exec(),
+    ]);
+
+    return {
+      analyses,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

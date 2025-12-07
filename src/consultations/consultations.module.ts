@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConsultationsService } from './consultations.service';
 import { ConsultationsController } from './consultations.controller';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
+import { AstrologicalAnalysis, AstrologicalAnalysisSchema } from './schemas/astrological-analysis.schema';
 import { DeepseekService } from './deepseek.service';
 import { EmailService } from '../common/services/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -13,6 +14,7 @@ import { Notification, NotificationSchema } from '../notifications/schemas/notif
     MongooseModule.forFeature([
       { name: Consultation.name, schema: ConsultationSchema },
       { name: Notification.name, schema: NotificationSchema },
+      { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
     ]),
   ],
   controllers: [ConsultationsController],

@@ -39,24 +39,36 @@ export class ConsultationsController {
 
   /**
    * POST /consultations
-   * Créer une nouvelle consultation (PUBLIC - sans authentification)
+   * Créer une consultation pour un utilisateur authentifié
+   * L'ID du client est automatiquement récupéré depuis le token JWT
    */
   @Post()
-  @Public()
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.CREATE_CONSULTATION)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Créer une consultation',
-    description: 'Crée une nouvelle consultation (accessible publiquement).',
+    summary: 'Créer une consultation (utilisateur connecté)',
+    description:
+      "Crée une consultation en associant automatiquement l'utilisateur connecté comme client.",
   })
-  @ApiResponse({ status: 201, description: 'Consultation créée.' })
-  async create(@Body() body: any) {
-    // Accepter le format frontend: serviceId, type, title, description, formData, status
-    const consultation = await this.consultationsService.createPublicConsultation(body);
+  @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
+  @ApiResponse({ status: 401, description: 'Non authentifié.' })
+  async create(@Body() body: any, @CurrentUser() user: UserDocument) {
+    console.log('[ConsultationController] Création consultation pour utilisateur:', user._id);
+
+    // Ajouter automatiquement le clientId depuis l'utilisateur connecté
+    const consultationData = {
+      ...body,
+      clientId: user._id.toString(),
+    };
+
+    const consultation = await this.consultationsService.createPublicConsultation(consultationData);
     return {
       success: true,
       message: 'Consultation créée avec succès',
       id: consultation.id,
       consultationId: consultation.consultationId,
+      clientId: user._id.toString(),
       ...consultation,
     };
   }
@@ -134,6 +146,38 @@ export class ConsultationsController {
   }
 
   /**
+   * GET /consultations/my-analyses
+   * Récupérer toutes les analyses astrologiques de l'utilisateur connecté
+   */
+  @Get('my-analyses')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_OWN_CONSULTATION)
+  @ApiOperation({
+    summary: 'Récupérer mes analyses',
+    description: "Retourne toutes les analyses astrologiques de l'utilisateur connecté.",
+  })
+  @ApiResponse({ status: 200, description: 'Liste des analyses.' })
+  async getMyAnalyses(
+    @CurrentUser() user: UserDocument,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.consultationsService.getUserAnalyses(user._id.toString(), {
+      page,
+      limit,
+    });
+
+    return {
+      success: true,
+      analyses: result.analyses,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
+  }
+
+  /**
    * GET /consultations/assigned
    * Récupérer les consultations attribuées au consultant connecté
    */
@@ -174,6 +218,18 @@ export class ConsultationsController {
   async findOne(@Param('id') id: string) {
     const consultation: any = await this.consultationsService.findOne(id);
     const consultationObj = consultation.toObject();
+
+    // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
+    let analyse = consultation.resultData;
+    try {
+      const astroAnalysis = await this.consultationsService.getAstrologicalAnalysis(id);
+      if (astroAnalysis) {
+        analyse = astroAnalysis.toObject();
+      }
+    } catch (error) {
+      console.log('[API] Pas d\'analyse trouvée dans AstrologicalAnalysis, utilisation de resultData');
+    }
+
     return {
       success: true,
       consultation: {
@@ -185,7 +241,7 @@ export class ConsultationsController {
         dateNaissance: consultation.formData?.dateOfBirth || '',
         dateGeneration: consultationObj.createdAt || new Date(),
         statut: consultation.status,
-        analyse: consultation.resultData,
+        analyse,
         ...consultationObj,
       },
     };
@@ -258,6 +314,21 @@ export class ConsultationsController {
       };
 
       console.log('[API] Analyse générée avec succès');
+
+      // Sauvegarder l'analyse dans la collection AstrologicalAnalysis
+      try {
+        const consultation = await this.consultationsService.findOne(id);
+        if (consultation && consultation.clientId) {
+          await this.consultationsService.saveAstrologicalAnalysis(
+            consultation.clientId.toString(),
+            id,
+            analyseComplete,
+          );
+          console.log('[API] Analyse sauvegardée dans la collection AstrologicalAnalysis');
+        }
+      } catch (saveError) {
+        console.error('[API] Erreur sauvegarde analyse:', saveError);
+      }
 
       // Envoyer l'email de notification (non-bloquant)
       if (birthData.email) {
@@ -349,7 +420,7 @@ export class ConsultationsController {
       throw new HttpException(
         {
           success: false,
-          error: 'Erreur lors de la récupération de l\'analyse',
+          error: 'Erreur lors de la récupération des analyses',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
