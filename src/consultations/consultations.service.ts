@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
+import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -197,6 +198,42 @@ export class ConsultationsService {
       console.error('Erreur lors de la création de la notification:', error);
     }
 
+    return consultation;
+  }
+
+  /**
+   * Sauvegarder l'analyse générée
+   */
+  async saveAnalysis(id: string, saveAnalysisDto: SaveAnalysisDto) {
+    const consultation = await this.consultationModel.findById(id).exec();
+
+    if (!consultation) {
+      throw new NotFoundException('Consultation not found');
+    }
+
+    // Mettre à jour avec l'analyse
+    consultation.resultData = saveAnalysisDto.analyse;
+    consultation.status =
+      saveAnalysisDto.statut === 'completed'
+        ? ConsultationStatus.COMPLETED
+        : ConsultationStatus.PENDING;
+
+    if (saveAnalysisDto.statut === 'completed') {
+      consultation.completedDate = new Date();
+
+      // Créer une notification pour le client
+      try {
+        await this.notificationsService.createConsultationResultNotification(
+          consultation.clientId.toString(),
+          id,
+          consultation.title,
+        );
+      } catch (error) {
+        console.error('Erreur lors de la création de la notification:', error);
+      }
+    }
+
+    await consultation.save();
     return consultation;
   }
 
