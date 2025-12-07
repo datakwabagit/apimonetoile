@@ -55,10 +55,7 @@ export class DeepseekService {
    */
   private async callDeepSeek(messages: DeepSeekMessage[]): Promise<string> {
     if (!this.DEEPSEEK_API_KEY) {
-      throw new HttpException(
-        'DEEPSEEK_API_KEY non configurée',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
+      throw new HttpException('DEEPSEEK_API_KEY non configurée', HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     const request: DeepSeekRequest = {
@@ -162,7 +159,11 @@ Fournis une analyse détaillée et structurée.`;
    * Génère l'analyse complète
    */
   async genererAnalyseComplete(birthData: BirthData): Promise<any> {
-    console.log('[DeepSeek] Début génération analyse complète pour', birthData.prenoms, birthData.nom);
+    console.log(
+      '[DeepSeek] Début génération analyse complète pour',
+      birthData.prenoms,
+      birthData.nom,
+    );
 
     try {
       // 1. Générer la carte du ciel
