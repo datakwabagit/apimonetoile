@@ -28,10 +28,7 @@ export class ConsultationsService {
 
     await consultation.save();
 
-    const populatedConsultation = await consultation.populate([
-      'clientId',
-      'serviceId',
-    ]);
+    const populatedConsultation = await consultation.populate(['clientId', 'serviceId']);
 
     // Retourner avec l'ID explicitement dans la réponse
     return {

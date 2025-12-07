@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConsultationsService } from './consultations.service';
-import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { DeepseekService, BirthData } from './deepseek.service';
@@ -201,8 +200,8 @@ export class ConsultationsController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Sauvegarder l\'analyse',
-    description: 'Sauvegarde l\'analyse astrologique générée en base de données.',
+    summary: "Sauvegarder l'analyse",
+    description: "Sauvegarde l'analyse astrologique générée en base de données.",
   })
   @ApiResponse({ status: 200, description: 'Analyse sauvegardée avec succès.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
@@ -223,7 +222,7 @@ export class ConsultationsController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Générer l\'analyse astrologique',
+    summary: "Générer l'analyse astrologique",
     description: 'Génère une analyse astrologique complète via DeepSeek AI.',
   })
   @ApiResponse({ status: 200, description: 'Analyse générée avec succès.' })
@@ -276,7 +275,7 @@ export class ConsultationsController {
             console.error('[API] Erreur envoi email:', err);
           });
       } else {
-        console.warn('[API] Pas d\'email fourni - notification non envoyée');
+        console.warn("[API] Pas d'email fourni - notification non envoyée");
       }
 
       return {
