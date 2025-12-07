@@ -21,6 +21,7 @@ import { DeepseekService, BirthData } from './deepseek.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Permission } from '../common/enums/permission.enum';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
@@ -37,19 +38,27 @@ export class ConsultationsController {
 
   /**
    * POST /consultations
-   * Créer une nouvelle consultation
+   * Créer une nouvelle consultation (PUBLIC - sans authentification)
    */
   @Post()
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.CREATE_CONSULTATION)
+  @Public()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Créer une consultation',
-    description: 'Crée une nouvelle consultation.',
+    description: 'Crée une nouvelle consultation (accessible publiquement).',
   })
   @ApiResponse({ status: 201, description: 'Consultation créée.' })
-  create(@CurrentUser() user: UserDocument, @Body() createConsultationDto: CreateConsultationDto) {
-    return this.consultationsService.create(user._id.toString(), createConsultationDto);
+  async create(@Body() body: any) {
+    // Accepter le format frontend: serviceId, type, title, description, formData, status
+    const consultation = await this.consultationsService.createPublicConsultation(body);
+    
+    return {
+      success: true,
+      message: 'Consultation créée avec succès',
+      id: consultation.id,
+      consultationId: consultation.consultationId,
+      ...consultation,
+    };
   }
 
   /**
@@ -186,9 +195,10 @@ export class ConsultationsController {
 
   /**
    * POST /consultations/:id/save-analysis
-   * Sauvegarder l'analyse générée
+   * Sauvegarder l'analyse générée (PUBLIC)
    */
   @Post(':id/save-analysis')
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Sauvegarder l\'analyse',
@@ -207,9 +217,10 @@ export class ConsultationsController {
 
   /**
    * POST /consultations/:id/generate-analysis
-   * Générer l'analyse astrologique complète via DeepSeek
+   * Générer l'analyse astrologique complète via DeepSeek (PUBLIC)
    */
   @Post(':id/generate-analysis')
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Générer l\'analyse astrologique',

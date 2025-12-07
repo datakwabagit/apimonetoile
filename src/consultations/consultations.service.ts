@@ -42,6 +42,30 @@ export class ConsultationsService {
   }
 
   /**
+   * Créer une consultation publique (sans authentification)
+   */
+  async createPublicConsultation(data: any) {
+    const consultation = new this.consultationModel({
+      serviceId: data.serviceId,
+      type: data.type,
+      title: data.title,
+      description: data.description,
+      formData: data.formData,
+      status: data.status || ConsultationStatus.PENDING,
+      createdAt: new Date(),
+    });
+
+    await consultation.save();
+
+    // Retourner avec l'ID explicitement dans la réponse
+    return {
+      ...consultation.toObject(),
+      id: consultation._id.toString(),
+      consultationId: consultation._id.toString(),
+    };
+  }
+
+  /**
    * Créer une consultation personnelle
    */
   async createPersonalConsultation(data: any) {
