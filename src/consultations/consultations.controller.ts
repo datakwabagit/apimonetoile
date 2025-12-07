@@ -271,10 +271,11 @@ export class ConsultationsController {
 
   /**
    * POST /consultations/:id/generate-analysis
-   * Générer l'analyse astrologique complète via DeepSeek (PUBLIC)
+   * Générer l'analyse astrologique complète via DeepSeek (Authentifié)
    */
   @Post(':id/generate-analysis')
-  @Public()
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_OWN_CONSULTATION)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Générer l'analyse astrologique",
@@ -282,8 +283,13 @@ export class ConsultationsController {
   })
   @ApiResponse({ status: 200, description: 'Analyse générée avec succès.' })
   @ApiResponse({ status: 400, description: 'Données invalides.' })
+  @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
-  async generateAnalysis(@Param('id') id: string, @Body() body: { birthData: BirthData }) {
+  async generateAnalysis(
+    @Param('id') id: string,
+    @Body() body: { birthData: BirthData },
+    @CurrentUser() user: UserDocument,
+  ) {
     try {
       const { birthData } = body;
 
@@ -329,44 +335,23 @@ export class ConsultationsController {
 
       // Sauvegarder l'analyse dans la collection AstrologicalAnalysis
       try {
-        console.log('[API] 🔍 Recherche consultation pour sauvegarde...');
-        const consultation = await this.consultationsService.findOne(id);
+        const userId = user._id.toString();
+        console.log('[API] 💾 Sauvegarde analyse pour userId:', userId);
 
-        // Extraire le userId correctement (peut être un objet populé ou un ObjectId)
-        let userId: string | undefined;
-        if (consultation.clientId) {
-          // Si clientId est un objet populé (a une propriété _id)
-          if (typeof consultation.clientId === 'object' && 'email' in consultation.clientId) {
-            userId = (consultation.clientId as any)._id.toString();
-          } else {
-            // Si clientId est juste un ObjectId
-            userId = consultation.clientId.toString();
-          }
-        }
-
-        console.log('[API] 📊 Consultation trouvée:', {
-          id: consultation._id,
-          hasClientId: !!consultation.clientId,
-          userId: userId,
-        });
-
-        if (consultation && userId) {
-          console.log('[API] 💾 Sauvegarde analyse dans AstrologicalAnalysis...');
-          const savedAnalysis = await this.consultationsService.saveAstrologicalAnalysis(
-            userId,
-            id,
-            analyseComplete,
-          );
-          console.log('[API] ✅ Analyse sauvegardée avec succès, ID:', savedAnalysis._id);
-        } else {
-          console.warn('[API] ⚠️ Consultation sans clientId, analyse non sauvegardée');
-        }
+        const savedAnalysis = await this.consultationsService.saveAstrologicalAnalysis(
+          userId,
+          id,
+          analyseComplete,
+        );
+        console.log('[API] ✅ Analyse sauvegardée avec succès, ID:', savedAnalysis._id);
       } catch (saveError) {
         console.error('[API] ❌ Erreur sauvegarde analyse:', {
           message: saveError.message,
           stack: saveError.stack,
         });
-      }      // Envoyer l'email de notification (non-bloquant)
+      }
+
+      // Envoyer l'email de notification (non-bloquant)
       if (birthData.email) {
         this.emailService
           .sendAnalysisReadyEmail(birthData.email, birthData.prenoms, birthData.nom, id)
