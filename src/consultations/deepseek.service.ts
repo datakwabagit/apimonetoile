@@ -1,291 +1,3 @@
-// /**
-//  * Service pour générer des analyses astrologiques via DeepSeek AI
-//  */
-
-// import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-// import { ConfigService } from '@nestjs/config';
-
-// export interface BirthData {
-//   nom: string;
-//   prenoms: string;
-//   genre: string;
-//   dateNaissance: string;
-//   heureNaissance: string;
-//   paysNaissance: string;
-//   villeNaissance: string;
-//   email?: string;
-// }
-
-// export interface DeepSeekMessage {
-//   role: 'system' | 'user' | 'assistant';
-//   content: string;
-// }
-
-// export interface DeepSeekRequest {
-//   model: string;
-//   messages: DeepSeekMessage[];
-//   temperature?: number;
-//   max_tokens?: number;
-// }
-
-// export interface DeepSeekResponse {
-//   choices: Array<{
-//     message: {
-//       role: string;
-//       content: string;
-//     };
-//   }>;
-// }
-
-// @Injectable()
-// export class DeepseekService {
-//   private readonly DEEPSEEK_API_KEY: string;
-//   private readonly DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-//   private readonly SYSTEM_PROMPT = `Tu es un astrologue professionnel expert. Tu analyses les cartes du ciel avec précision et profondeur. Tes réponses sont structurées, empathiques et riches en insights pratiques.`;
-
-//   constructor(private configService: ConfigService) {
-//     this.DEEPSEEK_API_KEY = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
-//     if (!this.DEEPSEEK_API_KEY) {
-//       console.warn('[DeepSeek] DEEPSEEK_API_KEY non configurée');
-//     }
-//   }
-
-//   /**
-//    * Appelle l'API DeepSeek avec timeout étendu
-//    */
-//   private async callDeepSeek(messages: DeepSeekMessage[]): Promise<string> {
-//     if (!this.DEEPSEEK_API_KEY) {
-//       throw new HttpException('DEEPSEEK_API_KEY non configurée', HttpStatus.SERVICE_UNAVAILABLE);
-//     }
-
-//     const request: DeepSeekRequest = {
-//       model: 'deepseek-chat',
-//       messages,
-//       temperature: 0.7,
-//       max_tokens: 4000,
-//     };
-
-//     console.log('[DeepSeek] Envoi requête API...');
-//     const startTime = Date.now();
-
-//     // Utiliser AbortController pour timeout personnalisé
-//     const controller = new AbortController();
-//     const timeoutId = setTimeout(() => controller.abort(), 400000); // 6 minutes 40 secondes
-
-//     try {
-//       const response = await fetch(this.DEEPSEEK_API_URL, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           Authorization: `Bearer ${this.DEEPSEEK_API_KEY}`,
-//         },
-//         body: JSON.stringify(request),
-//         signal: controller.signal,
-//       });
-
-//       clearTimeout(timeoutId);
-
-//       if (!response.ok) {
-//         const errorText = await response.text();
-//         throw new HttpException(
-//           `Erreur DeepSeek API: ${response.status} - ${errorText}`,
-//           HttpStatus.BAD_GATEWAY,
-//         );
-//       }
-
-//       const data: DeepSeekResponse = await response.json();
-
-//       if (!data.choices || data.choices.length === 0) {
-//         throw new HttpException('Aucune réponse de DeepSeek', HttpStatus.BAD_GATEWAY);
-//       }
-
-//       const duration = Date.now() - startTime;
-//       console.log(`[DeepSeek] Réponse reçue en ${duration}ms`);
-
-//       return data.choices[0].message.content;
-//     } catch (error) {
-//       clearTimeout(timeoutId);
-
-//       if (error.name === 'AbortError') {
-//         throw new HttpException(
-//           'Timeout DeepSeek API (120s dépassé)',
-//           HttpStatus.REQUEST_TIMEOUT,
-//         );
-//       }
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Génère le prompt pour la carte du ciel
-//    */
-//   private generateCarteDuCielPrompt(birthData: BirthData): string {
-//     return `Génère la CARTE DU CIEL complète pour :
-
-// NOM: ${birthData.nom}
-// PRÉNOMS: ${birthData.prenoms}
-// DATE DE NAISSANCE: ${birthData.dateNaissance}
-// HEURE DE NAISSANCE: ${birthData.heureNaissance}
-// LIEU DE NAISSANCE: ${birthData.villeNaissance}, ${birthData.paysNaissance}
-
-// Fournis UNIQUEMENT les positions suivantes au format précis :
-// - Soleil en [Signe]
-// - Ascendant en [Signe]
-// - Lune en [Signe]
-// - Milieu du Ciel en [Signe]
-// - MERCURE EN [SIGNE] EN MAISON [X]
-// - VÉNUS EN [SIGNE] EN MAISON [X]
-// - MARS EN [SIGNE] EN MAISON [X]
-// - JUPITER [RÉTROGRADE] EN [SIGNE] EN MAISON [X]
-// - SATURNE [RÉTROGRADE] EN [SIGNE] EN MAISON [X]
-// - URANUS [RÉTROGRADE] EN [SIGNE] EN MAISON [X]
-// - NEPTUNE [RÉTROGRADE] EN [SIGNE] EN MAISON [X]
-// - PLUTON [RÉTROGRADE] EN [SIGNE] EN MAISON [X]
-// - Nœud Nord en [Signe] en Maison [X]
-// - Nœud Sud en [Signe] en Maison [X]
-// - CHIRON EN [SIGNE] : MAISON [X]
-// - VERTEX EN [SIGNE] : MAISON [X]
-// - LILITH VRAIE [RÉTROGRADE] EN [SIGNE] – MAISON [X]
-// - PALLAS EN [SIGNE] EN MAISON [X]
-// - VESTA EN [SIGNE] EN MAISON [X]
-// - CÉRÈS EN [SIGNE] EN MAISON [X]
-// - PART DE FORTUNE & JUNON EN [SIGNE] EN MAISON [X]
-
-// Réponds UNIQUEMENT avec les positions, sans explication.`;
-//   }
-
-//   /**
-//    * Génère le prompt pour la mission de vie
-//    */
-//   private generateMissionDeViePrompt(birthData: BirthData, carteDuCiel: string): string {
-//     return `Dans la carte du ciel de ${birthData.prenoms} ${birthData.nom}, prends en compte les positions des astres ci-dessous pour faire une analyse astrologique lui permettant de comprendre et connaître sa MISSION DE VIE :
-
-// CARTE DU CIEL :
-// ${carteDuCiel}
-
-// ÉLÉMENTS À ANALYSER :
-// • Nœud Nord & Nœud Sud (position, maison, aspects) — indicateur principal du but karmique et des thèmes à développer/éviter.
-// • Milieu du Ciel (MC) & Maison 10 — vocation publique / impact social lié à la mission.
-// • Soleil (position, maison, aspects) — vitalité, expression essentielle de l'âme.
-// • Jupiter (expansion, sens, vocation spirituelle) et Saturne (structure, leçon) — grand cadre de mission.
-// • Chiron (si relié aux nœuds ou au Soleil) — appel à transformer la blessure en service.
-// • Part of Fortune (localise chance alignée à la vocation).
-// • Astéroïdes : Vesta (consécration / vocation spirituelle), Pallas (stratégie/mission intellectuelle), Cérès (service/soin).
-
-// ASPECTS À ANALYSER :
-// • Conjonctions Nœud-Soleil/MC/Jupiter (forte empreinte de mission).
-// • Trigones/Sextiles Nœud-planètes rapides (facilitant) vs Carrés/Oppositions (épreuves formatrices).
-// • Aspects majeurs impliquant Saturne (obligation/discipline) ou Neptune (vocation spirituelle, possible confusion).
-
-// Fournis une analyse détaillée et structurée.`;
-//   }
-
-//   /**
-//    * Génère l'analyse complète
-//    */
-//   async genererAnalyseComplete(birthData: BirthData): Promise<any> {
-//     console.log(
-//       '[DeepSeek] Début génération analyse complète pour',
-//       birthData.prenoms,
-//       birthData.nom,
-//     );
-
-//     try {
-//       // 1. Générer la carte du ciel
-//       const carteDuCielPrompt = this.generateCarteDuCielPrompt(birthData);
-//       const carteDuCielTexte = await this.callDeepSeek([
-//         { role: 'system', content: this.SYSTEM_PROMPT },
-//         { role: 'user', content: carteDuCielPrompt },
-//       ]);
-
-//       console.log('[DeepSeek] Carte du ciel générée');
-
-//       // 2. Générer la mission de vie
-//       const missionDeViePrompt = this.generateMissionDeViePrompt(birthData, carteDuCielTexte);
-//       const missionDeVieTexte = await this.callDeepSeek([
-//         { role: 'system', content: this.SYSTEM_PROMPT },
-//         { role: 'user', content: missionDeViePrompt },
-//       ]);
-
-//       console.log('[DeepSeek] Mission de vie générée');
-
-//       // Construire l'analyse complète
-//       const analyseComplete = {
-//         carteDuCiel: {
-//           sujet: {
-//             nom: birthData.nom,
-//             prenoms: birthData.prenoms,
-//             dateNaissance: birthData.dateNaissance,
-//             lieuNaissance: `${birthData.villeNaissance}, ${birthData.paysNaissance}`,
-//             heureNaissance: birthData.heureNaissance,
-//           },
-//           positions: this.parsePositions(carteDuCielTexte),
-//           aspectsTexte: carteDuCielTexte,
-//         },
-//         missionDeVie: {
-//           titre: 'Mission de Vie',
-//           contenu: missionDeVieTexte,
-//         },
-//         talentsNaturels: {
-//           titre: 'Talents Naturels',
-//           contenu: 'Analyse en cours de développement',
-//         },
-//         relations: {
-//           titre: 'Relations',
-//           contenu: 'Analyse en cours de développement',
-//         },
-//         carriereVocation: {
-//           titre: 'Carrière & Vocation',
-//           contenu: 'Analyse en cours de développement',
-//         },
-//         spiritualiteCroissance: {
-//           titre: 'Spiritualité & Croissance',
-//           contenu: 'Analyse en cours de développement',
-//         },
-//       };
-
-//       console.log('[DeepSeek] Analyse complète générée avec succès');
-//       return analyseComplete;
-//     } catch (error) {
-//       console.error('[DeepSeek] Erreur génération analyse:', error);
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Parse les positions planétaires depuis le texte brut
-//    */
-//   private parsePositions(texte: string): any[] {
-//     const positions: any[] = [];
-//     const lignes = texte.split('\n').filter((l) => l.trim());
-
-//     for (const ligne of lignes) {
-//       const match = ligne.match(
-//         /^([\w\s]+?)\s+(?:RÉTROGRADE\s+)?EN\s+([\wéèêàâùç]+)(?:\s+[E:–-]\s*MAISON\s+(\d+))?/i,
-//       );
-
-//       if (match) {
-//         const planete = match[1].trim();
-//         const signe = match[2].trim();
-//         const maison = match[3] ? parseInt(match[3]) : undefined;
-//         const retrograde = /RÉTROGRADE/i.test(ligne);
-
-//         positions.push({
-//           planete,
-//           signe,
-//           maison: maison || 1,
-//           retrograde,
-//         });
-//       }
-//     }
-
-//     return positions;
-//   }
-// }
-/**
- * Service optimisé pour générer des analyses astrologiques via DeepSeek AI
- */
-
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
@@ -506,10 +218,12 @@ Ton : Professionnel, empathique, encourageant.`,
     const requestId = uuidv4().substring(0, 8);
     const startTime = Date.now();
 
-    this.logger.debug(`[${requestId}] Appel API DeepSeek démarré`, {
-      messages: messages.length,
-      model,
-    });
+    this.logger.log(
+      `[${requestId}] 🚀 Appel API DeepSeek - Model: ${model}, MaxTokens: ${maxTokens}, Temp: ${temperature}`,
+    );
+
+    this.logger.log(`[${requestId}] 🚀 Appel API DeepSeek démarré - Model: ${model}, Tokens max: ${maxTokens}, Temp: ${temperature}`);
+    this.logger.debug(`[${requestId}] Messages: ${messages.length} messages`);
 
     const requestBody: DeepSeekRequest = {
       model,
@@ -540,11 +254,9 @@ Ton : Professionnel, empathique, encourageant.`,
         const duration = Date.now() - startTime;
 
         if (response.status === 200) {
-          this.logger.log(`[${requestId}] API call réussie en ${duration}ms`, {
-            attempt,
-            tokens: response.data.usage?.total_tokens,
-            duration,
-          });
+          this.logger.log(
+            `[${requestId}] ✅ Réponse reçue en ${duration}ms (${(duration / 1000).toFixed(1)}s) - Tokens: ${response.data.usage?.total_tokens || 0}`,
+          );
 
           return response.data;
         }
@@ -633,6 +345,9 @@ Ton : Professionnel, empathique, encourageant.`,
 
     try {
       // 1. Générer la carte du ciel
+      this.logger.log(`[${sessionId}] 📊 ÉTAPE 1/4: Génération carte du ciel...`);
+      const step1Start = Date.now();
+      
       const carteDuCielPrompt = this.PROMPT_TEMPLATES.carteDuCiel(birthData);
       const carteDuCielResponse = await this.callDeepSeekApi(
         [
@@ -644,11 +359,15 @@ Ton : Professionnel, empathique, encourageant.`,
       ); // Température plus basse pour la précision
 
       const carteDuCielTexte = carteDuCielResponse.choices[0].message.content;
-      this.logger.debug(`[${sessionId}] Carte du ciel générée`, {
-        tokens: carteDuCielResponse.usage?.total_tokens,
-      });
+      const step1Duration = Date.now() - step1Start;
+      this.logger.log(
+        `[${sessionId}] ✅ ÉTAPE 1 terminée en ${step1Duration}ms - Tokens: ${carteDuCielResponse.usage?.total_tokens || 0}`,
+      );
 
-      // 2. Générer la mission de vie en parallèle si possible
+      // 2. Générer la mission de vie
+      this.logger.log(`[${sessionId}] 🎯 ÉTAPE 2/4: Génération mission de vie...`);
+      const step2Start = Date.now();
+      
       const missionDeViePrompt = this.PROMPT_TEMPLATES.missionDeVie(birthData, carteDuCielTexte);
       const missionDeVieResponse = await this.callDeepSeekApi(
         [
@@ -660,14 +379,20 @@ Ton : Professionnel, empathique, encourageant.`,
       ); // Température plus élevée pour la créativité
 
       const missionDeVieTexte = missionDeVieResponse.choices[0].message.content;
-      this.logger.debug(`[${sessionId}] Mission de vie générée`, {
-        tokens: missionDeVieResponse.usage?.total_tokens,
-      });
+      const step2Duration = Date.now() - step2Start;
+      this.logger.log(
+        `[${sessionId}] ✅ ÉTAPE 2 terminée en ${step2Duration}ms - Tokens: ${missionDeVieResponse.usage?.total_tokens || 0}`,
+      );
 
       // 3. Parser les positions
+      this.logger.log(`[${sessionId}] 🔍 ÉTAPE 3/4: Parsing des positions...`);
+      const step3Start = Date.now();
       const positions = this.parsePositionsAmeliore(carteDuCielTexte);
+      const step3Duration = Date.now() - step3Start;
+      this.logger.log(`[${sessionId}] ✅ ÉTAPE 3 terminée en ${step3Duration}ms - ${positions.length} positions`);
 
       // 4. Construire le résultat
+      this.logger.log(`[${sessionId}] 🏗️ ÉTAPE 4/4: Construction du résultat final...`);
       const result: AnalysisResult = {
         sessionId,
         timestamp: new Date(),
@@ -700,6 +425,15 @@ Ton : Professionnel, empathique, encourageant.`,
         result,
         timestamp: Date.now(),
       });
+
+      const totalDuration = Date.now() - startTime;
+      this.logger.log(
+        `[${sessionId}] 🎉 ANALYSE COMPLÈTE TERMINÉE en ${totalDuration}ms (${(totalDuration / 1000).toFixed(1)}s)`,
+      );
+      this.logger.log(`[${sessionId}] 📊 Tokens totaux: ${result.metadata.tokensUsed}`);
+      this.logger.log(
+        `[${sessionId}] ⏱️ Répartition: Étape1=${step1Duration}ms, Étape2=${step2Duration}ms, Étape3=${step3Duration}ms`,
+      );
 
       // Nettoyer le cache si nécessaire
       if (this.analysisCache.size > 100) {
