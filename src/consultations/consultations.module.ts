@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { HttpModule } from '@nestjs/axios';
 import { ConsultationsService } from './consultations.service';
 import { ConsultationsController } from './consultations.controller';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
@@ -14,6 +15,7 @@ import { Notification, NotificationSchema } from '../notifications/schemas/notif
 
 @Module({
   imports: [
+    HttpModule,
     MongooseModule.forFeature([
       { name: Consultation.name, schema: ConsultationSchema },
       { name: Notification.name, schema: NotificationSchema },
