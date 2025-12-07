@@ -176,6 +176,52 @@ export class ConsultationsController {
   }
 
   /**
+   * GET /consultations/analysis/:consultationId
+   * Récupérer l'analyse d'une consultation spécifique (PUBLIC)
+   */
+  @Get('analysis/:consultationId')
+  @Public()
+  @ApiOperation({
+    summary: "Récupérer l'analyse d'une consultation",
+    description: "Retourne uniquement l'analyse astrologique d'une consultation donnée.",
+  })
+  @ApiResponse({ status: 200, description: 'Analyse trouvée.' })
+  @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
+  async getAnalysisByConsultationId(@Param('consultationId') consultationId: string) {
+    try {
+      const analysis = await this.consultationsService.getAstrologicalAnalysis(consultationId);
+
+      if (!analysis) {
+        throw new HttpException(
+          {
+            success: false,
+            message: "Aucune analyse trouvée pour cette consultation",
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      return {
+        success: true,
+        consultationId,
+        analyse: analysis.toObject(),
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          error: "Erreur lors de la récupération de l'analyse",
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * GET /consultations/my-analyses
    * Récupérer toutes les analyses astrologiques de l'utilisateur connecté
    */
