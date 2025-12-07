@@ -354,12 +354,20 @@ export class ConsultationsService {
    * Sauvegarder une analyse astrologique complète
    */
   async saveAstrologicalAnalysis(userId: string, consultationId: string, analysisData: any) {
-    console.log('[ConsultationService] Sauvegarde analyse astrologique pour user:', userId);
+    console.log('[ConsultationService] 💾 Début sauvegarde analyse astrologique');
+    console.log('[ConsultationService] 📋 Paramètres:', {
+      userId,
+      consultationId,
+      hasCarteDuCiel: !!analysisData.carteDuCiel,
+      hasMissionDeVie: !!analysisData.missionDeVie,
+    });
 
     // Vérifier si une analyse existe déjà pour cette consultation
+    console.log('[ConsultationService] 🔍 Vérification existence analyse...');
     const existingAnalysis = await this.analysisModel.findOne({ consultationId }).exec();
 
     if (existingAnalysis) {
+      console.log('[ConsultationService] 📝 Analyse existante trouvée, mise à jour...');
       // Mettre à jour l'analyse existante
       Object.assign(existingAnalysis, {
         userId,
@@ -374,11 +382,25 @@ export class ConsultationsService {
       });
 
       await existingAnalysis.save();
-      console.log('[ConsultationService] Analyse mise à jour:', existingAnalysis._id);
+      console.log('[ConsultationService] ✅ Analyse mise à jour:', existingAnalysis._id);
       return existingAnalysis;
     }
 
+    console.log('[ConsultationService] ➕ Création nouvelle analyse...');
+
     // Créer une nouvelle analyse
+    console.log('[ConsultationService] 🏗️ Données à sauvegarder:', {
+      userId,
+      consultationId,
+      hasCarteDuCiel: !!analysisData.carteDuCiel,
+      hasMissionDeVie: !!analysisData.missionDeVie,
+      hasTalentsNaturels: !!analysisData.talentsNaturels,
+      hasDefisViePersonnelle: !!analysisData.defisViePersonnelle,
+      hasRelations: !!analysisData.relations,
+      hasCarriereVocation: !!analysisData.carriereVocation,
+      hasSpiritualiteCroissance: !!analysisData.spiritualiteCroissance,
+    });
+
     const analysis = new this.analysisModel({
       userId,
       consultationId,
@@ -392,9 +414,23 @@ export class ConsultationsService {
       dateGeneration: new Date(),
     });
 
-    await analysis.save();
-    console.log('[ConsultationService] Nouvelle analyse créée:', analysis._id);
-    return analysis;
+    console.log('[ConsultationService] 💾 Sauvegarde en base de données...');
+    try {
+      const savedAnalysis = await analysis.save();
+      console.log('[ConsultationService] ✅ Nouvelle analyse créée avec succès:', {
+        id: savedAnalysis._id,
+        userId: savedAnalysis.userId,
+        consultationId: savedAnalysis.consultationId,
+      });
+      return savedAnalysis;
+    } catch (error) {
+      console.error('[ConsultationService] ❌ Erreur lors de la sauvegarde:', {
+        message: error.message,
+        code: error.code,
+        errors: error.errors,
+      });
+      throw error;
+    }
   }
 
   /**

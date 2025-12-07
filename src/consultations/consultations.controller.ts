@@ -302,11 +302,23 @@ export class ConsultationsController {
         throw new HttpException('Données de naissance incomplètes', HttpStatus.BAD_REQUEST);
       }
 
-      console.log('[API] Génération analyse pour consultation:', id);
-      console.log('[API] Données naissance:', birthData);
+      console.log('[API] 🚀 Génération analyse pour consultation:', id);
+      console.log('[API] 📋 Données naissance:', {
+        nom: birthData.nom,
+        prenoms: birthData.prenoms,
+        dateNaissance: birthData.dateNaissance,
+        lieu: `${birthData.villeNaissance}, ${birthData.paysNaissance}`,
+      });
 
       // Générer l'analyse complète via DeepSeek
+      console.log('[API] ⏳ Appel DeepSeek en cours...');
       const analyse = await this.deepseekService.genererAnalyseComplete(birthData);
+      console.log('[API] ✅ Analyse générée, structure:', {
+        sessionId: analyse.sessionId,
+        hasCarteDuCiel: !!analyse.carteDuCiel,
+        hasMissionDeVie: !!analyse.missionDeVie,
+        positionsCount: analyse.carteDuCiel?.positions?.length || 0,
+      });
 
       // Construire l'objet AnalyseAstrologique complet
       const analyseComplete = {
@@ -315,21 +327,35 @@ export class ConsultationsController {
         dateGeneration: new Date().toISOString(),
       };
 
-      console.log('[API] Analyse générée avec succès');
+      console.log('[API] 📦 Analyse complète construite');
 
       // Sauvegarder l'analyse dans la collection AstrologicalAnalysis
       try {
+        console.log('[API] 🔍 Recherche consultation pour sauvegarde...');
         const consultation = await this.consultationsService.findOne(id);
+        
+        console.log('[API] 📊 Consultation trouvée:', {
+          id: consultation._id,
+          hasClientId: !!consultation.clientId,
+          clientId: consultation.clientId?.toString(),
+        });
+
         if (consultation && consultation.clientId) {
-          await this.consultationsService.saveAstrologicalAnalysis(
+          console.log('[API] 💾 Sauvegarde analyse dans AstrologicalAnalysis...');
+          const savedAnalysis = await this.consultationsService.saveAstrologicalAnalysis(
             consultation.clientId.toString(),
             id,
             analyseComplete,
           );
-          console.log('[API] Analyse sauvegardée dans la collection AstrologicalAnalysis');
+          console.log('[API] ✅ Analyse sauvegardée avec succès, ID:', savedAnalysis._id);
+        } else {
+          console.warn('[API] ⚠️ Consultation sans clientId, analyse non sauvegardée');
         }
       } catch (saveError) {
-        console.error('[API] Erreur sauvegarde analyse:', saveError);
+        console.error('[API] ❌ Erreur sauvegarde analyse:', {
+          message: saveError.message,
+          stack: saveError.stack,
+        });
       }
 
       // Envoyer l'email de notification (non-bloquant)
