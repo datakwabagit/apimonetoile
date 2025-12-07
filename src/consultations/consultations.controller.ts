@@ -52,7 +52,6 @@ export class ConsultationsController {
   async create(@Body() body: any) {
     // Accepter le format frontend: serviceId, type, title, description, formData, status
     const consultation = await this.consultationsService.createPublicConsultation(body);
-    
     return {
       success: true,
       message: 'Consultation créée avec succès',
@@ -295,6 +294,62 @@ export class ConsultationsController {
           success: false,
           error: `Erreur lors de la génération: ${errorMessage}`,
           statut: 'error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * GET /consultations/:id/generate-analysis
+   * Récupérer l'analyse générée d'une consultation (PUBLIC)
+   */
+  @Get(':id/generate-analysis')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Récupérer l'analyse générée",
+    description: "Retourne l'analyse astrologique si elle a été générée et sauvegardée.",
+  })
+  @ApiResponse({ status: 200, description: 'Analyse trouvée.' })
+  @ApiResponse({ status: 404, description: 'Analyse non trouvée ou pas encore générée.' })
+  async getGeneratedAnalysis(@Param('id') id: string) {
+    try {
+      const consultation: any = await this.consultationsService.findOne(id);
+
+      if (!consultation) {
+        throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
+      }
+
+      // Vérifier si l'analyse existe dans resultData
+      if (consultation.resultData && consultation.resultData.analyse) {
+        return {
+          success: true,
+          consultationId: id,
+          statut: consultation.resultData.statut || 'completed',
+          analyse: consultation.resultData.analyse,
+        };
+      }
+
+      // Pas d'analyse encore générée
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Analyse pas encore générée',
+          statut: 'pending',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      console.error('[API] Erreur récupération analyse:', error);
+      throw new HttpException(
+        {
+          success: false,
+          error: 'Erreur lors de la récupération de l\'analyse',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
