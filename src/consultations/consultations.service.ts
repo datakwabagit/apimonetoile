@@ -27,7 +27,17 @@ export class ConsultationsService {
 
     await consultation.save();
 
-    return consultation.populate(['clientId', 'serviceId']);
+    const populatedConsultation = await consultation.populate([
+      'clientId',
+      'serviceId',
+    ]);
+
+    // Retourner avec l'ID explicitement dans la réponse
+    return {
+      ...populatedConsultation.toObject(),
+      id: populatedConsultation._id.toString(),
+      consultationId: populatedConsultation._id.toString(),
+    };
   }
 
   /**
@@ -40,7 +50,13 @@ export class ConsultationsService {
       createdAt: new Date(),
     });
     await consultation.save();
-    return consultation;
+
+    // Retourner avec l'ID explicitement dans la réponse
+    return {
+      ...consultation.toObject(),
+      id: consultation._id.toString(),
+      consultationId: consultation._id.toString(),
+    };
   }
 
   /**
