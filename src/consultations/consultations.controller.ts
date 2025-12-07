@@ -10,12 +10,14 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  HttpException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConsultationsService } from './consultations.service';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
+import { DeepseekService, BirthData } from './deepseek.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -28,7 +30,10 @@ import { UserDocument } from '../users/schemas/user.schema';
 @Controller('consultations')
 @UseGuards(JwtAuthGuard)
 export class ConsultationsController {
-  constructor(private readonly consultationsService: ConsultationsService) {}
+  constructor(
+    private readonly consultationsService: ConsultationsService,
+    private readonly deepseekService: DeepseekService,
+  ) {}
 
   /**
    * POST /consultations
@@ -198,6 +203,74 @@ export class ConsultationsController {
       message: 'Analyse sauvegardée avec succès',
       consultationId: id,
     };
+  }
+
+  /**
+   * POST /consultations/:id/generate-analysis
+   * Générer l'analyse astrologique complète via DeepSeek
+   */
+  @Post(':id/generate-analysis')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Générer l\'analyse astrologique',
+    description: 'Génère une analyse astrologique complète via DeepSeek AI.',
+  })
+  @ApiResponse({ status: 200, description: 'Analyse générée avec succès.' })
+  @ApiResponse({ status: 400, description: 'Données invalides.' })
+  @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
+  async generateAnalysis(@Param('id') id: string, @Body() body: { birthData: BirthData }) {
+    try {
+      const { birthData } = body;
+
+      // Validation des données
+      if (
+        !birthData ||
+        !birthData.nom ||
+        !birthData.prenoms ||
+        !birthData.dateNaissance ||
+        !birthData.heureNaissance ||
+        !birthData.villeNaissance ||
+        !birthData.paysNaissance
+      ) {
+        throw new HttpException('Données de naissance incomplètes', HttpStatus.BAD_REQUEST);
+      }
+
+      console.log('[API] Génération analyse pour consultation:', id);
+      console.log('[API] Données naissance:', birthData);
+
+      // Générer l'analyse complète via DeepSeek
+      const analyse = await this.deepseekService.genererAnalyseComplete(birthData);
+
+      // Construire l'objet AnalyseAstrologique complet
+      const analyseComplete = {
+        consultationId: id,
+        ...analyse,
+        dateGeneration: new Date().toISOString(),
+      };
+
+      console.log('[API] Analyse générée avec succès');
+
+      return {
+        success: true,
+        consultationId: id,
+        statut: 'completed',
+        message: 'Analyse astrologique générée avec succès',
+        analyse: analyseComplete,
+      };
+    } catch (error) {
+      console.error('[API] Erreur génération analyse:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+
+      throw new HttpException(
+        {
+          success: false,
+          error: `Erreur lors de la génération: ${errorMessage}`,
+          statut: 'error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**

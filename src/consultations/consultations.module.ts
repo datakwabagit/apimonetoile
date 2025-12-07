@@ -4,6 +4,7 @@ import { ConsultationsService } from './consultations.service';
 import { ConsultationsController } from './consultations.controller';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { DeepseekService } from './deepseek.service';
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [ConsultationsController],
-  providers: [ConsultationsService],
-  exports: [ConsultationsService],
+  providers: [ConsultationsService, DeepseekService],
+  exports: [ConsultationsService, DeepseekService],
 })
 export class ConsultationsModule {}
