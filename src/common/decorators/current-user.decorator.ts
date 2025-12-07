@@ -3,7 +3,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 /**
  * Décorateur pour récupérer l'utilisateur actuellement authentifié
  * L'utilisateur est attaché à request.user par le JwtStrategy
- * 
+ *
  * @example
  * @Get('profile')
  * @UseGuards(JwtAuthGuard)

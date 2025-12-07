@@ -37,7 +37,10 @@ export class ConsultationsController {
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.CREATE_CONSULTATION)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Créer une consultation', description: 'Crée une nouvelle consultation.' })
+  @ApiOperation({
+    summary: 'Créer une consultation',
+    description: 'Crée une nouvelle consultation.',
+  })
   @ApiResponse({ status: 201, description: 'Consultation créée.' })
   create(@CurrentUser() user: UserDocument, @Body() createConsultationDto: CreateConsultationDto) {
     return this.consultationsService.create(user._id.toString(), createConsultationDto);
@@ -62,7 +65,10 @@ export class ConsultationsController {
   @Get()
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.READ_ANY_CONSULTATION)
-  @ApiOperation({ summary: 'Lister les consultations', description: 'Retourne toutes les consultations (admin/consultant).' })
+  @ApiOperation({
+    summary: 'Lister les consultations',
+    description: 'Retourne toutes les consultations (admin/consultant).',
+  })
   @ApiResponse({ status: 200, description: 'Liste des consultations.' })
   findAll(
     @Query('page') page?: number,

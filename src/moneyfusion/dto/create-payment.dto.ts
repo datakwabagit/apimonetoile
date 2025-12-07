@@ -6,7 +6,7 @@ export class ArticleDto {
   @ApiProperty({ example: 1, description: 'Nombre de sacs' })
   @IsNumber()
   sac?: number;
-  
+
   @ApiProperty({ example: 2, description: 'Nombre de chaussures' })
   @IsNumber()
   chaussure?: number;
@@ -17,7 +17,7 @@ export class PersonalInfoDto {
   @IsNumber()
   @IsOptional()
   userId?: number;
-  
+
   @ApiPropertyOptional({ example: 99, description: 'ID commande' })
   @IsNumber()
   @IsOptional()
@@ -43,19 +43,28 @@ export class CreatePaymentDto {
   @IsString()
   nomclient: string;
 
-  @ApiPropertyOptional({ type: [PersonalInfoDto], description: 'Informations personnelles additionnelles' })
+  @ApiPropertyOptional({
+    type: [PersonalInfoDto],
+    description: 'Informations personnelles additionnelles',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PersonalInfoDto)
   @IsOptional()
   personal_Info?: PersonalInfoDto[];
 
-  @ApiPropertyOptional({ example: 'https://votre-site.com/retour', description: 'URL de retour après paiement' })
+  @ApiPropertyOptional({
+    example: 'https://votre-site.com/retour',
+    description: 'URL de retour après paiement',
+  })
   @IsString()
   @IsOptional()
   return_url?: string;
 
-  @ApiPropertyOptional({ example: 'https://votre-backend.com/moneyfusion/webhook', description: 'URL du webhook pour notifications MoneyFusion' })
+  @ApiPropertyOptional({
+    example: 'https://votre-backend.com/moneyfusion/webhook',
+    description: 'URL du webhook pour notifications MoneyFusion',
+  })
   @IsString()
   @IsOptional()
   webhook_url?: string;

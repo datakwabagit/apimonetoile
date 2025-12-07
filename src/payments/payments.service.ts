@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, HttpException, HttpStatus, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { HttpService } from '@nestjs/axios';
@@ -64,7 +71,7 @@ export class PaymentsService {
 
     try {
       this.logger.log(`Vérification paiement MoneyFusion: ${token}`);
-      
+
       const response = await firstValueFrom(
         this.httpService.post(
           this.MONEYFUSION_VERIFY_URL,
@@ -81,7 +88,7 @@ export class PaymentsService {
       }
 
       const { statut, message, code_statut, data } = response.data;
-      
+
       this.logger.debug(`Réponse MoneyFusion: ${JSON.stringify(response.data)}`);
 
       // Vérifier si le paiement existe déjà
@@ -108,7 +115,7 @@ export class PaymentsService {
         });
 
         this.logger.log(`Paiement créé avec succès: ${payment._id}`);
-        
+
         return {
           status: 'success',
           message: 'Paiement validé',
@@ -131,10 +138,9 @@ export class PaymentsService {
         message: message || 'Paiement non validé',
         details: response.data,
       };
-
     } catch (error: any) {
       this.logger.error('Erreur vérification MoneyFusion:', error);
-      
+
       if (error.response) {
         const { status, data } = error.response;
         if (status === 400) {
@@ -144,22 +150,19 @@ export class PaymentsService {
             details: data,
           };
         }
-        throw new HttpException(
-          data?.message || 'Erreur API MoneyFusion', 
-          status
-        );
+        throw new HttpException(data?.message || 'Erreur API MoneyFusion', status);
       }
 
       if (error.code === 'ECONNABORTED' || error.name === 'TimeoutError') {
         throw new HttpException(
-          'Timeout lors de la vérification du paiement', 
-          HttpStatus.REQUEST_TIMEOUT
+          'Timeout lors de la vérification du paiement',
+          HttpStatus.REQUEST_TIMEOUT,
         );
       }
 
       throw new HttpException(
-        error.message || 'Erreur lors de la vérification du paiement', 
-        HttpStatus.INTERNAL_SERVER_ERROR
+        error.message || 'Erreur lors de la vérification du paiement',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -203,23 +206,28 @@ export class PaymentsService {
       }
 
       // Créer le paiement
-      const payment = await this.paymentModel.create([{
-        userId,
-        amount: paymentData.montant,
-        currency: 'EUR',
-        method: 'MONEYFUSION',
-        status: PaymentStatus.COMPLETED,
-        moneyFusionToken: token,
-        reference: paymentData.reference || token,
-        metadata: paymentData,
-        paidAt: new Date(),
-      }], { session });
+      const payment = await this.paymentModel.create(
+        [
+          {
+            userId,
+            amount: paymentData.montant,
+            currency: 'EUR',
+            method: 'MONEYFUSION',
+            status: PaymentStatus.COMPLETED,
+            moneyFusionToken: token,
+            reference: paymentData.reference || token,
+            metadata: paymentData,
+            paidAt: new Date(),
+          },
+        ],
+        { session },
+      );
 
       // Créditer l'utilisateur
       const updatedUser = await this.userModel.findByIdAndUpdate(
         userId,
         { $inc: { credits: paymentData.montant } },
-        { new: true, session }
+        { new: true, session },
       );
 
       await session.commitTransaction();
@@ -232,20 +240,19 @@ export class PaymentsService {
         payment: payment[0],
         // credits: updatedUser.credits,
       };
-
     } catch (error) {
       await session.abortTransaction();
       this.logger.error('Erreur callback MoneyFusion:', error);
-      
+
       // Marquer le paiement comme échoué en cas d'erreur
       if (error instanceof NotFoundException) {
         await this.paymentModel.updateOne(
           { moneyFusionToken: token },
           { status: PaymentStatus.FAILED },
-          { session }
+          { session },
         );
       }
-      
+
       throw error;
     } finally {
       session.endSession();
@@ -284,17 +291,14 @@ export class PaymentsService {
       const paymentData = verification.payment.metadata;
 
       // Trouver l'utilisateur
-      const user = await this.userModel.findOne({
-        $or: [
-          { phone: paymentData.numeroSend }, 
-          { email: paymentData.email }
-        ],
-      }).session(session);
+      const user = await this.userModel
+        .findOne({
+          $or: [{ phone: paymentData.numeroSend }, { email: paymentData.email }],
+        })
+        .session(session);
 
       if (!user) {
-        this.logger.error(
-          `Utilisateur introuvable pour le webhook: ${paymentData.numeroSend}`,
-        );
+        this.logger.error(`Utilisateur introuvable pour le webhook: ${paymentData.numeroSend}`);
 
         // Marquer le paiement comme en attente
         await this.paymentModel.findByIdAndUpdate(
@@ -306,7 +310,7 @@ export class PaymentsService {
               webhookError: 'Utilisateur introuvable',
             },
           },
-          { session }
+          { session },
         );
 
         await session.commitTransaction();
@@ -317,13 +321,13 @@ export class PaymentsService {
       await this.paymentModel.findByIdAndUpdate(
         verification.payment._id,
         { userId: user._id },
-        { session }
+        { session },
       );
 
       await this.userModel.findByIdAndUpdate(
         user._id,
         { $inc: { credits: paymentData.montant } },
-        { session }
+        { session },
       );
 
       await session.commitTransaction();
@@ -335,7 +339,6 @@ export class PaymentsService {
         message: 'Paiement traité',
         paymentId: verification.payment._id,
       };
-
     } catch (error) {
       await session.abortTransaction();
       this.logger.error('Erreur webhook MoneyFusion:', error);
@@ -363,12 +366,7 @@ export class PaymentsService {
   /**
    * Lister les paiements avec pagination et filtres
    */
-  async findAll(query: {
-    page?: number;
-    limit?: number;
-    userId?: string;
-    status?: PaymentStatus;
-  }) {
+  async findAll(query: { page?: number; limit?: number; userId?: string; status?: PaymentStatus }) {
     const { page = 1, limit = 10, userId, status } = query;
     const skip = (page - 1) * limit;
 
@@ -456,24 +454,16 @@ export class PaymentsService {
    * Obtenir les statistiques des paiements
    */
   async getStatistics() {
-    const [
-      total,
-      byStatus,
-      totalRevenue,
-      avgAmount,
-      last30Days
-    ] = await Promise.all([
+    const [total, byStatus, totalRevenue, avgAmount, last30Days] = await Promise.all([
       this.paymentModel.countDocuments().exec(),
-      
-      this.paymentModel.aggregate([
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-      ]),
-      
+
+      this.paymentModel.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+
       this.paymentModel.aggregate([
         { $match: { status: PaymentStatus.COMPLETED } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      
+
       this.paymentModel.aggregate([
         { $match: { status: PaymentStatus.COMPLETED } },
         { $group: { _id: null, avg: { $avg: '$amount' } } },
@@ -486,12 +476,12 @@ export class PaymentsService {
             paidAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
           },
         },
-        { 
-          $group: { 
-            _id: null, 
-            total: { $sum: '$amount' }, 
-            count: { $sum: 1 } 
-          } 
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$amount' },
+            count: { $sum: 1 },
+          },
         },
       ]),
     ]);

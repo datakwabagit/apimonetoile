@@ -25,7 +25,7 @@ export class KnowledgeService {
     });
 
     await knowledge.save();
-    
+
     // Si la connaissance est publiée immédiatement, créer une notification
     if (createKnowledgeDto.isPublished) {
       try {
@@ -42,7 +42,7 @@ export class KnowledgeService {
         console.error('Erreur lors de la création de la notification:', error);
       }
     }
-    
+
     return knowledge.populate('authorId', 'firstName lastName email role');
   }
 
@@ -128,7 +128,11 @@ export class KnowledgeService {
     }
 
     // Vérifier les permissions
-    if (knowledge.authorId.toString() !== userId && userRole !== Role.ADMIN && userRole !== Role.SUPER_ADMIN) {
+    if (
+      knowledge.authorId.toString() !== userId &&
+      userRole !== Role.ADMIN &&
+      userRole !== Role.SUPER_ADMIN
+    ) {
       throw new ForbiddenException("Vous n'avez pas la permission de modifier cette connaissance");
     }
 
@@ -137,7 +141,7 @@ export class KnowledgeService {
     // Si on publie pour la première fois
     if (updateKnowledgeDto.isPublished && !knowledge.isPublished) {
       updateKnowledgeDto['publishedAt'] = new Date();
-      
+
       // Créer une notification pour la nouvelle publication
       if (wasUnpublished) {
         try {
@@ -170,7 +174,11 @@ export class KnowledgeService {
     }
 
     // Vérifier les permissions
-    if (knowledge.authorId.toString() !== userId && userRole !== Role.ADMIN && userRole !== Role.SUPER_ADMIN) {
+    if (
+      knowledge.authorId.toString() !== userId &&
+      userRole !== Role.ADMIN &&
+      userRole !== Role.SUPER_ADMIN
+    ) {
       throw new ForbiddenException("Vous n'avez pas la permission de supprimer cette connaissance");
     }
 
@@ -189,7 +197,7 @@ export class KnowledgeService {
     }
 
     const userIdObj = userId as any;
-    const likedIndex = knowledge.likedBy.findIndex(id => id.toString() === userId);
+    const likedIndex = knowledge.likedBy.findIndex((id) => id.toString() === userId);
 
     if (likedIndex > -1) {
       // Retirer le like

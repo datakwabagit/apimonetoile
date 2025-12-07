@@ -14,10 +14,10 @@ import { Role } from '../../common/enums/role.enum';
 import { Permission } from '../../common/enums/permission.enum';
 
 export class CreateUserDto {
-    @IsString()
-    @MinLength(3)
-    @MaxLength(30)
-    username: string;
+  @IsString()
+  @MinLength(3)
+  @MaxLength(30)
+  username: string;
 
   @IsString()
   gender: string; // Peut être 'male', 'female', 'other', 'Homme', 'Femme', 'Autre'
@@ -57,10 +57,6 @@ export class CreateUserDto {
   @IsOptional()
   customPermissions?: Permission[];
 
-
-
- 
-
   @IsDateString()
   @IsOptional()
   dateOfBirth?: string;
@@ -72,7 +68,6 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   city?: string;
-
 
   @IsString()
   @IsOptional()

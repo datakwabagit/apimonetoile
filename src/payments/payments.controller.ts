@@ -100,10 +100,7 @@ export class PaymentsController {
     @CurrentUser() user: UserDocument,
     @Body() body: MoneyfusionCallbackDto,
   ) {
-    return this.paymentsService.handleMoneyfusionCallback(
-      user._id.toString(),
-      body,
-    );
+    return this.paymentsService.handleMoneyfusionCallback(user._id.toString(), body);
   }
 
   /**
@@ -147,22 +144,19 @@ export class PaymentsController {
     summary: 'Créer un paiement',
     description: 'Crée un nouveau paiement standard.',
   })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Paiement créé avec succès.' 
+  @ApiResponse({
+    status: 201,
+    description: 'Paiement créé avec succès.',
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Données invalides.' 
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides.',
   })
   @ApiResponse({
     status: 403,
     description: 'Permissions insuffisantes.',
   })
-  create(
-    @CurrentUser() user: UserDocument,
-    @Body() createPaymentDto: CreatePaymentDto,
-  ) {
+  create(@CurrentUser() user: UserDocument, @Body() createPaymentDto: CreatePaymentDto) {
     return this.paymentsService.create(user._id.toString(), createPaymentDto);
   }
 
@@ -187,7 +181,7 @@ export class PaymentsController {
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Nombre d\'éléments par page (défaut: 10, max: 100)',
+    description: "Nombre d'éléments par page (défaut: 10, max: 100)",
     example: 10,
   })
   @ApiQuery({
@@ -202,9 +196,9 @@ export class PaymentsController {
     type: String,
     description: 'Filtrer par ID utilisateur',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Liste des paiements retournée.' 
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des paiements retournée.',
   })
   @ApiResponse({
     status: 403,
@@ -224,11 +218,11 @@ export class PaymentsController {
       throw new BadRequestException('La limite doit être entre 1 et 100');
     }
 
-    return this.paymentsService.findAll({ 
-      page, 
-      limit, 
+    return this.paymentsService.findAll({
+      page,
+      limit,
       status,
-      userId 
+      userId,
     });
   }
 
@@ -253,12 +247,12 @@ export class PaymentsController {
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Nombre d\'éléments par page (défaut: 10, max: 100)',
+    description: "Nombre d'éléments par page (défaut: 10, max: 100)",
     example: 10,
   })
   @ApiResponse({
     status: 200,
-    description: 'Liste des paiements de l\'utilisateur.',
+    description: "Liste des paiements de l'utilisateur.",
   })
   @ApiResponse({
     status: 403,
@@ -323,31 +317,28 @@ export class PaymentsController {
     type: String,
     example: '507f1f77bcf86cd799439011',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Paiement retourné.' 
+  @ApiResponse({
+    status: 200,
+    description: 'Paiement retourné.',
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Paiement introuvable.' 
+  @ApiResponse({
+    status: 404,
+    description: 'Paiement introuvable.',
   })
   @ApiResponse({
     status: 403,
     description: 'Permissions insuffisantes.',
   })
-  async findOne(
-    @CurrentUser() user: UserDocument,
-    @Param('id') id: string,
-  ) {
+  async findOne(@CurrentUser() user: UserDocument, @Param('id') id: string) {
     const payment = await this.paymentsService.findOne(id);
-    
+
     // Vérification supplémentaire pour s'assurer que l'utilisateur peut voir ce paiement
     // Cette logique pourrait être déplacée dans le service ou un guard personnalisé
     const hasReadAnyPermission = user.customPermissions?.includes(Permission.READ_ANY_PAYMENT);
     const isOwner = payment.userId?.toString() === user._id.toString();
-    
+
     if (!hasReadAnyPermission && !isOwner) {
-      throw new BadRequestException('Vous n\'avez pas accès à ce paiement');
+      throw new BadRequestException("Vous n'avez pas accès à ce paiement");
     }
 
     return payment;
@@ -361,7 +352,7 @@ export class PaymentsController {
   @Permissions(Permission.UPDATE_PAYMENT)
   @ApiOperation({
     summary: 'Mettre à jour un paiement',
-    description: 'Met à jour les informations d\'un paiement.',
+    description: "Met à jour les informations d'un paiement.",
   })
   @ApiParam({
     name: 'id',
@@ -369,22 +360,19 @@ export class PaymentsController {
     type: String,
     example: '507f1f77bcf86cd799439011',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Paiement mis à jour.' 
+  @ApiResponse({
+    status: 200,
+    description: 'Paiement mis à jour.',
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Paiement introuvable.' 
+  @ApiResponse({
+    status: 404,
+    description: 'Paiement introuvable.',
   })
   @ApiResponse({
     status: 403,
     description: 'Permissions insuffisantes.',
   })
-  update(
-    @Param('id') id: string, 
-    @Body() updatePaymentDto: UpdatePaymentDto
-  ) {
+  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
     return this.paymentsService.update(id, updatePaymentDto);
   }
 }

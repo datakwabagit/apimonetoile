@@ -21,7 +21,7 @@ export class User {
 
   @Prop({ required: true })
   phone: string;
-  
+
   @Prop({ trim: true })
   firstName?: string;
 
@@ -53,7 +53,6 @@ export class User {
   })
   customPermissions?: Permission[];
 
-
   @Prop()
   dateOfBirth?: Date;
 
@@ -62,7 +61,6 @@ export class User {
 
   @Prop()
   city?: string;
-
 
   @Prop()
   profilePicture?: string;
@@ -125,4 +123,3 @@ UserSchema.index({ createdAt: -1 });
 UserSchema.index({ emailVerified: 1 });
 UserSchema.index({ specialties: 1 });
 UserSchema.index({ rating: -1 });
-

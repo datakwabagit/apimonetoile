@@ -35,7 +35,9 @@ import { AppService } from './app.service';
     // Rate Limiting (protection contre les attaques)
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService): import('@nestjs/throttler').ThrottlerModuleOptions => {
+      useFactory: (
+        configService: ConfigService,
+      ): import('@nestjs/throttler').ThrottlerModuleOptions => {
         return {
           throttlers: [
             {

@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Notification, NotificationDocument, NotificationType } from './schemas/notification.schema';
+import {
+  Notification,
+  NotificationDocument,
+  NotificationType,
+} from './schemas/notification.schema';
 
 @Injectable()
 export class NotificationsService {
@@ -28,7 +32,11 @@ export class NotificationsService {
   /**
    * Créer une notification pour un résultat de consultation disponible
    */
-  async createConsultationResultNotification(userId: string, consultationId: string, consultationTitle: string) {
+  async createConsultationResultNotification(
+    userId: string,
+    consultationId: string,
+    consultationTitle: string,
+  ) {
     return this.create({
       userId,
       type: NotificationType.CONSULTATION_RESULT,
@@ -44,7 +52,11 @@ export class NotificationsService {
   /**
    * Créer une notification pour une nouvelle connaissance partagée
    */
-  async createNewKnowledgeNotification(knowledgeId: string, knowledgeTitle: string, category: string) {
+  async createNewKnowledgeNotification(
+    knowledgeId: string,
+    knowledgeTitle: string,
+    category: string,
+  ) {
     // Envoyer la notification à tous les utilisateurs actifs
     // Dans une implémentation réelle, on pourrait filtrer par préférences utilisateur
     const notification = {
@@ -66,7 +78,11 @@ export class NotificationsService {
   /**
    * Créer une notification pour une consultation assignée (pour le consultant)
    */
-  async createConsultationAssignedNotification(consultantId: string, consultationId: string, consultationTitle: string) {
+  async createConsultationAssignedNotification(
+    consultantId: string,
+    consultationId: string,
+    consultationTitle: string,
+  ) {
     return this.create({
       userId: consultantId,
       type: NotificationType.CONSULTATION_ASSIGNED,
@@ -106,7 +122,7 @@ export class NotificationsService {
       limit?: number;
       isRead?: boolean;
       type?: NotificationType;
-    }
+    },
   ) {
     const { page = 1, limit = 20, isRead, type } = query;
     const skip = (page - 1) * limit;
@@ -116,16 +132,13 @@ export class NotificationsService {
     if (type) filter.type = type;
 
     const [notifications, total] = await Promise.all([
-      this.notificationModel
-        .find(filter)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 })
-        .exec(),
+      this.notificationModel.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).exec(),
       this.notificationModel.countDocuments(filter).exec(),
     ]);
 
-    const unreadCount = await this.notificationModel.countDocuments({ userId, isRead: false }).exec();
+    const unreadCount = await this.notificationModel
+      .countDocuments({ userId, isRead: false })
+      .exec();
 
     return {
       notifications,
@@ -142,7 +155,7 @@ export class NotificationsService {
    */
   async markAsRead(id: string, userId: string) {
     const notification = await this.notificationModel.findOne({ _id: id, userId });
-    
+
     if (!notification) {
       throw new Error('Notification non trouvée');
     }
@@ -160,7 +173,7 @@ export class NotificationsService {
   async markAllAsRead(userId: string) {
     const result = await this.notificationModel.updateMany(
       { userId, isRead: false },
-      { isRead: true, readAt: new Date() }
+      { isRead: true, readAt: new Date() },
     );
 
     return {
@@ -174,7 +187,7 @@ export class NotificationsService {
    */
   async remove(id: string, userId: string) {
     const result = await this.notificationModel.deleteOne({ _id: id, userId });
-    
+
     if (result.deletedCount === 0) {
       throw new Error('Notification non trouvée');
     }

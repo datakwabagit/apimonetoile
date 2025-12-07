@@ -38,7 +38,10 @@ export class ServicesController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'Lister les services', description: 'Retourne la liste des services disponibles.' })
+  @ApiOperation({
+    summary: 'Lister les services',
+    description: 'Retourne la liste des services disponibles.',
+  })
   @ApiResponse({ status: 200, description: 'Liste des services.' })
   findAll(
     @Query('page') page?: number,
@@ -51,7 +54,10 @@ export class ServicesController {
 
   @Public()
   @Get(':id')
-  @ApiOperation({ summary: 'Obtenir un service', description: 'Retourne les détails d’un service par son ID.' })
+  @ApiOperation({
+    summary: 'Obtenir un service',
+    description: 'Retourne les détails d’un service par son ID.',
+  })
   @ApiResponse({ status: 200, description: 'Détails du service.' })
   findOne(@Param('id') id: string) {
     return this.servicesService.findOne(id);

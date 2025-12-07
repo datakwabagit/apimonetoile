@@ -18,7 +18,7 @@ export class Consultation {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Service' })
   serviceId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: String, enum: ConsultationType})
+  @Prop({ type: String, enum: ConsultationType })
   type: ConsultationType;
 
   @Prop({ type: String, enum: ConsultationStatus, default: ConsultationStatus.PENDING })

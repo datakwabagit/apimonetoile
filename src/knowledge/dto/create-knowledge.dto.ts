@@ -1,4 +1,12 @@
-import { IsString, IsEnum, IsOptional, IsArray, IsBoolean, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 import { KnowledgeCategory } from '../schemas/knowledge.schema';
 
 export class CreateKnowledgeDto {

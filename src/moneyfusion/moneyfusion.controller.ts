@@ -1,7 +1,14 @@
 import { Controller, Post, Body, Get, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { MoneyfusionService } from './moneyfusion.service';
 import { CreatePaymentDto, ArticleDto, PersonalInfoDto } from './dto/create-payment.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiExtraModels,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 
 @ApiTags('MoneyFusion')
 @Controller('moneyfusion')
@@ -34,10 +41,10 @@ export class MoneyfusionController {
       example: {
         event: 'payment_success',
         token: '123456TOKEN',
-        amount: 100
-      }
+        amount: 100,
+      },
     },
-    description: 'Payload envoyé par MoneyFusion lors d’un webhook.'
+    description: 'Payload envoyé par MoneyFusion lors d’un webhook.',
   })
   @HttpCode(HttpStatus.OK)
   handleWebhook(@Body() payload: any) {

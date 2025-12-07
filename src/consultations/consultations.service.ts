@@ -111,7 +111,7 @@ export class ConsultationsService {
    */
   async update(id: string, updateConsultationDto: UpdateConsultationDto) {
     const currentConsultation = await this.consultationModel.findById(id).exec();
-    
+
     if (!currentConsultation) {
       throw new NotFoundException('Consultation not found');
     }
@@ -119,7 +119,7 @@ export class ConsultationsService {
     // Si le statut passe à COMPLETED, mettre la date de complétion
     if (updateConsultationDto.status === ConsultationStatus.COMPLETED) {
       updateConsultationDto['completedDate'] = new Date();
-      
+
       // Créer une notification si un résultat a été ajouté
       if (updateConsultationDto.result || updateConsultationDto.resultData) {
         try {

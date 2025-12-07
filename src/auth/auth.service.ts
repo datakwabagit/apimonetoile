@@ -21,13 +21,13 @@ export class AuthService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Inscription d'un nouvel utilisateur
    */
   async register(registerDto: RegisterDto) {
-console.log('Register DTO:', registerDto);
+    console.log('Register DTO:', registerDto);
 
     // Nouveau RegisterDto : username, gender, country, phone, password, autres champs optionnels
     const { username, gender, country, phone, password, ...optionals } = registerDto;
@@ -36,7 +36,7 @@ console.log('Register DTO:', registerDto);
     const email = `${username}@monetoile.org`;
 
     // Vérifier si le username ou l'email existe déjà
-    const existingUser = await this.userModel.findOne({ $or: [ { email }, { username } ] }).exec();
+    const existingUser = await this.userModel.findOne({ $or: [{ email }, { username }] }).exec();
     if (existingUser) {
       throw new ConflictException('Username or email already exists');
     }

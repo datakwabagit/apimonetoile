@@ -6,6 +6,6 @@ import { CreateUserDto } from './create-user.dto';
  * Tous les champs sont optionnels sauf le password (sécurité)
  */
 export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['password'] as const)) {
-	/** Email optionnel pour la mise à jour */
-	email?: string;
+  /** Email optionnel pour la mise à jour */
+  email?: string;
 }

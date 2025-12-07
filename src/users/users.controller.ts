@@ -33,17 +33,23 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('count')
-  @ApiOperation({ summary: "Nombre d'abonnés", description: "Retourne le nombre total d'utilisateurs inscrits." })
+  @ApiOperation({
+    summary: "Nombre d'abonnés",
+    description: "Retourne le nombre total d'utilisateurs inscrits.",
+  })
   @ApiResponse({ status: 200, description: "Nombre d'abonnés." })
   async getSubscribersCount() {
     return { count: await this.usersService.getSubscribersCount() };
   }
- 
+
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Créer un utilisateur', description: 'Crée un nouvel utilisateur (réservé aux admins).' })
+  @ApiOperation({
+    summary: 'Créer un utilisateur',
+    description: 'Crée un nouvel utilisateur (réservé aux admins).',
+  })
   @ApiResponse({ status: 201, description: 'Utilisateur créé.' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
@@ -51,7 +57,10 @@ export class UsersController {
 
   @Get()
   @UseGuards(PermissionsGuard)
-  @ApiOperation({ summary: 'Lister les utilisateurs', description: 'Retourne la liste de tous les utilisateurs (admin seulement).' })
+  @ApiOperation({
+    summary: 'Lister les utilisateurs',
+    description: 'Retourne la liste de tous les utilisateurs (admin seulement).',
+  })
   @ApiResponse({ status: 200, description: 'Liste des utilisateurs.' })
   @Permissions(Permission.READ_ANY_USER)
   findAll(

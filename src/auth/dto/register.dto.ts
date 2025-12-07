@@ -1,4 +1,3 @@
-
 export interface RegisterDto {
   username: string;
   gender: string;
