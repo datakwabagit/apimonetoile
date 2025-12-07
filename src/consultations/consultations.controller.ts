@@ -77,14 +77,13 @@ export class ConsultationsController {
 
   /**
    * GET /consultations
-   * Récupérer toutes les consultations (admin/consultant)
+   * Récupérer toutes les consultations (PUBLIC)
    */
   @Get()
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.READ_ANY_CONSULTATION)
+  @Public()
   @ApiOperation({
     summary: 'Lister les consultations',
-    description: 'Retourne toutes les consultations (admin/consultant).',
+    description: 'Retourne toutes les consultations (accessible publiquement).',
   })
   @ApiResponse({ status: 200, description: 'Liste des consultations.' })
   async findAll(
@@ -164,14 +163,13 @@ export class ConsultationsController {
 
   /**
    * GET /consultations/:id
-   * Récupérer une consultation par ID
+   * Récupérer une consultation par ID (PUBLIC)
    */
   @Get(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.READ_OWN_CONSULTATION)
+  @Public()
   @ApiOperation({
     summary: 'Récupérer une consultation',
-    description: 'Récupère une consultation complète avec son analyse.',
+    description: 'Récupère une consultation complète avec son analyse (accessible publiquement).',
   })
   @ApiResponse({ status: 200, description: 'Consultation trouvée.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
