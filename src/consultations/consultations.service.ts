@@ -6,11 +6,13 @@ import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Role } from '../common/enums/role.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ConsultationsService {
   constructor(
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -108,9 +110,29 @@ export class ConsultationsService {
    * Mettre à jour une consultation
    */
   async update(id: string, updateConsultationDto: UpdateConsultationDto) {
+    const currentConsultation = await this.consultationModel.findById(id).exec();
+    
+    if (!currentConsultation) {
+      throw new NotFoundException('Consultation not found');
+    }
+
     // Si le statut passe à COMPLETED, mettre la date de complétion
     if (updateConsultationDto.status === ConsultationStatus.COMPLETED) {
       updateConsultationDto['completedDate'] = new Date();
+      
+      // Créer une notification si un résultat a été ajouté
+      if (updateConsultationDto.result || updateConsultationDto.resultData) {
+        try {
+          await this.notificationsService.createConsultationResultNotification(
+            currentConsultation.clientId.toString(),
+            id,
+            currentConsultation.title,
+          );
+        } catch (error) {
+          console.error('Erreur lors de la création de la notification:', error);
+          // Ne pas bloquer la mise à jour si la notification échoue
+        }
+      }
     }
 
     const consultation = await this.consultationModel
@@ -146,6 +168,17 @@ export class ConsultationsService {
 
     if (!consultation) {
       throw new NotFoundException('Consultation not found');
+    }
+
+    // Créer une notification pour le consultant
+    try {
+      await this.notificationsService.createConsultationAssignedNotification(
+        consultantId,
+        consultationId,
+        consultation.title,
+      );
+    } catch (error) {
+      console.error('Erreur lors de la création de la notification:', error);
     }
 
     return consultation;

@@ -9,6 +9,8 @@ import { UsersModule } from './users/users.module';
 import { ConsultationsModule } from './consultations/consultations.module';
 import { ServicesModule } from './services/services.module';
 import { PaymentsModule } from './payments/payments.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -52,6 +54,8 @@ import { AppService } from './app.service';
     ConsultationsModule,
     ServicesModule,
     PaymentsModule,
+    NotificationsModule,
+    KnowledgeModule,
     require('./moneyfusion/moneyfusion.module').MoneyfusionModule,
     require('./common/site-metrics.module').SiteMetricsModule,
   ],
