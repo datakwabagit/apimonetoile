@@ -244,4 +244,79 @@ export class AdminService {
 
     return { consultations, total };
   }
+
+  async getPayments(options: {
+    search?: string;
+    status?: string;
+    method?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { search, status = 'all', method = 'all', page = 1, limit = 18 } = options || {};
+
+    const filter: any = {};
+
+    if (status && status !== 'all') {
+      filter.status = status.toUpperCase();
+    }
+
+    if (method && method !== 'all') {
+      filter.method = method.toUpperCase();
+    }
+
+    if (search && search.trim().length > 0) {
+      const re = new RegExp(search.trim(), 'i');
+      // search by transactionId, metadata fields, or referenced user/phone later
+      filter.$or = [
+        { transactionId: re },
+        { 'metadata.reference': re },
+      ];
+    }
+
+    const skip = Math.max(0, (page - 1) * limit);
+
+    const [total, docs] = await Promise.all([
+      this.paymentModel.countDocuments(filter).exec(),
+      this.paymentModel
+        .find(filter)
+        .populate('userId', 'firstName lastName phone email')
+        .populate({ path: 'consultationId', select: 'formData' })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+    ]);
+
+    const payments = docs.map((p: any) => {
+      // customer info: prefer populated user, fallback to consultation.formData
+      let customerName = '';
+      let customerPhone = '';
+      if (p.userId) {
+        customerName = `${p.userId.firstName || ''} ${p.userId.lastName || ''}`.trim();
+        customerPhone = p.userId.phone || '';
+      }
+      if ((!customerName || !customerPhone) && p.consultationId && p.consultationId.formData) {
+        const fd = p.consultationId.formData;
+        if (!customerName) customerName = `${fd.firstName || ''} ${fd.lastName || ''}`.trim();
+        if (!customerPhone) customerPhone = fd.telephone || fd.phone || '';
+      }
+
+      const reference = p.transactionId || p.metadata?.reference || (p._id ? p._id.toString() : undefined);
+
+      return {
+        id: p._id.toString(),
+        reference,
+        amount: p.amount || 0,
+        status: (p.status || '').toLowerCase(),
+        method: (p.method || '').toLowerCase(),
+        customerName: customerName || 'Client',
+        customerPhone: customerPhone || '',
+        createdAt: p.createdAt,
+        completedAt: p.paidAt || p.refundedAt || null,
+      };
+    });
+
+    return { payments, total };
+  }
 }

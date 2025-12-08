@@ -65,4 +65,27 @@ export class AdminController {
 
     return result;
   }
+
+  @Get('payments')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_ANY_PAYMENT)
+  @ApiOperation({ summary: 'Lister les paiements (admin)' })
+  @ApiResponse({ status: 200, description: 'Liste paginée des paiements' })
+  async getPayments(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('method') method?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '18',
+  ) {
+    const result = await this.adminService.getPayments({
+      search,
+      status,
+      method,
+      page: parseInt(page as string, 10) || 1,
+      limit: parseInt(limit as string, 10) || 18,
+    });
+
+    return result;
+  }
 }
