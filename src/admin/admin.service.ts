@@ -170,11 +170,13 @@ export class AdminService {
         .exec(),
     ]);
 
-    const users = docs.map((u: any) => ({
-      ...u,
-      id: u._id.toString(),
-      _id: undefined, // Remove _id since we have id
-    }));
+    const users = docs.map((u: any) => {
+      const { _id, password, ...userData } = u;
+      return {
+        ...userData,
+        id: _id.toString(),
+      };
+    });
 
     return { users, total };
   }
