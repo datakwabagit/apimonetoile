@@ -212,7 +212,7 @@ export class AdminService {
       this.consultationModel.countDocuments(filter).exec(),
       this.consultationModel
         .find(filter)
-        .populate('clientId', 'firstName lastName email')
+        .populate('clientId', 'firstName lastName email phone')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -220,18 +220,13 @@ export class AdminService {
         .exec(),
     ]);
 
-    const consultations = docs.map((c: any) => ({
-      id: c._id.toString(),
-      type: c.type,
-      status: (c.status || '').toLowerCase(),
-      clientName: c.clientId
-        ? `${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`.trim()
-        : 'Invité',
-      clientEmail: c.clientId ? c.clientId.email : '',
-      price: c.price || 0,
-      createdAt: c.createdAt,
-      completedAt: c.completedDate || null,
-    }));
+    const consultations = docs.map((c: any) => {
+      const { _id, ...consultationData } = c;
+      return {
+        ...consultationData,
+        id: _id.toString(),
+      };
+    });
 
     return { consultations, total };
   }
