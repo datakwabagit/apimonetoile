@@ -171,16 +171,9 @@ export class AdminService {
     ]);
 
     const users = docs.map((u: any) => ({
+      ...u,
       id: u._id.toString(),
-      email: u.email,
-      prenom: u.firstName || '',
-      nom: u.lastName || '',
-      telephone: u.phone || '',
-      role: (u.role || '').toLowerCase(),
-      status: u.isActive ? 'active' : 'inactive',
-      createdAt: u.createdAt,
-      lastLogin: u.lastLogin,
-      consultationsCount: u.totalConsultations || u.totalConsultations === 0 ? u.totalConsultations : u.totalConsultations || 0,
+      _id: undefined, // Remove _id since we have id
     }));
 
     return { users, total };
