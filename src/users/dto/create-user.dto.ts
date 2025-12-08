@@ -1,5 +1,4 @@
 import {
-  IsEmail,
   IsString,
   IsEnum,
   MinLength,
@@ -8,7 +7,6 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
-  Matches,
 } from 'class-validator';
 import { Role } from '../../common/enums/role.enum';
 import { Permission } from '../../common/enums/permission.enum';

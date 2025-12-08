@@ -238,7 +238,7 @@ export class PaymentsService {
         status: 'success',
         message: 'Paiement enregistré avec succès',
         payment: payment[0],
-        // credits: updatedUser.credits,
+        credits: updatedUser ? updatedUser.credits : undefined,
       };
     } catch (error) {
       await session.abortTransaction();

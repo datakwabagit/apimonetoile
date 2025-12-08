@@ -222,7 +222,9 @@ Ton : Professionnel, empathique, encourageant.`,
       `[${requestId}] 🚀 Appel API DeepSeek - Model: ${model}, MaxTokens: ${maxTokens}, Temp: ${temperature}`,
     );
 
-    this.logger.log(`[${requestId}] 🚀 Appel API DeepSeek démarré - Model: ${model}, Tokens max: ${maxTokens}, Temp: ${temperature}`);
+    this.logger.log(
+      `[${requestId}] 🚀 Appel API DeepSeek démarré - Model: ${model}, Tokens max: ${maxTokens}, Temp: ${temperature}`,
+    );
     this.logger.debug(`[${requestId}] Messages: ${messages.length} messages`);
 
     const requestBody: DeepSeekRequest = {
@@ -347,7 +349,7 @@ Ton : Professionnel, empathique, encourageant.`,
       // 1. Générer la carte du ciel
       this.logger.log(`[${sessionId}] 📊 ÉTAPE 1/4: Génération carte du ciel...`);
       const step1Start = Date.now();
-      
+
       const carteDuCielPrompt = this.PROMPT_TEMPLATES.carteDuCiel(birthData);
       const carteDuCielResponse = await this.callDeepSeekApi(
         [
@@ -367,7 +369,7 @@ Ton : Professionnel, empathique, encourageant.`,
       // 2. Générer la mission de vie
       this.logger.log(`[${sessionId}] 🎯 ÉTAPE 2/4: Génération mission de vie...`);
       const step2Start = Date.now();
-      
+
       const missionDeViePrompt = this.PROMPT_TEMPLATES.missionDeVie(birthData, carteDuCielTexte);
       const missionDeVieResponse = await this.callDeepSeekApi(
         [
@@ -389,7 +391,9 @@ Ton : Professionnel, empathique, encourageant.`,
       const step3Start = Date.now();
       const positions = this.parsePositionsAmeliore(carteDuCielTexte);
       const step3Duration = Date.now() - step3Start;
-      this.logger.log(`[${sessionId}] ✅ ÉTAPE 3 terminée en ${step3Duration}ms - ${positions.length} positions`);
+      this.logger.log(
+        `[${sessionId}] ✅ ÉTAPE 3 terminée en ${step3Duration}ms - ${positions.length} positions`,
+      );
 
       // 4. Construire le résultat
       this.logger.log(`[${sessionId}] 🏗️ ÉTAPE 4/4: Construction du résultat final...`);

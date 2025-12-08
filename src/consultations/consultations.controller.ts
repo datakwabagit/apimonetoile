@@ -195,7 +195,7 @@ export class ConsultationsController {
         throw new HttpException(
           {
             success: false,
-            message: "Aucune analyse trouvée pour cette consultation",
+            message: 'Aucune analyse trouvée pour cette consultation',
           },
           HttpStatus.NOT_FOUND,
         );

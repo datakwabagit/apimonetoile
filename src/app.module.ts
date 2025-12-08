@@ -13,6 +13,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { MoneyfusionModule } from './moneyfusion/moneyfusion.module';
+import { SiteMetricsModule } from './common/site-metrics.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -58,8 +61,9 @@ import { AppService } from './app.service';
     PaymentsModule,
     NotificationsModule,
     KnowledgeModule,
-    require('./moneyfusion/moneyfusion.module').MoneyfusionModule,
-    require('./common/site-metrics.module').SiteMetricsModule,
+    MoneyfusionModule,
+    SiteMetricsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
