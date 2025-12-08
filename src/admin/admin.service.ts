@@ -6,6 +6,8 @@ import { Consultation, ConsultationDocument } from '../consultations/schemas/con
 import { Payment, PaymentDocument } from '../payments/schemas/payment.schema';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
+import { Role } from '../common/enums/role.enum';
+import { Permission } from '../common/enums/permission.enum';
 
 @Injectable()
 export class AdminService {
@@ -115,5 +117,72 @@ export class AdminService {
         growth,
       },
     };
+  }
+
+  async getUsers(options: {
+    search?: string;
+    status?: string;
+    role?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { search, status = 'all', role = 'all', page = 1, limit = 10 } = options || {};
+
+    const filter: any = {};
+
+    if (search && search.trim().length > 0) {
+      const re = new RegExp(search.trim(), 'i');
+      filter.$or = [
+        { firstName: re },
+        { lastName: re },
+        { email: re },
+        { username: re },
+        { phone: re },
+      ];
+    }
+
+    if (status && status !== 'all') {
+      if (status === 'active') filter.isActive = true;
+      else filter.isActive = false; // treat inactive/suspended as not active
+    }
+
+    if (role && role !== 'all') {
+      const roleUpper = role.toUpperCase();
+      if (Object.values(Role).includes(roleUpper as Role)) {
+        filter.role = roleUpper;
+      } else if (role === 'admin') {
+        filter.role = Role.ADMIN;
+      } else if (role === 'user') {
+        filter.role = Role.USER;
+      }
+    }
+
+    const skip = Math.max(0, (page - 1) * limit);
+
+    const [total, docs] = await Promise.all([
+      this.userModel.countDocuments(filter).exec(),
+      this.userModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+    ]);
+
+    const users = docs.map((u: any) => ({
+      id: u._id.toString(),
+      email: u.email,
+      prenom: u.firstName || '',
+      nom: u.lastName || '',
+      telephone: u.phone || '',
+      role: (u.role || '').toLowerCase(),
+      status: u.isActive ? 'active' : 'inactive',
+      createdAt: u.createdAt,
+      lastLogin: u.lastLogin,
+      consultationsCount: u.totalConsultations || u.totalConsultations === 0 ? u.totalConsultations : u.totalConsultations || 0,
+    }));
+
+    return { users, total };
   }
 }
