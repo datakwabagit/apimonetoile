@@ -185,4 +185,63 @@ export class AdminService {
 
     return { users, total };
   }
+
+  async getConsultations(options: {
+    search?: string;
+    status?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { search, status = 'all', type = 'all', page = 1, limit = 18 } = options || {};
+
+    const filter: any = {};
+
+    if (search && search.trim().length > 0) {
+      const re = new RegExp(search.trim(), 'i');
+      filter.$or = [
+        { title: re },
+        { description: re },
+        { 'formData.firstName': re },
+        { 'formData.lastName': re },
+        { 'formData.question': re },
+      ];
+    }
+
+    if (status && status !== 'all') {
+      // Map frontend statuses to stored statuses
+      filter.status = status.toUpperCase();
+    }
+
+    if (type && type !== 'all') {
+      filter.type = type;
+    }
+
+    const skip = Math.max(0, (page - 1) * limit);
+
+    const [total, docs] = await Promise.all([
+      this.consultationModel.countDocuments(filter).exec(),
+      this.consultationModel
+        .find(filter)
+        .populate('clientId', 'firstName lastName email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+    ]);
+
+    const consultations = docs.map((c: any) => ({
+      id: c._id.toString(),
+      type: c.type,
+      status: (c.status || '').toLowerCase(),
+      clientName: c.clientId ? `${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`.trim() : 'Invité',
+      clientEmail: c.clientId ? c.clientId.email : '',
+      price: c.price || 0,
+      createdAt: c.createdAt,
+      completedAt: c.completedDate || null,
+    }));
+
+    return { consultations, total };
+  }
 }

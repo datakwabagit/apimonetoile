@@ -1,11 +1,10 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { Permission } from '../common/enums/permission.enum';
 import { AdminService } from './admin.service';
-import { Query, UseGuards } from '@nestjs/common';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -39,6 +38,29 @@ export class AdminController {
       role,
       page: parseInt(page as string, 10) || 1,
       limit: parseInt(limit as string, 10) || 10,
+    });
+
+    return result;
+  }
+
+  @Get('consultations')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_ANY_CONSULTATION)
+  @ApiOperation({ summary: 'Lister les consultations (admin)' })
+  @ApiResponse({ status: 200, description: 'Liste paginée des consultations' })
+  async getConsultations(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '18',
+  ) {
+    const result = await this.adminService.getConsultations({
+      search,
+      status,
+      type,
+      page: parseInt(page as string, 10) || 1,
+      limit: parseInt(limit as string, 10) || 18,
     });
 
     return result;
