@@ -7,7 +7,6 @@ import { Payment, PaymentDocument } from '../payments/schemas/payment.schema';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { Role } from '../common/enums/role.enum';
-import { Permission } from '../common/enums/permission.enum';
 
 @Injectable()
 export class AdminService {
@@ -161,16 +160,11 @@ export class AdminService {
 
     const [total, docs] = await Promise.all([
       this.userModel.countDocuments(filter).exec(),
-      this.userModel
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean()
-        .exec(),
+      this.userModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec(),
     ]);
 
     const users = docs.map((u: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _id, password, ...userData } = u;
       return {
         ...userData,
@@ -230,7 +224,9 @@ export class AdminService {
       id: c._id.toString(),
       type: c.type,
       status: (c.status || '').toLowerCase(),
-      clientName: c.clientId ? `${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`.trim() : 'Invité',
+      clientName: c.clientId
+        ? `${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`.trim()
+        : 'Invité',
       clientEmail: c.clientId ? c.clientId.email : '',
       price: c.price || 0,
       createdAt: c.createdAt,
@@ -262,10 +258,7 @@ export class AdminService {
     if (search && search.trim().length > 0) {
       const re = new RegExp(search.trim(), 'i');
       // search by transactionId, metadata fields, or referenced user/phone later
-      filter.$or = [
-        { transactionId: re },
-        { 'metadata.reference': re },
-      ];
+      filter.$or = [{ transactionId: re }, { 'metadata.reference': re }];
     }
 
     const skip = Math.max(0, (page - 1) * limit);
@@ -297,7 +290,8 @@ export class AdminService {
         if (!customerPhone) customerPhone = fd.telephone || fd.phone || '';
       }
 
-      const reference = p.transactionId || p.metadata?.reference || (p._id ? p._id.toString() : undefined);
+      const reference =
+        p.transactionId || p.metadata?.reference || (p._id ? p._id.toString() : undefined);
 
       return {
         id: p._id.toString(),
