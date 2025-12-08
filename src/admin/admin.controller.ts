@@ -2,12 +2,13 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { Permission } from '../common/enums/permission.enum';
 
 @ApiTags('Admin')
 @Controller('admin')
-@UseGuards(PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
