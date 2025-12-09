@@ -16,6 +16,7 @@ import { AppService } from './app.service';
 import { MoneyfusionModule } from './moneyfusion/moneyfusion.module';
 import { SiteMetricsModule } from './common/site-metrics.module';
 import { AdminModule } from './admin/admin.module';
+import { BooksModule } from './books/books.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { AdminModule } from './admin/admin.module';
     MoneyfusionModule,
     SiteMetricsModule,
     AdminModule,
+    BooksModule,
   ],
   controllers: [AppController],
   providers: [

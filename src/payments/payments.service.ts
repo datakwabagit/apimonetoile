@@ -15,6 +15,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
+import { BooksService } from '../books/books.service';
 
 interface MoneyFusionResponse {
   statut: boolean;
@@ -46,6 +47,7 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly httpService: HttpService,
+    private readonly booksService: BooksService,
   ) {}
 
   // ==================== VALIDATION METHODS ====================
@@ -223,22 +225,58 @@ export class PaymentsService {
         { session },
       );
 
-      // Créditer l'utilisateur
-      const updatedUser = await this.userModel.findByIdAndUpdate(
-        userId,
-        { $inc: { credits: paymentData.montant } },
-        { new: true, session },
-      );
+      // Vérifier si c'est un achat de livre
+      const isBookPurchase =
+        paymentData.personal_Info &&
+        Array.isArray(paymentData.personal_Info) &&
+        paymentData.personal_Info.length > 0 &&
+        paymentData.personal_Info[0].productType === 'ebook_pdf';
+
+      let bookPurchase = null;
+
+      if (isBookPurchase) {
+        // Enregistrer l'achat du livre
+        const bookInfo = paymentData.personal_Info[0];
+        try {
+          bookPurchase = await this.booksService.recordPurchase(
+            {
+              bookId: bookInfo.bookId,
+              paymentId: payment[0]._id.toString(),
+              customerName: paymentData.nomclient || 'Client',
+              customerPhone: paymentData.numeroSend,
+              customerEmail: paymentData.email || undefined,
+              price: paymentData.montant,
+            },
+            userId,
+          );
+          this.logger.log(`Achat de livre enregistré: ${bookInfo.bookId}`);
+        } catch (bookError) {
+          this.logger.error('Erreur enregistrement achat livre:', bookError);
+          // Continue même si l'enregistrement du livre échoue
+        }
+      } else {
+        // Créditer l'utilisateur (achat de crédits classique)
+        await this.userModel.findByIdAndUpdate(
+          userId,
+          { $inc: { credits: paymentData.montant } },
+          { new: true, session },
+        );
+      }
+
+      const updatedUser = await this.userModel.findById(userId).session(session);
 
       await session.commitTransaction();
-      this.logger.log(`Paiement enregistré et utilisateur crédité: ${payment[0]._id}`);
+      this.logger.log(`Paiement enregistré: ${payment[0]._id}`);
 
       return {
         success: true,
         status: 'success',
-        message: 'Paiement enregistré avec succès',
+        message: isBookPurchase
+          ? 'Achat de livre enregistré avec succès'
+          : 'Paiement enregistré avec succès',
         payment: payment[0],
         credits: updatedUser ? updatedUser.credits : undefined,
+        bookPurchase: bookPurchase || undefined,
       };
     } catch (error) {
       await session.abortTransaction();

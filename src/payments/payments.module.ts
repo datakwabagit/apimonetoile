@@ -6,6 +6,7 @@ import { PaymentsController } from './payments.controller';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { UsersModule } from '../users/users.module';
+import { BooksModule } from '../books/books.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UsersModule } from '../users/users.module';
       { name: User.name, schema: UserSchema },
     ]),
     UsersModule,
+    BooksModule,
     HttpModule,
   ],
   controllers: [PaymentsController],
