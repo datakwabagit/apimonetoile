@@ -131,6 +131,26 @@ export class PaymentsController {
     return this.paymentsService.handleMoneyfusionWebhook(body);
   }
 
+  /**
+   * Callback déclenché par le frontend après vérification MoneyFusion (consultations)
+   */
+  @Post('callback')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async frontendCallback(@Body() body: any) {
+    return this.paymentsService.handleClientCallback({ ...body, type: 'consultation' });
+  }
+
+  /**
+   * Callback déclenché par le frontend pour les achats de livres
+   */
+  @Post('callback/books')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async frontendBooksCallback(@Body() body: any) {
+    return this.paymentsService.handleClientCallback({ ...body, type: 'book' });
+  }
+
   // ==================== ROUTES GÉNÉRIQUES ====================
 
   /**

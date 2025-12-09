@@ -14,7 +14,7 @@ import { Payment, PaymentDocument } from './schemas/payment.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { PaymentStatus } from '../common/enums/payment-status.enum';
+import { PaymentStatus, PaymentMethod } from '../common/enums/payment-status.enum';
 import { BooksService } from '../books/books.service';
 
 interface MoneyFusionResponse {
@@ -56,6 +56,89 @@ export class PaymentsService {
     if (!token || typeof token !== 'string' || token.trim() === '') {
       throw new BadRequestException('Token MoneyFusion manquant ou invalide');
     }
+  }
+
+  /**
+   * Callback déclenché par le frontend après vérification MoneyFusion côté client.
+   * Sécurise côté serveur via verifyMoneyfusionPayment puis enregistre le paiement
+   * et, le cas échéant, l'achat de livre avec génération du lien de téléchargement.
+   */
+  async handleClientCallback(body: any) {
+    const { token, type = 'consultation' } = body || {};
+
+    if (!token) {
+      throw new BadRequestException('Token manquant');
+    }
+
+    // Vérification serveur du paiement via MoneyFusion
+    const verification = await this.verifyMoneyfusionPayment(token);
+    if (verification.status !== 'success' || !verification.payment) {
+      return {
+        success: false,
+        status: verification.status,
+        message: verification.message,
+      };
+    }
+
+    const paymentData = verification.payment.metadata || body.paymentData || {};
+    const personalInfo = paymentData.personal_Info?.[0] || {};
+    const userId = personalInfo.userId || null;
+    const consultationId = personalInfo.consultationId || null;
+
+    // Idempotence
+    const existing = await this.paymentModel.findOne({ moneyFusionToken: token }).lean().exec();
+    if (existing) {
+      return {
+        success: true,
+        status: 'already_used',
+        message: 'Paiement déjà traité',
+        consultationId: existing.consultationId?.toString(),
+      };
+    }
+
+    // Créer le paiement (consultation ou livre)
+    const payment = await this.paymentModel.create({
+      userId: userId || undefined,
+      consultationId: consultationId || undefined,
+      amount: paymentData.montant || paymentData.Montant || 0,
+      currency: 'XAF',
+      method: PaymentMethod.MOBILE_MONEY,
+      status: PaymentStatus.COMPLETED,
+      moneyFusionToken: token,
+      transactionId: paymentData.reference || paymentData.tokenPay || token,
+      metadata: paymentData,
+      paidAt: new Date(),
+    });
+
+    if (type === 'book' && personalInfo.bookId) {
+      // Enregistrer l'achat de livre et générer le lien de téléchargement
+      const bookPurchase = await this.booksService.recordPurchase(
+        {
+          bookId: personalInfo.bookId,
+          paymentId: payment._id.toString(),
+          customerName: paymentData.nomclient || 'Client',
+          customerPhone: paymentData.numeroSend,
+          customerEmail: paymentData.email || undefined,
+          price: paymentData.montant || paymentData.Montant || 0,
+        },
+        userId || undefined,
+      );
+
+      return {
+        success: true,
+        status: 'paid',
+        bookId: personalInfo.bookId,
+        downloadUrl: `/api/v1/books/${personalInfo.bookId}/download?token=${bookPurchase.downloadToken}`,
+        message: 'Paiement du livre traité avec succès',
+      };
+    }
+
+    return {
+      success: true,
+      status: 'paid',
+      consultationId: consultationId || undefined,
+      message: 'Paiement traité avec succès',
+    };
   }
 
   private validateMoneyFusionResponse(response: any): response is MoneyFusionResponse {

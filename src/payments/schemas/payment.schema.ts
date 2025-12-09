@@ -6,10 +6,10 @@ export type PaymentDocument = Payment & Document;
 
 @Schema({ timestamps: true })
 export class Payment {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false })
   userId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Consultation', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Consultation', required: false })
   consultationId: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true, min: 0 })
@@ -26,6 +26,9 @@ export class Payment {
 
   @Prop({ default: null })
   transactionId: string; // ID de la transaction externe (Stripe, PayPal, etc.)
+
+  @Prop({ default: null })
+  moneyFusionToken: string; // Token MoneyFusion (idempotence)
 
   @Prop({ type: Object, default: {} })
   metadata: {
