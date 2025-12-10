@@ -321,6 +321,34 @@ export class PaymentsController {
   }
 
   /**
+   * Vérifier le statut d'un paiement MoneyFusion
+   * GET /api/v1/payments/verify?token=xxx
+   */
+  @Get('verify')
+  @Public()
+  @ApiOperation({
+    summary: "Vérifier le statut d'un paiement",
+    description: "Vérifie le statut d'un paiement MoneyFusion via son token.",
+  })
+  @ApiQuery({
+    name: 'token',
+    type: String,
+    description: 'Token MoneyFusion du paiement',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statut du paiement vérifié.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token invalide ou manquant.',
+  })
+  async verifyPayment(@Query('token') token: string) {
+    return this.paymentsService.verifyPayment(token);
+  }
+
+  /**
    * Obtenir un paiement par ID
    * Vérification des permissions pour s'assurer que l'utilisateur peut voir ce paiement
    */
@@ -394,36 +422,6 @@ export class PaymentsController {
   })
   update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
     return this.paymentsService.update(id, updatePaymentDto);
-  }
-
-  // ==================== NOUVEAUX ENDPOINTS DE VÉRIFICATION ====================
-
-  /**
-   * Vérifier le statut d'un paiement MoneyFusion
-   * GET /api/v1/payments/verify?token=xxx
-   */
-  @Get('verify')
-  @Public()
-  @ApiOperation({
-    summary: "Vérifier le statut d'un paiement",
-    description: "Vérifie le statut d'un paiement MoneyFusion via son token.",
-  })
-  @ApiQuery({
-    name: 'token',
-    type: String,
-    description: 'Token MoneyFusion du paiement',
-    required: true,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Statut du paiement vérifié.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Token invalide ou manquant.',
-  })
-  async verifyPayment(@Query('token') token: string) {
-    return this.paymentsService.verifyPayment(token);
   }
 
   /**
