@@ -623,4 +623,146 @@ export class PaymentsService {
       },
     };
   }
+
+  /**
+   * Vérifier un paiement via MoneyFusion
+   * Utilisé par le frontend pour valider le paiement avant traitement
+   */
+  async verifyPayment(token: string) {
+    this.validateToken(token);
+
+    try {
+      const verification = await this.verifyMoneyfusionPayment(token);
+      return {
+        success: verification.status === 'success',
+        status: verification.payment?.status || 'unknown',
+        message: verification.message,
+        data: verification.payment
+          ? {
+              _id: verification.payment._id,
+              amount: verification.payment.amount,
+              status: verification.payment.status,
+              method: verification.payment.method,
+            }
+          : null,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        status: 'error',
+        message: error.message || 'Erreur de vérification',
+      };
+    }
+  }
+
+  /**
+   * Traiter un paiement de consultation
+   * Crée la consultation et génère l'analyse
+   */
+  async processConsultationPayment(token: string, paymentData: any) {
+    this.validateToken(token);
+
+    try {
+      // Vérifier le paiement
+      const verification = await this.verifyMoneyfusionPayment(token);
+      if (verification.status !== 'success' || !verification.payment) {
+        return {
+          success: false,
+          status: verification.status,
+          message: verification.message,
+        };
+      }
+
+      const payment = verification.payment;
+      const personalInfo = paymentData?.personal_Info?.[0];
+
+      if (!personalInfo || !personalInfo.consultationId) {
+        throw new BadRequestException('ID de consultation manquant');
+      }
+
+      const consultationId = personalInfo.consultationId;
+
+      this.logger.log(`📊 Traitement consultation: ${consultationId}`);
+
+      return {
+        success: true,
+        status: 'paid',
+        consultationId,
+        message: 'Paiement de consultation traité avec succès',
+        data: {
+          paymentId: payment._id.toString(),
+          amount: payment.amount,
+          reference: payment.transactionId,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(`❌ Erreur traitement consultation: ${error.message}`);
+      return {
+        success: false,
+        status: 'error',
+        message: error.message || 'Erreur de traitement',
+      };
+    }
+  }
+
+  /**
+   * Traiter un paiement de livre
+   * Enregistre l'achat et génère le lien de téléchargement
+   */
+  async processBookPayment(token: string, paymentData: any) {
+    this.validateToken(token);
+
+    try {
+      // Vérifier le paiement
+      const verification = await this.verifyMoneyfusionPayment(token);
+      if (verification.status !== 'success' || !verification.payment) {
+        return {
+          success: false,
+          status: verification.status,
+          message: verification.message,
+        };
+      }
+
+      const payment = verification.payment;
+      const personalInfo = paymentData?.personal_Info?.[0];
+
+      if (!personalInfo || !personalInfo.bookId) {
+        throw new BadRequestException('ID du livre manquant');
+      }
+
+      const bookId = personalInfo.bookId;
+      const userId = personalInfo.userId || payment.userId?.toString();
+
+      this.logger.log(`📚 Traitement achat livre: ${bookId} pour utilisateur: ${userId}`);
+
+      // Marquer le livre comme acheté par cet utilisateur
+      if (userId) {
+        await this.booksService.addUserPurchase(bookId, userId);
+      }
+
+      // Générer le token de téléchargement sécurisé
+      const downloadToken = Buffer.from(`${bookId}:${token}`).toString('base64');
+      const downloadUrl = `/api/v1/books/${bookId}/download?token=${downloadToken}`;
+
+      return {
+        success: true,
+        status: 'paid',
+        bookId,
+        downloadUrl,
+        message: 'Paiement du livre traité avec succès',
+        data: {
+          paymentId: payment._id.toString(),
+          amount: payment.amount,
+          reference: payment.transactionId,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(`❌ Erreur traitement livre: ${error.message}`);
+      return {
+        success: false,
+        status: 'error',
+        message: error.message || 'Erreur de traitement',
+      };
+    }
+  }
 }

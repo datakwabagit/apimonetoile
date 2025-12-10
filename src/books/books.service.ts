@@ -235,4 +235,35 @@ export class BooksService {
 
     return createdBooks;
   }
+
+  /**
+   * Ajouter un utilisateur à la liste des propriétaires d'un livre
+   * Utilisé après vérification du paiement
+   */
+  async addUserPurchase(bookId: string, userId: string): Promise<BookPurchase> {
+    // Vérifier que le livre existe
+    const book = await this.bookModel.findOne({ bookId }).exec();
+    if (!book) {
+      throw new NotFoundException(`Livre ${bookId} non trouvé`);
+    }
+
+    // Générer un token de téléchargement unique et sécurisé
+    const downloadToken = this.generateDownloadToken();
+
+    // Créer l'enregistrement d'achat
+    const purchase = new this.bookPurchaseModel({
+      userId,
+      bookId: book._id,
+      bookIdentifier: bookId,
+      bookTitle: book.title,
+      price: book.price,
+      downloadToken,
+      downloadCount: 0,
+      lastDownloadAt: null,
+      purchasedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours
+    });
+
+    return purchase.save();
+  }
 }

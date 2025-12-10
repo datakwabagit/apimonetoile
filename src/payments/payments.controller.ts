@@ -395,4 +395,100 @@ export class PaymentsController {
   update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
     return this.paymentsService.update(id, updatePaymentDto);
   }
+
+  // ==================== NOUVEAUX ENDPOINTS DE VÉRIFICATION ====================
+
+  /**
+   * Vérifier le statut d'un paiement MoneyFusion
+   * GET /api/v1/payments/verify?token=xxx
+   */
+  @Get('verify')
+  @Public()
+  @ApiOperation({
+    summary: "Vérifier le statut d'un paiement",
+    description: "Vérifie le statut d'un paiement MoneyFusion via son token.",
+  })
+  @ApiQuery({
+    name: 'token',
+    type: String,
+    description: 'Token MoneyFusion du paiement',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statut du paiement vérifié.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token invalide ou manquant.',
+  })
+  async verifyPayment(@Query('token') token: string) {
+    return this.paymentsService.verifyPayment(token);
+  }
+
+  /**
+   * Traiter le paiement d'une consultation
+   * POST /api/v1/payments/process-consultation
+   * Body: { token, paymentData }
+   */
+  @Post('process-consultation')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Traiter le paiement d'une consultation",
+    description: "Vérifie le paiement et crée la consultation avec génération d'analyse.",
+  })
+  @ApiBody({
+    schema: {
+      properties: {
+        token: { type: 'string', example: 'abc123def456' },
+        paymentData: { type: 'object' },
+      },
+      required: ['token', 'paymentData'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Consultation créée et paiement enregistré.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides ou paiement non valide.',
+  })
+  async processConsultationPayment(@Body() body: any) {
+    return this.paymentsService.processConsultationPayment(body.token, body.paymentData);
+  }
+
+  /**
+   * Traiter le paiement d'un livre
+   * POST /api/v1/payments/process-book
+   * Body: { token, paymentData }
+   */
+  @Post('process-book')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Traiter le paiement d'un livre",
+    description: "Vérifie le paiement, enregistre l'achat et génère le lien de téléchargement.",
+  })
+  @ApiBody({
+    schema: {
+      properties: {
+        token: { type: 'string', example: 'abc123def456' },
+        paymentData: { type: 'object' },
+      },
+      required: ['token', 'paymentData'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Achat enregistré et lien de téléchargement généré.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides ou paiement non valide.',
+  })
+  async processBookPayment(@Body() body: any) {
+    return this.paymentsService.processBookPayment(body.token, body.paymentData);
+  }
 }

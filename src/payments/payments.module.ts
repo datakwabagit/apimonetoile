@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { HttpModule } from '@nestjs/axios';
 import { PaymentsService } from './payments.service';
+import { PaymentVerificationService } from './payment-verification.service';
 import { PaymentsController } from './payments.controller';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
@@ -19,7 +20,7 @@ import { BooksModule } from '../books/books.module';
     HttpModule,
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService],
-  exports: [PaymentsService],
+  providers: [PaymentsService, PaymentVerificationService],
+  exports: [PaymentsService, PaymentVerificationService],
 })
 export class PaymentsModule {}
