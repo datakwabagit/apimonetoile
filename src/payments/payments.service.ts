@@ -40,7 +40,8 @@ export interface VerificationResult {
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-  private readonly MONEYFUSION_VERIFY_URL = 'https://www.pay.moneyfusion.net/api/verif';
+  // Endpoint officiel de vérification MoneyFusion (GET /paiementNotif/{token})
+  private readonly MONEYFUSION_VERIFY_URL = 'https://www.pay.moneyfusion.net/paiementNotif';
   private readonly MONEYFUSION_TIMEOUT = 10000;
 
   constructor(
@@ -48,7 +49,7 @@ export class PaymentsService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly httpService: HttpService,
     private readonly booksService: BooksService,
-  ) {}
+  ) { }
 
   // ==================== VALIDATION METHODS ====================
 
@@ -145,6 +146,24 @@ export class PaymentsService {
     return response && typeof response.statut === 'boolean';
   }
 
+  /**
+   * Mappe les statuts MoneyFusion vers nos PaymentStatus
+   */
+  private mapMoneyfusionStatus(status?: string): PaymentStatus {
+    const normalized = (status || '').toLowerCase();
+    switch (normalized) {
+      case 'paid':
+        return PaymentStatus.COMPLETED;
+      case 'pending':
+        return PaymentStatus.PENDING;
+      case 'failure':
+      case 'no paid':
+        return PaymentStatus.FAILED;
+      default:
+        return PaymentStatus.PENDING;
+    }
+  }
+
   // ==================== MONEYFUSION METHODS ====================
 
   /**
@@ -158,14 +177,10 @@ export class PaymentsService {
       this.logger.log(`Vérification paiement MoneyFusion: ${token}`);
 
       const response = await firstValueFrom(
-        this.httpService.post(
-          this.MONEYFUSION_VERIFY_URL,
-          { token },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: this.MONEYFUSION_TIMEOUT,
-          },
-        ),
+        this.httpService.get(`${this.MONEYFUSION_VERIFY_URL}/${token}`, {
+          timeout: this.MONEYFUSION_TIMEOUT,
+          headers: { 'Content-Type': 'application/json' },
+        }),
       );
 
       if (!this.validateMoneyFusionResponse(response.data)) {
@@ -188,15 +203,16 @@ export class PaymentsService {
       }
 
       if (statut === true) {
+        const mappedStatus = this.mapMoneyfusionStatus(data?.statut);
         const payment = await this.paymentModel.create({
-          amount: data?.montant || 0,
+          amount: data?.Montant || data?.montant || 0,
           currency: 'EUR',
           method: 'MONEYFUSION',
-          status: PaymentStatus.COMPLETED,
+          status: mappedStatus,
           moneyFusionToken: token,
-          reference: data?.reference || token,
+          reference: data?.tokenPay || data?.reference || token,
           metadata: data,
-          paidAt: new Date(),
+          paidAt: mappedStatus === PaymentStatus.COMPLETED ? new Date() : undefined,
         });
 
         this.logger.log(`Paiement créé avec succès: ${payment._id}`);
@@ -630,20 +646,21 @@ export class PaymentsService {
    */
   async verifyPayment(token: string) {
     this.validateToken(token);
-
+    console.log('Vérification du paiement pour le token2:', token);
     try {
       const verification = await this.verifyMoneyfusionPayment(token);
+      console.log('Résultat de la vérification:', verification);
       return {
         success: verification.status === 'success',
         status: verification.payment?.status || 'unknown',
         message: verification.message,
         data: verification.payment
           ? {
-              _id: verification.payment._id,
-              amount: verification.payment.amount,
-              status: verification.payment.status,
-              method: verification.payment.method,
-            }
+            _id: verification.payment._id,
+            amount: verification.payment.amount,
+            status: verification.payment.status,
+            method: verification.payment.method,
+          }
           : null,
       };
     } catch (error: any) {
