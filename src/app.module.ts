@@ -17,6 +17,7 @@ import { MoneyfusionModule } from './moneyfusion/moneyfusion.module';
 import { SiteMetricsModule } from './common/site-metrics.module';
 import { AdminModule } from './admin/admin.module';
 import { BooksModule } from './books/books.module';
+import { SpiritualiteModule } from './spiritualite/spiritualite.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { BooksModule } from './books/books.module';
     SiteMetricsModule,
     AdminModule,
     BooksModule,
+    SpiritualiteModule,
   ],
   controllers: [AppController],
   providers: [

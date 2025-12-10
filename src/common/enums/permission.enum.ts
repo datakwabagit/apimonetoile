@@ -32,6 +32,12 @@ export enum Permission {
   UPDATE_SERVICE = 'update:service',
   DELETE_SERVICE = 'delete:service',
 
+  // ========== CONTENT & SPIRITUALITY ==========
+  MANAGE_CONTENT = 'manage:content', // Gérer le contenu spirituel et autres contenus
+  CREATE_CONTENT = 'create:content',
+  UPDATE_CONTENT = 'update:content',
+  DELETE_CONTENT = 'delete:content',
+
   // ========== PAYMENTS ==========
   CREATE_PAYMENT = 'create:payment',
   READ_OWN_PAYMENT = 'read:own:payment',
@@ -75,6 +81,11 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     Permission.READ_SERVICE,
     Permission.UPDATE_SERVICE,
     Permission.DELETE_SERVICE,
+    // Content & Spirituality
+    Permission.MANAGE_CONTENT,
+    Permission.CREATE_CONTENT,
+    Permission.UPDATE_CONTENT,
+    Permission.DELETE_CONTENT,
     // Payments
     Permission.READ_ANY_PAYMENT,
     Permission.UPDATE_PAYMENT,
