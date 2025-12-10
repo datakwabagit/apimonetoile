@@ -1,10 +1,11 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Patch, UseGuards, Query, Param, Body } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { Permission } from '../common/enums/permission.enum';
 import { AdminService } from './admin.service';
+import { UpdateUserDto } from '../users/dto/update-user.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -87,5 +88,23 @@ export class AdminController {
     });
 
     return result;
+  }
+
+  @Get('users/:id')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_ANY_USER)
+  @ApiOperation({ summary: "Récupérer les détails d'un utilisateur" })
+  @ApiResponse({ status: 200, description: "Détails de l'utilisateur" })
+  async getUserById(@Param('id') id: string) {
+    return this.adminService.getUserById(id);
+  }
+
+  @Patch('users/:id')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.UPDATE_ANY_USER)
+  @ApiOperation({ summary: 'Mettre à jour un utilisateur' })
+  @ApiResponse({ status: 200, description: 'Utilisateur mis à jour' })
+  async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.adminService.updateUser(id, updateUserDto);
   }
 }
