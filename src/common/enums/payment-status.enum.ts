@@ -21,4 +21,5 @@ export enum PaymentMethod {
   MOBILE_MONEY = 'MOBILE_MONEY', // Pour l'Afrique (Orange Money, MTN, etc.)
   BANK_TRANSFER = 'BANK_TRANSFER',
   CASH = 'CASH',
+  MONEYFUSION = 'MONEYFUSION',
 }
