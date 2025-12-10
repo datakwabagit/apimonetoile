@@ -49,7 +49,7 @@ export class PaymentsService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly httpService: HttpService,
     private readonly booksService: BooksService,
-  ) { }
+  ) {}
 
   // ==================== VALIDATION METHODS ====================
 
@@ -656,11 +656,11 @@ export class PaymentsService {
         message: verification.message,
         data: verification.payment
           ? {
-            _id: verification.payment._id,
-            amount: verification.payment.amount,
-            status: verification.payment.status,
-            method: verification.payment.method,
-          }
+              _id: verification.payment._id,
+              amount: verification.payment.amount,
+              status: verification.payment.status,
+              method: verification.payment.method,
+            }
           : null,
       };
     } catch (error: any) {

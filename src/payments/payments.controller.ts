@@ -345,7 +345,10 @@ export class PaymentsController {
     description: 'Token invalide ou manquant.',
   })
   async verifyPayment(@Query('token') token: string) {
-    return this.paymentsService.verifyPayment(token);
+    console.log('Vérification du paiement pour le token:', token);
+    const verification = await this.paymentsService.verifyPayment(token);
+    console.log('Résultat de la vérification:', verification);
+    return verification;
   }
 
   /**
