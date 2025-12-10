@@ -10,7 +10,12 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   app.enableCors({
-    origin: ['https://www.monetoile.org', 'https://monetoile.org', 'http://localhost:3000', 'http://localhost:3001'],
+    origin: [
+      'https://www.monetoile.org',
+      'https://monetoile.org',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
