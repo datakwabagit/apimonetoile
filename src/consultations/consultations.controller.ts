@@ -394,7 +394,7 @@ export class ConsultationsController {
 
       // Générer l'analyse complète via DeepSeek
       console.log('[API] ⏳ Appel DeepSeek en cours...');
-      const analyse = await this.deepseekService.genererAnalyseComplete(birthData);
+      const analyse = await this.deepseekService.genererAnalyseComplete(birthData, id);
       console.log('[API] ✅ Analyse générée, structure:', {
         sessionId: analyse.sessionId,
         hasCarteDuCiel: !!analyse.carteDuCiel,

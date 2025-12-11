@@ -16,6 +16,10 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentStatus, PaymentMethod } from '../common/enums/payment-status.enum';
 import { BooksService } from '../books/books.service';
+import { ConsultationsService } from '../consultations/consultations.service';
+import { DeepseekService, BirthData } from '../consultations/deepseek.service';
+import { AnalysisStatus } from '../consultations/dto/save-analysis.dto';
+import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 
 interface MoneyFusionResponse {
   statut: boolean;
@@ -49,6 +53,8 @@ export class PaymentsService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly httpService: HttpService,
     private readonly booksService: BooksService,
+    private readonly consultationsService: ConsultationsService,
+    private readonly deepseekService: DeepseekService,
   ) {}
 
   // ==================== VALIDATION METHODS ====================
@@ -57,6 +63,73 @@ export class PaymentsService {
     if (!token || typeof token !== 'string' || token.trim() === '') {
       throw new BadRequestException('Token MoneyFusion manquant ou invalide');
     }
+  }
+
+  private normalizeDateInput(dateValue: any): string {
+    if (!dateValue) {
+      return '';
+    }
+
+    if (dateValue instanceof Date) {
+      return dateValue.toISOString().split('T')[0];
+    }
+
+    return dateValue.toString();
+  }
+
+  private buildBirthDataFromConsultation(consultation: any, personalInfo: any): BirthData {
+    const formData = consultation?.formData || {};
+
+    return {
+      nom: formData.lastName || personalInfo?.lastName || personalInfo?.nom || 'Client',
+      prenoms: formData.firstName || personalInfo?.firstName || personalInfo?.prenoms || 'Client',
+      genre:
+        formData.gender ||
+        formData.sexe ||
+        personalInfo?.genre ||
+        personalInfo?.gender ||
+        'Inconnu',
+      dateNaissance: this.normalizeDateInput(
+        formData.dateOfBirth || personalInfo?.dateNaissance || personalInfo?.dateOfBirth,
+      ),
+      heureNaissance:
+        formData.timeOfBirth ||
+        formData.hourOfBirth ||
+        formData.heureNaissance ||
+        personalInfo?.heureNaissance ||
+        personalInfo?.timeOfBirth ||
+        '',
+      paysNaissance:
+        formData.countryOfBirth ||
+        formData.paysNaissance ||
+        personalInfo?.paysNaissance ||
+        personalInfo?.countryOfBirth ||
+        personalInfo?.pays ||
+        '',
+      villeNaissance:
+        formData.cityOfBirth ||
+        formData.villeNaissance ||
+        personalInfo?.villeNaissance ||
+        personalInfo?.cityOfBirth ||
+        personalInfo?.ville ||
+        '',
+      email: formData.email || personalInfo?.email || undefined,
+    };
+  }
+
+  private getMissingBirthFields(birthData: BirthData): string[] {
+    const required: Array<keyof BirthData> = [
+      'nom',
+      'prenoms',
+      'dateNaissance',
+      'heureNaissance',
+      'paysNaissance',
+      'villeNaissance',
+    ];
+
+    return required.filter(
+      (field) => !birthData[field] || birthData[field].toString().trim() === '',
+    );
   }
 
   /**
@@ -103,7 +176,7 @@ export class PaymentsService {
       consultationId: consultationId || undefined,
       amount: paymentData.montant || paymentData.Montant || 0,
       currency: 'XAF',
-      method: PaymentMethod.MOBILE_MONEY,
+      method: PaymentMethod.MONEYFUSION,
       status: PaymentStatus.COMPLETED,
       moneyFusionToken: token,
       transactionId: paymentData.reference || paymentData.tokenPay || token,
@@ -207,10 +280,10 @@ export class PaymentsService {
         const payment = await this.paymentModel.create({
           amount: data?.Montant || data?.montant || 0,
           currency: 'EUR',
-          method: 'MONEYFUSION',
+          method: PaymentMethod.MONEYFUSION,
           status: mappedStatus,
           moneyFusionToken: token,
-          reference: data?.tokenPay || data?.reference || token,
+          transactionId: data?.tokenPay || data?.reference || token,
           metadata: data,
           paidAt: mappedStatus === PaymentStatus.COMPLETED ? new Date() : undefined,
         });
@@ -313,10 +386,10 @@ export class PaymentsService {
             userId,
             amount: paymentData.montant,
             currency: 'EUR',
-            method: 'MONEYFUSION',
+            method: PaymentMethod.MONEYFUSION,
             status: PaymentStatus.COMPLETED,
             moneyFusionToken: token,
-            reference: paymentData.reference || token,
+            transactionId: paymentData.reference || paymentData.tokenPay || token,
             metadata: paymentData,
             paidAt: new Date(),
           },
@@ -682,7 +755,7 @@ export class PaymentsService {
     try {
       // Vérifier le paiement
       const verification = await this.verifyMoneyfusionPayment(token);
-      if (verification.status !== 'success' || !verification.payment) {
+      if (!verification.payment || !['success', 'already_used'].includes(verification.status)) {
         return {
           success: false,
           status: verification.status,
@@ -691,13 +764,67 @@ export class PaymentsService {
       }
 
       const payment = verification.payment;
-      const personalInfo = paymentData?.personal_Info?.[0];
+      const transactionId =
+        payment.transactionId || payment.metadata?.tokenPay || payment.metadata?.reference || token;
+      const mergedPaymentData = paymentData || payment.metadata || {};
+      const personalInfo =
+        mergedPaymentData?.personal_Info?.[0] || payment.metadata?.personal_Info?.[0] || {};
 
-      if (!personalInfo || !personalInfo.consultationId) {
+      const consultationId =
+        personalInfo.consultationId || payment.consultationId?.toString() || null;
+
+      if (!consultationId) {
         throw new BadRequestException('ID de consultation manquant');
       }
 
-      const consultationId = personalInfo.consultationId;
+      const consultation = await this.consultationsService.findOne(consultationId);
+      const userId =
+        consultation.clientId?.toString() || personalInfo.userId || payment.userId?.toString();
+
+      await this.paymentModel.findByIdAndUpdate(payment._id, {
+        consultationId,
+        userId: userId || undefined,
+        status: PaymentStatus.COMPLETED,
+        method: PaymentMethod.MONEYFUSION,
+      });
+
+      const birthData = this.buildBirthDataFromConsultation(consultation, personalInfo);
+      const missingFields = this.getMissingBirthFields(birthData);
+
+      if (missingFields.length > 0) {
+        return {
+          success: false,
+          status: 'error',
+          message: `Informations de naissance manquantes: ${missingFields.join(', ')}`,
+        };
+      }
+
+      const analyse = await this.deepseekService.genererAnalyseComplete(birthData, consultationId);
+      const analyseComplete = {
+        consultationId,
+        ...analyse,
+        dateGeneration: new Date().toISOString(),
+      };
+
+      if (userId) {
+        await this.consultationsService.saveAstrologicalAnalysis(
+          userId,
+          consultationId,
+          analyseComplete,
+        );
+      }
+
+      await this.consultationsService.saveAnalysis(consultationId, {
+        statut: AnalysisStatus.COMPLETED,
+        analyse: analyseComplete,
+      });
+
+      await this.consultationsService.update(consultationId, {
+        status: ConsultationStatus.COMPLETED,
+        resultData: analyseComplete,
+        isPaid: true,
+        paymentId: payment._id,
+      } as any);
 
       this.logger.log(`📊 Traitement consultation: ${consultationId}`);
 
@@ -709,7 +836,8 @@ export class PaymentsService {
         data: {
           paymentId: payment._id.toString(),
           amount: payment.amount,
-          reference: payment.transactionId,
+          reference: transactionId,
+          analyse: analyseComplete,
         },
       };
     } catch (error: any) {
@@ -770,7 +898,7 @@ export class PaymentsService {
         data: {
           paymentId: payment._id.toString(),
           amount: payment.amount,
-          reference: payment.transactionId,
+          // reference: transactionId,
         },
       };
     } catch (error: any) {

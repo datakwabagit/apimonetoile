@@ -12,10 +12,12 @@ import { DeepseekService } from './deepseek.service';
 import { EmailService } from '../common/services/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
+import { AnalysisModule } from '../analysis/analysis.module';
 
 @Module({
   imports: [
     HttpModule,
+    AnalysisModule,
     MongooseModule.forFeature([
       { name: Consultation.name, schema: ConsultationSchema },
       { name: Notification.name, schema: NotificationSchema },

@@ -18,6 +18,7 @@ import { SiteMetricsModule } from './common/site-metrics.module';
 import { AdminModule } from './admin/admin.module';
 import { BooksModule } from './books/books.module';
 import { SpiritualiteModule } from './spiritualite/spiritualite.module';
+import { AnalysisModule } from './analysis/analysis.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { SpiritualiteModule } from './spiritualite/spiritualite.module';
     AdminModule,
     BooksModule,
     SpiritualiteModule,
+    AnalysisModule,
   ],
   controllers: [AppController],
   providers: [

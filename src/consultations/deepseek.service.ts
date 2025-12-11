@@ -4,6 +4,10 @@ import { HttpService } from '@nestjs/axios';
 import { AxiosError, AxiosRequestConfig } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  AnalysisProgressService,
+  AnalysisProgressUpdate,
+} from '../analysis/analysis-progress.service';
 
 export interface BirthData {
   nom: string;
@@ -96,6 +100,13 @@ export class DeepseekService {
   // Cache pour les analyses fréquentes (optionnel)
   private readonly analysisCache = new Map<string, { result: AnalysisResult; timestamp: number }>();
   private readonly CACHE_TTL = 3600000; // 1 heure
+  private readonly DEFAULT_PROGRESS = {
+    start: 0,
+    afterCarte: 30,
+    afterMission: 60,
+    afterPositions: 80,
+    done: 100,
+  };
 
   // Configuration des prompts
   private readonly SYSTEM_PROMPTS = {
@@ -192,6 +203,7 @@ Ton : Professionnel, empathique, encourageant.`,
   constructor(
     private configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly progressService: AnalysisProgressService,
   ) {
     this.DEEPSEEK_API_KEY = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
 
@@ -322,17 +334,28 @@ Ton : Professionnel, empathique, encourageant.`,
   /**
    * Génère une analyse complète avec cache et optimisation
    */
-  async genererAnalyseComplete(birthData: BirthData): Promise<AnalysisResult> {
+  async genererAnalyseComplete(
+    birthData: BirthData,
+    consultationId?: string,
+  ): Promise<AnalysisResult> {
     const sessionId = uuidv4();
     const cacheKey = this.generateCacheKey(birthData);
     const startTime = Date.now();
 
     this.logger.log(`[${sessionId}] Début analyse pour ${birthData.prenoms} ${birthData.nom}`);
+    this.publishStage(consultationId, 'start', 0, this.DEFAULT_PROGRESS.start, 'Analyse démarrée');
 
     // Vérifier le cache
     const cached = this.analysisCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
       this.logger.log(`[${sessionId}] Analyse récupérée depuis le cache`);
+      this.publishStage(
+        consultationId,
+        'cached',
+        0,
+        this.DEFAULT_PROGRESS.done,
+        'Analyse récupérée depuis le cache',
+      );
       return {
         ...cached.result,
         sessionId,
@@ -351,6 +374,13 @@ Ton : Professionnel, empathique, encourageant.`,
       const step1Start = Date.now();
 
       const carteDuCielPrompt = this.PROMPT_TEMPLATES.carteDuCiel(birthData);
+      this.publishStage(
+        consultationId,
+        'carte_du_ciel',
+        1,
+        10,
+        'Génération de la carte du ciel...',
+      );
       const carteDuCielResponse = await this.callDeepSeekApi(
         [
           { role: 'system', content: this.SYSTEM_PROMPTS.carteDuCiel },
@@ -371,6 +401,14 @@ Ton : Professionnel, empathique, encourageant.`,
       const step2Start = Date.now();
 
       const missionDeViePrompt = this.PROMPT_TEMPLATES.missionDeVie(birthData, carteDuCielTexte);
+      this.publishStage(
+        consultationId,
+        'mission_de_vie',
+        2,
+        this.DEFAULT_PROGRESS.afterCarte,
+        'Génération de la mission de vie...',
+      );
+
       const missionDeVieResponse = await this.callDeepSeekApi(
         [
           { role: 'system', content: this.SYSTEM_PROMPTS.astrologer },
@@ -390,6 +428,13 @@ Ton : Professionnel, empathique, encourageant.`,
       this.logger.log(`[${sessionId}] 🔍 ÉTAPE 3/4: Parsing des positions...`);
       const step3Start = Date.now();
       const positions = this.parsePositionsAmeliore(carteDuCielTexte);
+      this.publishStage(
+        consultationId,
+        'positions',
+        3,
+        this.DEFAULT_PROGRESS.afterMission,
+        'Positions planétaires interprétées',
+      );
       const step3Duration = Date.now() - step3Start;
       this.logger.log(
         `[${sessionId}] ✅ ÉTAPE 3 terminée en ${step3Duration}ms - ${positions.length} positions`,
@@ -424,6 +469,14 @@ Ton : Professionnel, empathique, encourageant.`,
         },
       };
 
+      this.publishStage(
+        consultationId,
+        'completed',
+        4,
+        this.DEFAULT_PROGRESS.done,
+        'Analyse terminée',
+      );
+
       // Mettre en cache
       this.analysisCache.set(cacheKey, {
         result,
@@ -457,6 +510,18 @@ Ton : Professionnel, empathique, encourageant.`,
         duration: Date.now() - startTime,
       });
 
+      if (consultationId) {
+        this.progressService.publishProgress({
+          consultationId,
+          stage: 'error',
+          stageIndex: -1,
+          progress: 0,
+          message: `Erreur: ${error.message}`,
+          timestamp: new Date().toISOString(),
+          completed: false,
+        });
+      }
+
       if (error instanceof HttpException) {
         throw error;
       }
@@ -466,6 +531,30 @@ Ton : Professionnel, empathique, encourageant.`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  private publishStage(
+    consultationId: string | undefined,
+    stage: string,
+    stageIndex: number,
+    progress: number,
+    message: string,
+  ): void {
+    if (!consultationId) {
+      return;
+    }
+
+    const update: AnalysisProgressUpdate = {
+      consultationId,
+      stage,
+      stageIndex,
+      progress,
+      message,
+      timestamp: new Date().toISOString(),
+      completed: progress >= 100,
+    };
+
+    this.progressService.publishProgress(update);
   }
 
   /**
