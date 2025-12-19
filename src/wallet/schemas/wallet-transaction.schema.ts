@@ -5,26 +5,11 @@ export type WalletTransactionDocument = WalletTransaction & Document;
 
 @Schema({ timestamps: true })
 export class OfferingItem {
-  @Prop({ required: true })
-  id: string;
-
-  @Prop({ required: true })
-  name: string;
-
-  @Prop({ required: true })
-  icon: string;
-
-  @Prop({ required: true })
-  category: string;
+  @Prop({ required: true, type: 'objectId', ref: 'Offering' })
+  offeringId: string; // _id de l'offrande
 
   @Prop({ required: true })
   quantity: number;
-
-  @Prop({ required: true })
-  unitPrice: number;
-
-  @Prop({ required: true })
-  totalPrice: number;
 }
 
 export const OfferingItemSchema = SchemaFactory.createForClass(OfferingItem);

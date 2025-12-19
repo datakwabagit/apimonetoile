@@ -23,4 +23,11 @@ export class WalletOfferingsController {
     const result = await this.walletOfferingsService.consumeOfferings(userId, body.consultationId, body.offerings);
     return result;
   }
+
+  // GET /wallet/offerings-stats
+  @Get('offerings-stats')
+  async getOfferingsStats() {
+    const stats = await this.walletOfferingsService.getOfferingsStats();
+    return { stats };
+  }
 }

@@ -21,6 +21,7 @@ import { SpiritualiteModule } from './spiritualite/spiritualite.module';
 
 import { AnalysisModule } from './analysis/analysis.module';
 import { WalletModule } from './wallet/wallet.module';
+import { OfferingsModule } from './offerings/offerings.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { WalletModule } from './wallet/wallet.module';
     SpiritualiteModule,
     AnalysisModule,
     WalletModule,
+    OfferingsModule,
   ],
   controllers: [AppController],
   providers: [

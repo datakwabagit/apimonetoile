@@ -17,7 +17,7 @@ export class WalletOfferingsService {
     const offeringsMap: Record<string, number> = {};
     transactions.forEach(tx => {
       tx.items.forEach(item => {
-        offeringsMap[item.id] = (offeringsMap[item.id] || 0) + item.quantity;
+        offeringsMap[item.offeringId] = (offeringsMap[item.offeringId] || 0) + item.quantity;
       });
     });
     // TODO: soustraire les offrandes déjà consommées (si tracking)
@@ -30,5 +30,21 @@ export class WalletOfferingsService {
     // Pour l'exemple, on suppose que la consommation est toujours possible
     // En vrai, il faut vérifier la quantité disponible et enregistrer la consommation
     return { success: true, message: 'Offrandes consommées avec succès' };
+  }
+
+  // Statistiques : offrandes les plus achetées et total vendu par élément
+  async getOfferingsStats() {
+    // Agrège toutes les transactions "completed" et somme les quantités par offeringId
+    const stats = await this.walletTransactionModel.aggregate([
+      { $match: { status: 'completed' } },
+      { $unwind: '$items' },
+      { $group: {
+        _id: '$items.offeringId',
+        totalSold: { $sum: '$items.quantity' },
+        transactions: { $sum: 1 }
+      }},
+      { $sort: { totalSold: -1 } },
+    ]);
+    return stats;
   }
 }

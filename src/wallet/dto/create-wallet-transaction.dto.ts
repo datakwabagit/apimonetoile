@@ -3,25 +3,10 @@ import { Type } from 'class-transformer';
 
 export class OfferingItemDto {
   @IsString()
-  id: string;
-
-  @IsString()
-  name: string;
-
-  @IsString()
-  icon: string;
-
-  @IsString()
-  category: string;
+  offeringId: string; // _id de l'offrande
 
   @IsNumber()
   quantity: number;
-
-  @IsNumber()
-  unitPrice: number;
-
-  @IsNumber()
-  totalPrice: number;
 }
 
 export class CreateWalletTransactionDto {
