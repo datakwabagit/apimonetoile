@@ -1,5 +1,3 @@
-import { renderToStream } from '@react-pdf/renderer';
- import { createElement } from 'react';
   /**
    * Générer le PDF d'une consultation
    */
