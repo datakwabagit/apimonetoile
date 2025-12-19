@@ -12,8 +12,16 @@ export class WalletService {
   ) {}
 
   async createTransaction(dto: CreateWalletTransactionDto): Promise<WalletTransaction> {
-    const created = new this.walletTransactionModel(dto);
-    return created.save();
+    try {
+      console.log('[WalletService] Tentative d\'enregistrement:', JSON.stringify(dto, null, 2));
+      const created = new this.walletTransactionModel(dto);
+      const saved = await created.save();
+      console.log('[WalletService] Transaction enregistrée:', saved._id);
+      return saved;
+    } catch (err) {
+      console.error('[WalletService] Erreur lors de l\'enregistrement:', err);
+      throw err;
+    }
   }
 
   async getTransactionsByUser(userId: string): Promise<WalletTransaction[]> {
