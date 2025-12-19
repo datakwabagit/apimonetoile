@@ -7,6 +7,7 @@ export class OfferingItemDto {
 
   @IsNumber()
   quantity: number;
+    id: any;
 }
 
 export class CreateWalletTransactionDto {

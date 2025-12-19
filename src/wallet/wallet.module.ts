@@ -3,9 +3,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
 import { WalletOfferingsService } from './wallet-offerings.service';
-import { WalletOfferingsController } from './wallet-offerings.controller';
 import { WalletTransaction, WalletTransactionSchema } from './schemas/wallet-transaction.schema';
 import { OfferingsModule } from '../offerings/offerings.module';
+import { OfferingStockModule } from '@/offerings/offering-stock.module';
 
 @Module({
   imports: [
@@ -13,8 +13,9 @@ import { OfferingsModule } from '../offerings/offerings.module';
       { name: WalletTransaction.name, schema: WalletTransactionSchema },
     ]),
     OfferingsModule,
+    OfferingStockModule
   ],
-  controllers: [WalletController, WalletOfferingsController],
+  controllers: [WalletController],
   providers: [WalletService, WalletOfferingsService],
   exports: [WalletService, WalletOfferingsService],
 })

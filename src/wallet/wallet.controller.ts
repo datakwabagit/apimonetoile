@@ -8,6 +8,7 @@ export class WalletController {
 
   @Post()
   async create(@Body() dto: CreateWalletTransactionDto) {
+    console.log('[WalletController] Création de transaction:', dto);
     const transaction = await this.walletService.createTransaction(dto);
     return { transaction };
   }

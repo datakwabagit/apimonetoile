@@ -22,6 +22,7 @@ import { SpiritualiteModule } from './spiritualite/spiritualite.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { WalletModule } from './wallet/wallet.module';
 import { OfferingsModule } from './offerings/offerings.module';
+import { OfferingStockModule } from './offerings/offering-stock.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { OfferingsModule } from './offerings/offerings.module';
     AnalysisModule,
     WalletModule,
     OfferingsModule,
+    OfferingStockModule,
   ],
   controllers: [AppController],
   providers: [
@@ -86,4 +88,4 @@ import { OfferingsModule } from './offerings/offerings.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

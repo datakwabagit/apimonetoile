@@ -10,6 +10,21 @@ export class OfferingItem {
 
   @Prop({ required: true })
   quantity: number;
+
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  icon: string;
+
+  @Prop({ required: true })
+  category: string;
+
+  @Prop({ required: true })
+  unitPrice: number;
+
+  @Prop({ required: true })
+  totalPrice: number;
 }
 
 export const OfferingItemSchema = SchemaFactory.createForClass(OfferingItem);
