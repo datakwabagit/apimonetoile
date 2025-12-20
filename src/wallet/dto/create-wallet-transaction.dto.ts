@@ -7,7 +7,30 @@ export class OfferingItemDto {
 
   @IsNumber()
   quantity: number;
-    id: any;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  icon?: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @IsNumber()
+  @IsOptional()
+  price?: number;
+
+  @IsNumber()
+  @IsOptional()
+  unitPrice?: number;
+
+  @IsNumber()
+  @IsOptional()
+  totalPrice?: number;
 }
 
 export class CreateWalletTransactionDto {

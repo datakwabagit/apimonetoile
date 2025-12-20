@@ -20,12 +20,15 @@ export class WalletService {
 
   async createTransaction(dto: CreateWalletTransactionDto): Promise<WalletTransaction> {
    console.log('[WalletService] Création de transaction avec DTO:', JSON.stringify(dto, null, 2));  
-   
     // Validation d’intégrité : vérifier que chaque offeringId existe
     const offeringIds = dto.items.map(item => item.offeringId);
     console.log('[WalletService] Vérification des offeringIds:', offeringIds);
 
-    const found = await this.offeringsService['offeringModel'].find({ _id: { $in: offeringIds } }).select('_id').lean();
+    const found = await this.offeringsService['offeringModel']
+      .find({ _id: { $in: offeringIds } })
+      .select('_id name icon category price')
+      .lean();
+
     const foundIds = found.map((o: any) => o._id.toString());
     const missing = offeringIds.filter(id => !foundIds.includes(id));
     if (missing.length > 0) {
@@ -36,19 +39,49 @@ export class WalletService {
         receivedItems: dto.items,
         expectedField: 'offeringId',
         foundIds,
-        offeringIds
+        offeringIds,
       });
     }
 
+    // Enrichir chaque item avec les données d'offrande officielles et calculer les prix
+    const offeringMap = new Map(found.map((o: any) => [o._id.toString(), o]));
+
+    const normalizedItems = dto.items.map(item => {
+      const offering = offeringMap.get(item.offeringId);
+      const unitPrice = offering?.price ?? item.unitPrice ?? item.price;
+
+      if (unitPrice === undefined || unitPrice === null) {
+        throw new BadRequestException({
+          message: `Prix manquant pour l'offrande ${item.offeringId}`,
+          error: 'Bad Request',
+          statusCode: 400,
+        });
+      }
+
+      const quantity = Number(item.quantity) || 0;
+
+      return {
+        offeringId: item.offeringId,
+        quantity,
+        name: offering?.name ?? item.name,
+        icon: offering?.icon ?? item.icon,
+        category: offering?.category ?? item.category,
+        unitPrice,
+        totalPrice: unitPrice * quantity,
+      };
+    });
+
+    const totalAmount = normalizedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const payload = { ...dto, items: normalizedItems, totalAmount };
+
     try {
-      console.log('[WalletService] Tentative d\'enregistrement:', JSON.stringify(dto, null, 2));
-      const created = new this.walletTransactionModel(dto);
+      console.log('[WalletService] Tentative d\'enregistrement:', JSON.stringify(payload, null, 2));
+      const created = new this.walletTransactionModel(payload);
       const saved = await created.save();
 
       // Incrémenter le stock pour chaque item acheté
-      for (const item of dto.items) {
-        // Récupérer les infos de l'offrande depuis la base
-        const offering = await this.offeringsService['offeringModel'].findById(item.offeringId).lean();
+      for (const item of normalizedItems) {
+        const offering = offeringMap.get(item.offeringId);
         if (!offering) continue;
         await this.offeringStockService.incrementStock(
           new Types.ObjectId(item.offeringId),
