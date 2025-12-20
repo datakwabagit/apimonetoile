@@ -373,32 +373,45 @@ export class ConsultationsController {
     @CurrentUser() user: UserDocument,
   ) {
     try {
-      const { birthData } = body;
+      const { birthData } = body || {};
+
+      // Récupérer la consultation pour fallback des données de naissance
+      const consultation: any = await this.consultationsService.findOne(id);
+      const form = consultation?.formData || {};
+
+      const mergedBirthData: BirthData = {
+        nom: birthData?.nom ?? form.nom ?? form.lastName ?? '',
+        prenoms: birthData?.prenoms ?? form.prenoms ?? form.firstName ?? '',
+        dateNaissance: birthData?.dateNaissance ?? form.dateNaissance ?? form.dateOfBirth ?? '',
+        heureNaissance: birthData?.heureNaissance ?? form.heureNaissance ?? '',
+        villeNaissance: birthData?.villeNaissance ?? form.villeNaissance ?? form.cityOfBirth ?? '',
+        paysNaissance: birthData?.paysNaissance ?? form.paysNaissance ?? form.countryOfBirth ?? '',
+        email: birthData?.email ?? form.email ?? '',
+      } as BirthData;
 
       // Validation des données
       if (
-        !birthData ||
-        !birthData.nom ||
-        !birthData.prenoms ||
-        !birthData.dateNaissance ||
-        !birthData.heureNaissance ||
-        !birthData.villeNaissance ||
-        !birthData.paysNaissance
+        !mergedBirthData.nom ||
+        !mergedBirthData.prenoms ||
+        !mergedBirthData.dateNaissance ||
+        !mergedBirthData.heureNaissance ||
+        !mergedBirthData.villeNaissance ||
+        !mergedBirthData.paysNaissance
       ) {
         throw new HttpException('Données de naissance incomplètes', HttpStatus.BAD_REQUEST);
       }
 
       console.log('[API] 🚀 Génération analyse pour consultation:', id);
       console.log('[API] 📋 Données naissance:', {
-        nom: birthData.nom,
-        prenoms: birthData.prenoms,
-        dateNaissance: birthData.dateNaissance,
-        lieu: `${birthData.villeNaissance}, ${birthData.paysNaissance}`,
+        nom: mergedBirthData.nom,
+        prenoms: mergedBirthData.prenoms,
+        dateNaissance: mergedBirthData.dateNaissance,
+        lieu: `${mergedBirthData.villeNaissance}, ${mergedBirthData.paysNaissance}`,
       });
 
       // Générer l'analyse complète via DeepSeek
       console.log('[API] ⏳ Appel DeepSeek en cours...');
-      const analyse = await this.deepseekService.genererAnalyseComplete(birthData, id);
+      const analyse = await this.deepseekService.genererAnalyseComplete(mergedBirthData, id);
       console.log('[API] ✅ Analyse générée, structure:', {
         sessionId: analyse.sessionId,
         hasCarteDuCiel: !!analyse.carteDuCiel,
@@ -434,12 +447,17 @@ export class ConsultationsController {
       }
 
       // Envoyer l'email de notification (non-bloquant)
-      if (birthData.email) {
+      if (mergedBirthData.email) {
         this.emailService
-          .sendAnalysisReadyEmail(birthData.email, birthData.prenoms, birthData.nom, id)
+          .sendAnalysisReadyEmail(
+            mergedBirthData.email,
+            mergedBirthData.prenoms,
+            mergedBirthData.nom,
+            id,
+          )
           .then((result) => {
             if (result.success) {
-              console.log('[API] Email de notification envoyé à:', birthData.email);
+              console.log('[API] Email de notification envoyé à:', mergedBirthData.email);
             } else {
               console.error('[API] Échec envoi email:', result.error);
             }
