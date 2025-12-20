@@ -55,6 +55,12 @@ export class WalletTransaction {
   @Prop({ type: Object })
   metadata: Record<string, any>;
 
+  @Prop({ type: 'objectId', ref: 'Consultation', required: false })
+  consultationId?: string;
+
+  @Prop({ required: false, enum: ['purchase', 'consumption', 'refund'] })
+  type?: string;
+
   @Prop()
   completedAt?: Date;
 }

@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WalletTransaction, WalletTransactionDocument } from './schemas/wallet-transaction.schema';
 import { OfferingStockService } from '../offerings/offering-stock.service';
+import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
+import { OfferingsService } from '../offerings/offerings.service';
 
 interface OfferingItem {
   offeringId: string | Types.ObjectId | any;
@@ -38,6 +40,10 @@ export class WalletOfferingsService {
     private walletTransactionModel: Model<WalletTransactionDocument>,
     @Inject(forwardRef(() => OfferingStockService))
     private offeringStockService: OfferingStockService,
+    @InjectModel(Consultation.name)
+    private consultationModel: Model<ConsultationDocument>,
+    @Inject(forwardRef(() => OfferingsService))
+    private offeringsService: OfferingsService,
   ) {}
 
   /**
@@ -52,9 +58,9 @@ export class WalletOfferingsService {
 
     // Agréger toutes les transactions "completed" pour cet utilisateur
     const transactions = await this.walletTransactionModel
-      .find({ 
-        userId: new Types.ObjectId(userId), 
-        status: 'completed' 
+      .find({
+        userId: new Types.ObjectId(userId),
+        status: 'completed',
       })
       .populate({
         path: 'items.offeringId',
@@ -72,6 +78,8 @@ export class WalletOfferingsService {
         return;
       }
 
+      const sign = transaction['type'] === 'consumption' ? -1 : 1;
+
       transaction.items.forEach(item => {
         if (!item.offeringId || !item.quantity || item.quantity <= 0) {
           return;
@@ -88,10 +96,10 @@ export class WalletOfferingsService {
         const offeringData = this.extractOfferingData(item.offeringId);
 
         if (current) {
-          current.quantity += item.quantity;
+          current.quantity += item.quantity * sign;
         } else {
           offeringsMap.set(offeringId, {
-            quantity: item.quantity,
+            quantity: item.quantity * sign,
             offering: offeringData,
           });
         }
@@ -105,9 +113,9 @@ export class WalletOfferingsService {
         quantity: data.quantity,
         offering: data.offering,
       }))
-      .filter(item => 
-        item.quantity > 0 && 
-        item.offering && 
+      .filter(item =>
+        item.quantity > 0 &&
+        item.offering &&
         item.offering.isActive !== false // Exclure les offrandes inactives
       )
       .sort((a, b) => b.quantity - a.quantity); // Tri par quantité décroissante
@@ -123,24 +131,36 @@ export class WalletOfferingsService {
    * @returns Résultat de la consommation
    */
   async consumeOfferings(
-    userId: string, 
-    consultationId: string, 
-    offerings: Array<{ offeringId: string; quantity: number }>
+    userId: string | undefined,
+    consultationId: string,
+    offerings: Array<{ offeringId: string; quantity: number }>,
   ): Promise<ConsumptionResult> {
-    // Validation des paramètres
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('ID utilisateur invalide');
-    }
+    // Validation de la consultation
     if (!Types.ObjectId.isValid(consultationId)) {
       throw new BadRequestException('ID consultation invalide');
     }
+
+    // Résoudre l'utilisateur si non fourni
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const consultation = await this.consultationModel.findById(consultationId).select('clientId');
+      if (!consultation || !consultation.clientId) {
+        throw new BadRequestException('Impossible de déterminer l\'utilisateur pour cette consultation');
+      }
+      resolvedUserId = consultation.clientId.toString();
+    }
+
+    if (!Types.ObjectId.isValid(resolvedUserId)) {
+      throw new BadRequestException('ID utilisateur invalide');
+    }
+
     if (!Array.isArray(offerings) || offerings.length === 0) {
       throw new BadRequestException('Liste d\'offrandes invalide');
     }
 
     // Vérifier que l'utilisateur possède suffisamment d'offrandes
-    const userOfferings = await this.getUserOfferings(userId);
-    const consumedItems = [];
+    const userOfferings = await this.getUserOfferings(resolvedUserId);
+    const consumedItems = [] as Array<{ offeringId: string; quantity: number }>;
 
     for (const requestedItem of offerings) {
       if (!Types.ObjectId.isValid(requestedItem.offeringId)) {
@@ -151,19 +171,19 @@ export class WalletOfferingsService {
       }
 
       const userOffering = userOfferings.find(
-        item => item.offeringId === requestedItem.offeringId.toString()
+        item => item.offeringId === requestedItem.offeringId.toString(),
       );
 
       if (!userOffering) {
         throw new BadRequestException(
-          `Offrande ${requestedItem.offeringId} non trouvée dans le wallet`
+          `Offrande ${requestedItem.offeringId} non trouvée dans le wallet`,
         );
       }
 
       if (userOffering.quantity < requestedItem.quantity) {
         throw new BadRequestException(
           `Quantité insuffisante pour l'offrande ${requestedItem.offeringId}. ` +
-          `Possédé: ${userOffering.quantity}, Demandé: ${requestedItem.quantity}`
+            `Possédé: ${userOffering.quantity}, Demandé: ${requestedItem.quantity}`,
         );
       }
 
@@ -183,27 +203,62 @@ export class WalletOfferingsService {
       throw new BadRequestException('Cette consultation a déjà consommé des offrandes');
     }
 
+    // Récupérer les détails des offrandes
+    const offeringIds = consumedItems.map(item => item.offeringId);
+    const offeringsData = await this.offeringsService['offeringModel']
+      .find({ _id: { $in: offeringIds } })
+      .select('_id name icon category price')
+      .lean();
+
+    const offeringMap = new Map(
+      offeringsData.map((o: any) => [o._id.toString(), o]),
+    );
+
+    // Préparer les items complets pour le stockage
+    const normalizedItems = consumedItems.map(item => {
+      const offering = offeringMap.get(item.offeringId.toString());
+      if (!offering) {
+        throw new BadRequestException(`Offrande introuvable: ${item.offeringId}`);
+      }
+
+      const unitPrice = offering.price ?? 0;
+      return {
+        offeringId: item.offeringId.toString(),
+        quantity: item.quantity,
+        name: offering.name,
+        icon: offering.icon,
+        category: offering.category,
+        unitPrice,
+        totalPrice: unitPrice * item.quantity,
+      };
+    });
+
+    const totalAmount = normalizedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+
     try {
-      // Créer une transaction de consommation
-      const consumptionTransaction = await this.walletTransactionModel.create({
-        userId: new Types.ObjectId(userId),
-        consultationId: new Types.ObjectId(consultationId),
+      // Créer une transaction de consommation (traçabilité)
+      const timestamp = Date.now();
+      const transactionPayload: Partial<WalletTransaction> & Record<string, any> = {
+        userId: resolvedUserId,
+        consultationId,
         type: 'consumption',
         status: 'completed',
-        items: consumedItems.map(item => ({
-          offeringId: new Types.ObjectId(item.offeringId),
-          quantity: item.quantity,
-        })),
-        totalAmount: 0, // Pas de valeur monétaire pour la consommation
-        createdAt: new Date(),
-      });
+        transactionId: `TXN-CONS-${timestamp}`,
+        paymentToken: `CONS-${timestamp}`,
+        paymentMethod: 'wallet_offerings',
+        items: normalizedItems,
+        totalAmount,
+        metadata: { consultationId },
+      };
+
+      await this.walletTransactionModel.create(transactionPayload);
 
       // Décrémenter le stock pour chaque offrande consommée
       const stockResults = [];
       for (const item of consumedItems) {
         const stockResult = await this.offeringStockService.decrementStock(
-          new Types.ObjectId(item.offeringId), 
-          item.quantity
+          new Types.ObjectId(item.offeringId),
+          item.quantity,
         );
         stockResults.push({
           offeringId: item.offeringId,
@@ -218,7 +273,9 @@ export class WalletOfferingsService {
         consumedOfferings: stockResults,
       };
     } catch (error) {
-      throw new BadRequestException(`Erreur lors de la consommation des offrandes: ${error.message}`);
+      throw new BadRequestException(
+        `Erreur lors de la consommation des offrandes: ${error.message}`,
+      );
     }
   }
 

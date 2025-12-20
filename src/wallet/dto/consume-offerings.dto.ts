@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ConsumeOfferingDto {
@@ -11,8 +11,8 @@ export class ConsumeOfferingDto {
 
 export class ConsumeOfferingsDto {
   @IsString()
-  @IsNotEmpty()
-  userId: string;
+  @IsOptional()
+  userId?: string;
 
   @IsString()
   @IsNotEmpty()
