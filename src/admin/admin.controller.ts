@@ -21,6 +21,16 @@ export class AdminController {
     return stats;
   }
 
+  @Get('offerings/stats')
+  @ApiOperation({ summary: 'Statistiques des ventes d\'offrandes' })
+  @ApiResponse({ status: 200, description: 'Statistiques des ventes retournées.' })
+  async getOfferingStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.adminService.getOfferingSalesStats({ startDate, endDate });
+  }
+
   @Get('users')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.READ_ANY_USER)

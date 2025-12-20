@@ -8,6 +8,7 @@ import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { UpdateUserDto } from '../users/dto/update-user.dto';
+import { WalletTransaction, WalletTransactionDocument } from '../wallet/schemas/wallet-transaction.schema';
 
 @Injectable()
 export class AdminService {
@@ -15,6 +16,7 @@ export class AdminService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
+    @InjectModel(WalletTransaction.name) private walletTransactionModel: Model<WalletTransactionDocument>,
   ) {}
 
   private startOfDay(date = new Date()) {
@@ -116,6 +118,154 @@ export class AdminService {
         todayRevenue,
         growth,
       },
+    };
+  }
+
+  async getOfferingSalesStats(options?: { startDate?: string; endDate?: string }) {
+    const { startDate, endDate } = options || {};
+
+    const match: any = { status: 'completed' };
+    if (startDate || endDate) {
+      match.createdAt = {};
+      if (startDate) match.createdAt.$gte = new Date(startDate);
+      if (endDate) match.createdAt.$lte = new Date(endDate);
+    }
+
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const last7Start = new Date(todayStart);
+    last7Start.setDate(last7Start.getDate() - 6); // today + 6 jours précédents
+
+    const last30Start = new Date(todayStart);
+    last30Start.setDate(last30Start.getDate() - 29); // today + 29 jours précédents
+
+    const [facet] = await this.walletTransactionModel.aggregate([
+      { $match: match },
+      {
+        $facet: {
+          overview: [
+            { $unwind: '$items' },
+            {
+              $group: {
+                _id: null,
+                revenue: { $sum: '$items.totalPrice' },
+                quantitySold: { $sum: '$items.quantity' },
+                transactions: { $addToSet: '$_id' },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                revenue: 1,
+                quantitySold: 1,
+                transactionsCount: { $size: '$transactions' },
+              },
+            },
+          ],
+          byOffering: [
+            { $unwind: '$items' },
+            {
+              $group: {
+                _id: '$items.offeringId',
+                revenue: { $sum: '$items.totalPrice' },
+                quantitySold: { $sum: '$items.quantity' },
+                name: { $first: '$items.name' },
+                category: { $first: '$items.category' },
+                icon: { $first: '$items.icon' },
+                avgUnitPrice: { $avg: '$items.unitPrice' },
+              },
+            },
+            { $sort: { revenue: -1 } },
+            {
+              $project: {
+                _id: 0,
+                offeringId: '$_id',
+                name: 1,
+                category: 1,
+                icon: 1,
+                revenue: 1,
+                quantitySold: 1,
+                avgUnitPrice: { $round: ['$avgUnitPrice', 2] },
+              },
+            },
+          ],
+          byCategory: [
+            { $unwind: '$items' },
+            {
+              $group: {
+                _id: '$items.category',
+                revenue: { $sum: '$items.totalPrice' },
+                quantitySold: { $sum: '$items.quantity' },
+              },
+            },
+            { $sort: { revenue: -1 } },
+            {
+              $project: {
+                _id: 0,
+                category: '$_id',
+                revenue: 1,
+                quantitySold: 1,
+              },
+            },
+          ],
+          today: [
+            { $match: { createdAt: { $gte: todayStart } } },
+            { $unwind: '$items' },
+            {
+              $group: {
+                _id: null,
+                revenue: { $sum: '$items.totalPrice' },
+                quantitySold: { $sum: '$items.quantity' },
+              },
+            },
+            { $project: { _id: 0, revenue: 1, quantitySold: 1 } },
+          ],
+          last7: [
+            { $match: { createdAt: { $gte: last7Start } } },
+            { $unwind: '$items' },
+            {
+              $group: {
+                _id: null,
+                revenue: { $sum: '$items.totalPrice' },
+                quantitySold: { $sum: '$items.quantity' },
+              },
+            },
+            { $project: { _id: 0, revenue: 1, quantitySold: 1 } },
+          ],
+          last30: [
+            { $match: { createdAt: { $gte: last30Start } } },
+            { $unwind: '$items' },
+            {
+              $group: {
+                _id: null,
+                revenue: { $sum: '$items.totalPrice' },
+                quantitySold: { $sum: '$items.quantity' },
+              },
+            },
+            { $project: { _id: 0, revenue: 1, quantitySold: 1 } },
+          ],
+        },
+      },
+    ]).exec();
+
+    const overview = (facet?.overview && facet.overview[0]) || {
+      revenue: 0,
+      quantitySold: 0,
+      transactionsCount: 0,
+    };
+
+    return {
+      overview,
+      byOffering: facet?.byOffering || [],
+      byCategory: facet?.byCategory || [],
+      periods: {
+        today: (facet?.today && facet.today[0]) || { revenue: 0, quantitySold: 0 },
+        last7: (facet?.last7 && facet.last7[0]) || { revenue: 0, quantitySold: 0 },
+        last30: (facet?.last30 && facet.last30[0]) || { revenue: 0, quantitySold: 0 },
+      },
+      filters: { startDate, endDate },
     };
   }
 

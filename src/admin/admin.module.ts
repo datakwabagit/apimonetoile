@@ -5,6 +5,7 @@ import { AdminService } from './admin.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { Consultation, ConsultationSchema } from '../consultations/schemas/consultation.schema';
 import { Payment, PaymentSchema } from '../payments/schemas/payment.schema';
+import { WalletTransaction, WalletTransactionSchema } from '../wallet/schemas/wallet-transaction.schema';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { Payment, PaymentSchema } from '../payments/schemas/payment.schema';
       { name: User.name, schema: UserSchema },
       { name: Consultation.name, schema: ConsultationSchema },
       { name: Payment.name, schema: PaymentSchema },
+      { name: WalletTransaction.name, schema: WalletTransactionSchema },
     ]),
   ],
   controllers: [AdminController],
