@@ -297,6 +297,7 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
   async findOne(@Param('id') id: string) {
     const consultation: any = await this.consultationsService.findOne(id);
+    console.log('[ConsultationsController] Consultation récupérée:', consultation);
     const consultationObj = consultation.toObject();
 
     // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
@@ -312,6 +313,12 @@ export class ConsultationsController {
       );
     }
 
+    // Populate alternatives with offering details
+    let alternatives = consultation.alternatives || consultationObj.alternatives || [];
+    if (alternatives.length) {
+      alternatives = await this.consultationsService.populateAlternatives(alternatives);
+    }
+
     return {
       success: true,
       consultation: {
@@ -324,6 +331,7 @@ export class ConsultationsController {
         dateGeneration: consultationObj.createdAt || new Date(),
         statut: consultation.status,
         analyse,
+        alternatives,
         ...consultationObj,
       },
     };

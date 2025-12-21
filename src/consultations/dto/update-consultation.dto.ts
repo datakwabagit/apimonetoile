@@ -8,9 +8,14 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   @IsOptional()
   status?: ConsultationStatus;
 
+
   @IsString()
   @IsOptional()
   consultantId?: string;
+
+  @IsObject()
+  @IsOptional()
+  requiredOffering?: import('./create-consultation.dto').RequiredOfferingDto;
 
   @IsString()
   @IsOptional()

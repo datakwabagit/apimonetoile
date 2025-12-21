@@ -13,11 +13,13 @@ import { EmailService } from '../common/services/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
 import { AnalysisModule } from '../analysis/analysis.module';
+import { OfferingsModule } from '../offerings/offerings.module';
 
 @Module({
   imports: [
     HttpModule,
     AnalysisModule,
+    OfferingsModule,
     MongooseModule.forFeature([
       { name: Consultation.name, schema: ConsultationSchema },
       { name: Notification.name, schema: NotificationSchema },

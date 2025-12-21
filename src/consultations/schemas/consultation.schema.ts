@@ -1,19 +1,55 @@
 ﻿import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
+import { Offering } from '@/offerings/schemas/offering.schema';
 
 export type ConsultationDocument = Consultation & Document;
 
+
 /**
- * Sous-schéma pour les offrandes requises
+ * Alternative d'offrande obligatoire (animal, végétal, boisson)
  */
 @Schema({ _id: false })
-export class RequiredOffering {
+export class OfferingAlternative {
   @Prop({ required: true })
   offeringId: string;
 
   @Prop({ required: true, min: 1 })
   quantity: number;
+
+  // Champs enrichis depuis l'entité Offering
+  @Prop()
+  name?: string;
+
+  @Prop()
+  price?: number;
+
+  @Prop()
+  priceUSD?: number;
+
+  @Prop()
+  category?: string;
+
+  @Prop()
+  icon?: string;
+
+  @Prop()
+  description?: string;
+}
+
+/**
+ * Sous-schéma pour l'offrande obligatoire unique avec alternatives
+ */
+@Schema({ _id: false })
+export class RequiredOffering {
+  @Prop({ required: true, enum: ['animal', 'vegetal', 'boisson'] })
+  type: string; // animal, vegetal, boisson
+
+  @Prop({ type: [OfferingAlternative], required: true })
+  alternatives: OfferingAlternative[];
+
+  @Prop({ required: true })
+  selectedAlternative: string; // 'animal', 'vegetal' ou 'boisson'
 }
 
 /**
@@ -75,8 +111,12 @@ export class Consultation {
     [key: string]: any; // Données spécifiques à chaque type de consultation
   };
 
-  @Prop({ type: [RequiredOffering], default: [] })
-  requiredOfferings: RequiredOffering[];
+
+  @Prop({ type: RequiredOffering, required: false, default: null })
+  requiredOffering?: RequiredOffering;
+
+  @Prop({ type: [OfferingAlternative], required: false, default: [] })
+  alternatives?: Offering[];
 
   @Prop({ type: [RequiredOfferingDetail], default: [] })
   requiredOfferingsDetails: RequiredOfferingDetail[];

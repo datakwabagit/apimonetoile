@@ -13,6 +13,16 @@ export class OfferingsService {
     return this.offeringModel.find().exec();
   }
 
+  /**
+   * Récupère les offrandes par une liste d'IDs
+   */
+  async findByIds(ids: any[]): Promise<Offering[]> {
+    if (!ids || !ids.length) return [];
+    // Convertir les IDs en string pour robustesse
+    const stringIds = ids.map(id => id?.toString());
+    return this.offeringModel.find({ _id: { $in: stringIds } }).exec();
+  }
+
   async bulkUpdate(offerings: any[]): Promise<void> {
     // Supprimer toutes les offrandes existantes
     await this.offeringModel.deleteMany({});

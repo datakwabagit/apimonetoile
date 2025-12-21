@@ -1,4 +1,5 @@
-﻿import {
+﻿import { Type } from 'class-transformer';
+import {
   IsString,
   IsEnum,
   IsObject,
@@ -11,13 +12,25 @@
 } from 'class-validator';
 import { ConsultationType } from '../../common/enums/consultation-status.enum';
 
-export class RequiredOfferingDto {
+
+export class OfferingAlternativeDto {
   @IsString()
   offeringId: string;
 
   @IsNumber()
   @Min(1)
   quantity: number;
+}
+
+export class RequiredOfferingDto {
+  @IsString()
+  type: 'animal' | 'vegetal' | 'boisson';
+
+  @IsArray()
+  alternatives: OfferingAlternativeDto[];
+
+  @IsString()
+  selectedAlternative: 'animal' | 'vegetal' | 'boisson';
 }
 
 export class RequiredOfferingDetailDto {
@@ -79,9 +92,16 @@ export class CreateConsultationDto {
   @IsOptional()
   price?: number;
 
-  @IsArray()
+
+
+  @IsObject()
   @IsOptional()
-  requiredOfferings?: RequiredOfferingDto[];
+  requiredOffering?: RequiredOfferingDto;
+
+  @IsArray()
+  @Type(() => OfferingAlternativeDto)
+  @IsOptional()
+  alternatives?: OfferingAlternativeDto[];
 
   @IsArray()
   @IsOptional()

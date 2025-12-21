@@ -6,6 +6,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
+import { OfferingsService } from '../offerings/offerings.service';
 import {
   AstrologicalAnalysis,
   AstrologicalAnalysisDocument,
@@ -16,6 +17,7 @@ import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import { off } from 'process';
 
 @Injectable()
 export class ConsultationsService {
@@ -24,12 +26,66 @@ export class ConsultationsService {
     @InjectModel(AstrologicalAnalysis.name)
     private analysisModel: Model<AstrologicalAnalysisDocument>,
     private notificationsService: NotificationsService,
+    private offeringsService: OfferingsService,
   ) {}
+
+  /**
+   * Récupère les alternatives enrichies avec les données d'offrande
+   */
+  async populateAlternatives(alternatives: any[] = []) {
+    console.log('[ConsultationsService] Population des alternatives:', alternatives);
+    if (!alternatives.length) return [];
+    // Filtrer les offeringIds valides et uniques
+    const offeringIds = Array.from(new Set(
+      alternatives
+        .map(a => a.offeringId)
+        .filter(id => id !== null && id !== undefined)
+        .map(id => id?.toString())
+    ));
+    console.log('[ConsultationsService] Offering IDs à récupérer:', offeringIds);
+    const offerings = await this.offeringsService.findByIds(offeringIds);
+    console.log('[ConsultationsService] Offrandes récupérées:', offerings);
+
+    // Fusionner chaque alternative avec ses données d'offrande au niveau racine
+    const enrichedAlternatives = alternatives.map(alt => {
+      const altId = alt.offeringId?.toString();
+      const found = offerings.find(o => {
+        const offerId = o._id?.toString() || o.id?.toString();
+        return offerId === altId;
+      });
+      return found
+        ? {
+            ...alt, // conserve offeringId et quantity
+            name: found.name,
+            price: found.price,
+            priceUSD: found.priceUSD,
+            category: found.category,
+            icon: found.icon,
+            description: found.description,
+          }
+        : alt;
+    });
+    return enrichedAlternatives;
+  }
 
   /**
    * Créer une nouvelle consultation
    */
   async create(clientId: string, createConsultationDto: CreateConsultationDto) {
+    // Si une offrande obligatoire est fournie, valider sa structure
+    if (createConsultationDto.requiredOffering) {
+      const { requiredOffering } = createConsultationDto;
+      if (!['animal', 'vegetal', 'boisson'].includes(requiredOffering.selectedAlternative)) {
+        throw new Error('L’alternative choisie doit être animal, vegetal ou boisson.');
+      }
+      if (!requiredOffering.alternatives || requiredOffering.alternatives.length !== 3) {
+        throw new Error('Il doit y avoir exactement trois alternatives (animal, vegetal, boisson).');
+      }
+      if (!requiredOffering.alternatives.find(a => a.offeringId && a.quantity)) {
+        throw new Error('Chaque alternative doit avoir un offeringId et une quantité.');
+      }
+    }
+
     const consultation = new this.consultationModel({
       ...createConsultationDto,
       clientId,
@@ -52,6 +108,20 @@ export class ConsultationsService {
    * Créer une consultation personnelle
    */
   async createPersonalConsultation(data: any) {
+    // Si une offrande obligatoire est fournie, valider sa structure
+    if (data.requiredOffering) {
+      const { requiredOffering } = data;
+      if (!['animal', 'vegetal', 'boisson'].includes(requiredOffering.selectedAlternative)) {
+        throw new Error('L’alternative choisie doit être animal, vegetal ou boisson.');
+      }
+      if (!requiredOffering.alternatives || requiredOffering.alternatives.length !== 3) {
+        throw new Error('Il doit y avoir exactement trois alternatives (animal, vegetal, boisson).');
+      }
+      if (!requiredOffering.alternatives.find(a => a.offeringId && a.quantity)) {
+        throw new Error('Chaque alternative doit avoir un offeringId et une quantité.');
+      }
+    }
+
     const consultation = new this.consultationModel({
       ...data,
       type: 'personal',
@@ -125,6 +195,13 @@ export class ConsultationsService {
 
     if (!consultation) {
       throw new NotFoundException('Consultation not found');
+    }
+
+    console.log('[ConsultationsService] Consultation trouvée:', consultation);
+
+    // Populate alternatives with offering details
+    if (consultation.alternatives && consultation.alternatives.length) {
+      consultation.alternatives = await this.populateAlternatives(consultation.alternatives);
     }
 
     return consultation;
