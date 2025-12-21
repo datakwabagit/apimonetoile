@@ -1,4 +1,4 @@
-import {
+﻿import {
   IsString,
   IsEnum,
   IsObject,
@@ -7,12 +7,44 @@ import {
   IsDateString,
   Min,
   MaxLength,
+  IsArray,
 } from 'class-validator';
 import { ConsultationType } from '../../common/enums/consultation-status.enum';
 
+export class RequiredOfferingDto {
+  @IsString()
+  offeringId: string;
+
+  @IsNumber()
+  @Min(1)
+  quantity: number;
+}
+
+export class RequiredOfferingDetailDto {
+  @IsString()
+  _id: string;
+
+  @IsString()
+  name: string;
+
+  @IsNumber()
+  @Min(0)
+  price: number;
+
+  @IsString()
+  icon: string;
+
+  @IsString()
+  category: string;
+
+  @IsNumber()
+  @Min(1)
+  quantity: number;
+}
+
 export class CreateConsultationDto {
   /**
-   * AVERTISSEMENT : L’analyse spirituelle, astrologique et numérologique sera réalisée uniquement à partir des informations que vous fournissez dans ce formulaire. Vous pouvez demander une consultation pour un tiers.
+   * AVERTISSEMENT : L'analyse spirituelle, astrologique et numérologique sera réalisée uniquement à partir des informations que vous fournissez dans ce formulaire. Vous pouvez demander une consultation pour un tiers.
    */
   @IsString()
   serviceId: string;
@@ -46,4 +78,12 @@ export class CreateConsultationDto {
   @Min(0)
   @IsOptional()
   price?: number;
+
+  @IsArray()
+  @IsOptional()
+  requiredOfferings?: RequiredOfferingDto[];
+
+  @IsArray()
+  @IsOptional()
+  requiredOfferingsDetails?: RequiredOfferingDetailDto[];
 }

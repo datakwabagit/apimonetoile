@@ -1,8 +1,44 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+﻿import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 
 export type ConsultationDocument = Consultation & Document;
+
+/**
+ * Sous-schéma pour les offrandes requises
+ */
+@Schema({ _id: false })
+export class RequiredOffering {
+  @Prop({ required: true })
+  offeringId: string;
+
+  @Prop({ required: true, min: 1 })
+  quantity: number;
+}
+
+/**
+ * Sous-schéma pour les détails des offrandes requises enrichies
+ */
+@Schema({ _id: false })
+export class RequiredOfferingDetail {
+  @Prop({ required: true })
+  _id: string;
+
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true, min: 0 })
+  price: number;
+
+  @Prop({ required: true })
+  icon: string;
+
+  @Prop({ required: true })
+  category: string;
+
+  @Prop({ required: true, min: 1 })
+  quantity: number;
+}
 
 /**
  * Schéma MongoDB pour les consultations
@@ -38,6 +74,12 @@ export class Consultation {
     question?: string;
     [key: string]: any; // Données spécifiques à chaque type de consultation
   };
+
+  @Prop({ type: [RequiredOffering], default: [] })
+  requiredOfferings: RequiredOffering[];
+
+  @Prop({ type: [RequiredOfferingDetail], default: [] })
+  requiredOfferingsDetails: RequiredOfferingDetail[];
 
   @Prop({ default: null })
   result: string; // Résultat de la consultation (texte long)
