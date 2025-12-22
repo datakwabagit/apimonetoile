@@ -254,6 +254,7 @@ http://localhost:3001/api/v1
 | PATCH | `/users/:id/role` | Assigner rôle | ✅ | MANAGE_ROLES |
 | DELETE | `/users/:id` | Supprimer (soft) | ✅ | DELETE_ANY_USER |
 
+
 #### 🔮 Consultations (`/consultations`)
 
 | Méthode | Endpoint | Description | Auth | Permission |
@@ -262,9 +263,31 @@ http://localhost:3001/api/v1
 | GET | `/consultations` | Liste consultations | ✅ | READ_ANY_CONSULTATION |
 | GET | `/consultations/my` | Mes consultations | ✅ | - |
 | GET | `/consultations/:id` | Consultation par ID | ✅ | - |
+| GET | `/consultations/analysis/:consultationId` | Analyse d'une consultation (astrologique) | ❌ (public) | - |
 | PATCH | `/consultations/:id` | Modifier consultation | ✅ | UPDATE_OWN_CONSULTATION |
 | PATCH | `/consultations/:id/assign/:consultantId` | Attribuer consultant | ✅ | ASSIGN_CONSULTATION |
 | DELETE | `/consultations/:id` | Supprimer | ✅ | DELETE_OWN_CONSULTATION |
+#
+### Exemple : Récupérer l'analyse d'une consultation
+
+**GET** `/consultations/analysis/:consultationId`
+
+**Réponse (200)**
+```json
+{
+  "success": true,
+  "consultationId": "65a1234bcdef567890123456",
+  "analyse": { /* ...données astrologiques... */ }
+}
+```
+
+**Réponse (404)**
+```json
+{
+  "success": false,
+  "message": "Aucune analyse trouvée pour cette consultation"
+}
+```
 
 #### 📦 Services (`/services`)
 
