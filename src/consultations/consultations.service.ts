@@ -379,7 +379,8 @@ export class ConsultationsService {
    * Récupérer les consultations d'un client
    */
   async findByClient(clientId: string, query: { page?: number; limit?: number }) {
-    return this.findAll({ ...query, clientId });
+    // Utilise l'enum pour le statut
+    return this.findAll({ ...query, clientId, status: ConsultationStatus.COMPLETED });
   }
 
   /**
