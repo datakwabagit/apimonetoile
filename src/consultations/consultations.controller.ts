@@ -458,8 +458,7 @@ export class ConsultationsController {
           id,
           analyseComplete,
         );
-        console.log('[API] ✅ Analyse sauvegardée avec succès, ID:', savedAnalysis._id);
-      } catch (saveError) {
+       } catch (saveError) {
         console.error('[API] ❌ Erreur sauvegarde analyse:', {
           message: saveError.message,
           stack: saveError.stack,
