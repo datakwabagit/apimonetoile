@@ -488,10 +488,13 @@ export class ConsultationsController {
         console.warn("[API] Pas d'email fourni - notification non envoyée");
       }
 
+      // Mettre à jour le statut de la consultation à COMPLETED
+      await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
+
       return {
         success: true,
         consultationId: id,
-        statut: 'completed',
+        statut: ConsultationStatus.COMPLETED,
         message: 'Analyse astrologique générée avec succès',
         analyse: analyseComplete,
       };
@@ -534,10 +537,11 @@ export class ConsultationsController {
 
       // Vérifier si l'analyse existe dans resultData
       if (consultation.resultData && consultation.resultData.analyse) {
+        
         return {
           success: true,
           consultationId: id,
-          statut: consultation.resultData.statut || 'completed',
+          statut: ConsultationStatus.COMPLETED,
           analyse: consultation.resultData.analyse,
         };
       }
