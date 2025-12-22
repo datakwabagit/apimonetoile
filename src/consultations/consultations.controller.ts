@@ -1,37 +1,34 @@
-import { Response } from 'express';
-import { Res } from '@nestjs/common';
  
   
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  Query,
+  Get,
   HttpCode,
-  HttpStatus,
   HttpException,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ConsultationsService } from './consultations.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/schemas/notification.schema';
-import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { SaveAnalysisDto } from './dto/save-analysis.dto';
-import { DeepseekService, BirthData } from './deepseek.service';
-import { EmailService } from '../common/services/email.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { Public } from '../common/decorators/public.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Permission } from '../common/enums/permission.enum';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
+import { Permission } from '../common/enums/permission.enum';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UserDocument } from '../users/schemas/user.schema';
+import { ConsultationsService } from './consultations.service';
+import { BirthData, DeepseekService } from './deepseek.service';
+import { SaveAnalysisDto } from './dto/save-analysis.dto';
+import { UpdateConsultationDto } from './dto/update-consultation.dto';
 
 @ApiTags('Consultations')
 @Controller('consultations')
@@ -40,7 +37,6 @@ export class ConsultationsController {
   constructor(
     private readonly consultationsService: ConsultationsService,
     private readonly deepseekService: DeepseekService,
-    private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
   ) {}
   /**
@@ -463,30 +459,7 @@ export class ConsultationsController {
           message: saveError.message,
           stack: saveError.stack,
         });
-      }
-
-      // Envoyer l'email de notification (non-bloquant)
-      if (mergedBirthData.email) {
-        this.emailService
-          .sendAnalysisReadyEmail(
-            mergedBirthData.email,
-            mergedBirthData.prenoms,
-            mergedBirthData.nom,
-            id,
-          )
-          .then((result) => {
-            if (result.success) {
-              console.log('[API] Email de notification envoyé à:', mergedBirthData.email);
-            } else {
-              console.error('[API] Échec envoi email:', result.error);
-            }
-          })
-          .catch((err) => {
-            console.error('[API] Erreur envoi email:', err);
-          });
-      } else {
-        console.warn("[API] Pas d'email fourni - notification non envoyée");
-      }
+      }    
 
       // Mettre à jour le statut de la consultation à COMPLETED
       await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });

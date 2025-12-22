@@ -1,20 +1,18 @@
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { HttpModule } from '@nestjs/axios';
-import { ConsultationsService } from './consultations.service';
+import { AnalysisModule } from '../analysis/analysis.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
+import { OfferingsModule } from '../offerings/offerings.module';
 import { ConsultationsController } from './consultations.controller';
-import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
+import { ConsultationsService } from './consultations.service';
+import { DeepseekService } from './deepseek.service';
 import {
   AstrologicalAnalysis,
   AstrologicalAnalysisSchema,
 } from './schemas/astrological-analysis.schema';
-import { DeepseekService } from './deepseek.service';
-import { EmailService } from '../common/services/email.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { AnalysisModule } from '../analysis/analysis.module';
-import { OfferingsModule } from '../offerings/offerings.module';
+import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
 
 @Module({
   imports: [
@@ -29,7 +27,7 @@ import { OfferingsModule } from '../offerings/offerings.module';
     NotificationsModule,
   ],
   controllers: [ConsultationsController],
-  providers: [ConsultationsService, DeepseekService, EmailService],
-  exports: [ConsultationsService, DeepseekService, EmailService],
+  providers: [ConsultationsService, DeepseekService],
+  exports: [ConsultationsService, DeepseekService],
 })
 export class ConsultationsModule {}
