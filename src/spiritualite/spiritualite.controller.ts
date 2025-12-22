@@ -132,7 +132,6 @@ export class SpiritualiteController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions(Permission.MANAGE_CONTENT)
   async seed() {
-    console.log('[ADMIN] Initialisation de la base de données');
     const result = await this.spiritualiteService.seedPractices();
     return {
       success: true,

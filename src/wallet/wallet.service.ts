@@ -19,10 +19,8 @@ export class WalletService {
   ) {}
 
   async createTransaction(dto: CreateWalletTransactionDto): Promise<WalletTransaction> {
-   console.log('[WalletService] Création de transaction avec DTO:', JSON.stringify(dto, null, 2));  
     // Validation d’intégrité : vérifier que chaque offeringId existe
     const offeringIds = dto.items.map(item => item.offeringId);
-    console.log('[WalletService] Vérification des offeringIds:', offeringIds);
 
     const found = await this.offeringsService['offeringModel']
       .find({ _id: { $in: offeringIds } })
@@ -75,7 +73,6 @@ export class WalletService {
     const payload = { ...dto, items: normalizedItems, totalAmount };
 
     try {
-      console.log('[WalletService] Tentative d\'enregistrement:', JSON.stringify(payload, null, 2));
       const created = new this.walletTransactionModel(payload);
       const saved = await created.save();
 
@@ -91,8 +88,6 @@ export class WalletService {
           offering.category
         );
       }
-
-      console.log('[WalletService] Transaction enregistrée:', saved._id);
       return saved;
     } catch (err) {
       console.error('[WalletService] Erreur lors de l\'enregistrement:', err);

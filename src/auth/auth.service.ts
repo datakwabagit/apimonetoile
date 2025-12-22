@@ -27,8 +27,6 @@ export class AuthService {
    * Inscription d'un nouvel utilisateur
    */
   async register(registerDto: RegisterDto) {
-    console.log('Register DTO:', registerDto);
-
     // Nouveau RegisterDto : username, gender, country, phone, password, autres champs optionnels
     const { username, gender, country, phone, password, ...optionals } = registerDto;
 

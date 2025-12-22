@@ -18,7 +18,6 @@ async function bootstrap() {
   }
 
   await offeringsService.bulkUpdate(data.offerings);
-  console.log(`${data.offerings.length} offrandes insérées avec succès.`);
   await app.close();
 }
 

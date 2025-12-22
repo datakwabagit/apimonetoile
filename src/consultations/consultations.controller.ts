@@ -18,6 +18,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConsultationsService } from './consultations.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { DeepseekService, BirthData } from './deepseek.service';
@@ -39,7 +41,42 @@ export class ConsultationsController {
     private readonly consultationsService: ConsultationsService,
     private readonly deepseekService: DeepseekService,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+  /**
+   * POST /consultations/:id/notify-user
+   * Envoyer une notification à l'utilisateur de la consultation
+   */
+  @Post(':id/notify-user')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.UPDATE_OWN_CONSULTATION)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Notifier l'utilisateur de la consultation",
+    description: "Envoie une notification à l'utilisateur lié à la consultation.",
+  })
+  @ApiResponse({ status: 200, description: 'Notification envoyée avec succès.' })
+  @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
+  async notifyUser(@Param('id') id: string) {
+    // Récupérer la consultation pour obtenir le client
+    const consultation: any = await this.consultationsService.findOne(id);
+    if (!consultation || !consultation.clientId) {
+      throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
+    }
+    // Correction : extraire l'_id si clientId est un objet
+    const userId = consultation.clientId._id ? consultation.clientId._id.toString() : consultation.clientId.toString();
+    await this.notificationsService.create({
+      userId,
+      type: NotificationType.CONSULTATION_RESULT,
+      title: 'Notification de consultation',
+      message: `Vous avez reçu une notification pour la consultation "${consultation.title || id}"`,
+      metadata: { consultationId: id },
+    });
+    return {
+      success: true,
+      message: "Notification envoyée à l'utilisateur.",
+    };
+  }
 
   /**
    * POST /consultations
@@ -58,17 +95,11 @@ export class ConsultationsController {
   @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-    console.log('[ConsultationController] Création consultation pour utilisateur:', user._id);
 
     // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
 
-    console.log('[ConsultationController] ✅ Consultation créée avec clientId:', {
-      id: consultation.id,
-      clientId: user._id.toString(),
-    });
-
-    return {
+       return {
       success: true,
       message: 'Consultation créée avec succès',
       ...consultation,
@@ -297,7 +328,6 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
   async findOne(@Param('id') id: string) {
     const consultation: any = await this.consultationsService.findOne(id);
-    console.log('[ConsultationsController] Consultation récupérée:', consultation);
     const consultationObj = consultation.toObject();
 
     // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
@@ -408,25 +438,9 @@ export class ConsultationsController {
       ) {
         throw new HttpException('Données de naissance incomplètes', HttpStatus.BAD_REQUEST);
       }
-
-      console.log('[API] 🚀 Génération analyse pour consultation:', id);
-      console.log('[API] 📋 Données naissance:', {
-        nom: mergedBirthData.nom,
-        prenoms: mergedBirthData.prenoms,
-        dateNaissance: mergedBirthData.dateNaissance,
-        lieu: `${mergedBirthData.villeNaissance}, ${mergedBirthData.paysNaissance}`,
-      });
-
-      // Générer l'analyse complète via DeepSeek
-      console.log('[API] ⏳ Appel DeepSeek en cours...');
+  
       const analyse = await this.deepseekService.genererAnalyseComplete(mergedBirthData, id);
-      console.log('[API] ✅ Analyse générée, structure:', {
-        sessionId: analyse.sessionId,
-        hasCarteDuCiel: !!analyse.carteDuCiel,
-        hasMissionDeVie: !!analyse.missionDeVie,
-        positionsCount: analyse.carteDuCiel?.positions?.length || 0,
-      });
-
+      
       // Construire l'objet AnalyseAstrologique complet
       const analyseComplete = {
         consultationId: id,
@@ -434,12 +448,10 @@ export class ConsultationsController {
         dateGeneration: new Date().toISOString(),
       };
 
-      console.log('[API] 📦 Analyse complète construite');
 
       // Sauvegarder l'analyse dans la collection AstrologicalAnalysis
       try {
         const userId = user._id.toString();
-        console.log('[API] 💾 Sauvegarde analyse pour userId:', userId);
 
         const savedAnalysis = await this.consultationsService.saveAstrologicalAnalysis(
           userId,

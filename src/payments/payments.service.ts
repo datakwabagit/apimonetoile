@@ -719,10 +719,8 @@ export class PaymentsService {
    */
   async verifyPayment(token: string) {
     this.validateToken(token);
-    console.log('Vérification du paiement pour le token2:', token);
     try {
       const verification = await this.verifyMoneyfusionPayment(token);
-      console.log('Résultat de la vérification:', verification);
       return {
         success: verification.status === 'success',
         status: verification.payment?.status || 'unknown',

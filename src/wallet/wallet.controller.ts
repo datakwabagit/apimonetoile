@@ -13,7 +13,6 @@ export class WalletController {
 
   @Post('transactions')
   async create(@Body() dto: CreateWalletTransactionDto) {
-    console.log('[WalletController] Création de transaction:', dto);
     const transaction = await this.walletService.createTransaction(dto);
     return { transaction };
   }
@@ -26,7 +25,6 @@ export class WalletController {
 
   @Post('consume-offerings')
   async consumeOfferings(@Body() dto: ConsumeOfferingsDto): Promise<any> {
-    console.log('[WalletController] Consommation offrandes:', dto);
     return this.walletOfferingsService.consumeOfferings(dto.userId, dto.consultationId, dto.offerings);
   }
 }

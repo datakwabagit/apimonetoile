@@ -6,12 +6,40 @@ import {
   NotificationDocument,
   NotificationType,
 } from './schemas/notification.schema';
+import {
+  NotificationPreferences,
+  NotificationPreferencesDocument,
+} from './schemas/notification-preferences.schema';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectModel(Notification.name) private notificationModel: Model<NotificationDocument>,
+    @InjectModel(NotificationPreferences.name) private preferencesModel: Model<NotificationPreferencesDocument>,
   ) {}
+  /**
+   * Récupérer les préférences de notification d'un utilisateur
+   */
+  async getPreferences(userId: string) {
+    let prefs = await this.preferencesModel.findOne({ userId }).exec();
+    if (!prefs) {
+      prefs = new this.preferencesModel({ userId });
+      await prefs.save();
+    }
+    return prefs.toObject();
+  }
+
+  /**
+   * Mettre à jour les préférences de notification d'un utilisateur
+   */
+  async updatePreferences(userId: string, updates: Partial<NotificationPreferences>) {
+    const prefs = await this.preferencesModel.findOneAndUpdate(
+      { userId },
+      { $set: updates },
+      { new: true, upsert: true },
+    ).exec();
+    return prefs.toObject();
+  }
 
   /**
    * Créer une notification

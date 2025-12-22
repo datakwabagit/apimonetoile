@@ -34,8 +34,6 @@ export class PaymentVerificationService {
       }
 
       const url = `${this.moneyfusionBaseUrl}/paiementNotif/${paymentToken}`;
-      console.log(`🔍 Vérification MoneyFusion: ${url}`);
-
       const response = await firstValueFrom(
         this.httpService.get<MoneyFusionResponse>(url, {
           timeout: 10000,
@@ -50,8 +48,6 @@ export class PaymentVerificationService {
       if (!result.statut || !result.data) {
         throw new BadRequestException('Format de réponse invalide de MoneyFusion');
       }
-
-      console.log(`✅ Paiement vérifié: ${result.data.statut}`);
 
       return {
         success: true,

@@ -37,7 +37,6 @@ export class KnowledgeService {
           knowledge.title,
           knowledge.category,
         );
-        console.log('Notification de nouvelle connaissance créée:', notificationData);
       } catch (error) {
         console.error('Erreur lors de la création de la notification:', error);
       }
@@ -150,7 +149,6 @@ export class KnowledgeService {
             updateKnowledgeDto.title || knowledge.title,
             updateKnowledgeDto.category || knowledge.category,
           );
-          console.log('Notification de nouvelle connaissance créée:', notificationData);
         } catch (error) {
           console.error('Erreur lors de la création de la notification:', error);
         }

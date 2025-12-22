@@ -31,7 +31,6 @@ export class UsersService {
    * Créer un nouvel utilisateur (admin only)
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
-    console.log('Creating user with DTO:', createUserDto);
     const { username, password, gender, phone, phoneNumber, ...rest } = createUserDto;
 
     // Générer l'email automatiquement

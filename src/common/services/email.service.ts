@@ -21,7 +21,6 @@ export class EmailService {
 
     if (RESEND_API_KEY) {
       this.resend = new Resend(RESEND_API_KEY);
-      console.log('[Email] Service Resend initialisé');
     } else {
       console.warn('[Email] RESEND_API_KEY non configurée - emails désactivés');
     }
@@ -178,9 +177,6 @@ Pour toute question, contactez-nous à support@monetoile.com
   ): Promise<{ success: boolean; error?: string }> {
     // Si Resend n'est pas configuré, simuler l'envoi (mode dev)
     if (!this.resend) {
-      console.log('[Email] Mode simulation - Email non envoyé (RESEND_API_KEY manquante)');
-      console.log(`[Email] Destinataire: ${email}`);
-      console.log(`[Email] Consultation: ${consultationId}`);
       return { success: true };
     }
 
@@ -196,7 +192,6 @@ Pour toute question, contactez-nous à support@monetoile.com
         text: textContent,
       });
 
-      console.log('[Email] Email envoyé avec succès:', result);
       return { success: true };
     } catch (error) {
       console.error('[Email] Erreur envoi email:', error);
@@ -212,7 +207,6 @@ Pour toute question, contactez-nous à support@monetoile.com
    * Teste l'envoi d'email (pour debug)
    */
   async testEmailService(email: string): Promise<void> {
-    console.log('[Email] Test du service email...');
     const result = await this.sendAnalysisReadyEmail(
       email,
       'Test',

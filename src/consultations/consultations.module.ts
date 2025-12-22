@@ -12,6 +12,7 @@ import { DeepseekService } from './deepseek.service';
 import { EmailService } from '../common/services/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AnalysisModule } from '../analysis/analysis.module';
 import { OfferingsModule } from '../offerings/offerings.module';
 
@@ -25,9 +26,10 @@ import { OfferingsModule } from '../offerings/offerings.module';
       { name: Notification.name, schema: NotificationSchema },
       { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
     ]),
+    NotificationsModule,
   ],
   controllers: [ConsultationsController],
-  providers: [ConsultationsService, DeepseekService, EmailService, NotificationsService],
+  providers: [ConsultationsService, DeepseekService, EmailService],
   exports: [ConsultationsService, DeepseekService, EmailService],
 })
 export class ConsultationsModule {}

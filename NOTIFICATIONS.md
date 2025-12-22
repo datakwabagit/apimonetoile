@@ -381,7 +381,6 @@ const { data } = await axios.get('/notifications', {
   params: { page: 1, limit: 10, isRead: false }
 });
 
-console.log(`Vous avez ${data.unreadCount} notifications non lues`);
 
 // Afficher le badge
 <NotificationBell count={data.unreadCount} />
