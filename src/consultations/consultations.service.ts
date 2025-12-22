@@ -2,22 +2,21 @@
  * Générer le PDF d'une consultation
  */
 
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
+import { ConsultationStatus } from '../common/enums/consultation-status.enum';
+import { Role } from '../common/enums/role.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OfferingsService } from '../offerings/offerings.service';
+import { CreateConsultationDto } from './dto/create-consultation.dto';
+import { SaveAnalysisDto } from './dto/save-analysis.dto';
+import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import {
   AstrologicalAnalysis,
   AstrologicalAnalysisDocument,
 } from './schemas/astrological-analysis.schema';
-import { CreateConsultationDto } from './dto/create-consultation.dto';
-import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { SaveAnalysisDto } from './dto/save-analysis.dto';
-import { ConsultationStatus } from '../common/enums/consultation-status.enum';
-import { Role } from '../common/enums/role.enum';
-import { NotificationsService } from '../notifications/notifications.service';
-import { off } from 'process';
+import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 
 @Injectable()
 export class ConsultationsService {

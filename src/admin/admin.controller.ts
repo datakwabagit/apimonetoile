@@ -74,6 +74,8 @@ export class AdminController {
       limit: parseInt(limit as string, 10) || 18,
     });
 
+    console.log('[AdminController] Consultations récupérées:', JSON.stringify(result, null, 2));
+
     return result;
   }
 
