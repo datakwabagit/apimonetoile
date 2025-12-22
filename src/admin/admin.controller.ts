@@ -73,9 +73,6 @@ export class AdminController {
       page: parseInt(page as string, 10) || 1,
       limit: parseInt(limit as string, 10) || 18,
     });
-
-    console.log('[AdminController] Consultations récupérées:', JSON.stringify(result, null, 2));
-
     return result;
   }
 
