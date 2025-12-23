@@ -22,11 +22,27 @@ export class User {
   @Prop({ required: true })
   phone: string;
 
-  @Prop({ trim: true })
-  firstName?: string;
 
   @Prop({ trim: true })
-  lastName?: string;
+  nom?: string; // Nom de famille
+
+  @Prop({ trim: true })
+  prenoms?: string; // Prénoms
+
+  @Prop({ trim: true })
+  genre?: string; // Genre (Homme/Femme/Autre)
+
+  @Prop({ type: Date })
+  dateNaissance?: Date;
+
+  @Prop({ trim: true })
+  paysNaissance?: string;
+
+  @Prop({ trim: true })
+  villeNaissance?: string;
+
+  @Prop({ trim: true })
+  heureNaissance?: string;
 
   @Prop({
     required: true,
@@ -67,6 +83,9 @@ export class User {
 
   @Prop({ default: true })
   isActive?: boolean;
+
+    @Prop({ default: false })
+  premium?: boolean;
 
   @Prop({ default: false })
   emailVerified?: boolean;
