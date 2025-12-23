@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { DeepseekService } from '../consultations/deepseek.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -30,7 +31,25 @@ import { UserDocument } from './schemas/user.schema';
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly deepseekService: DeepseekService,
+  ) {}
+  @Get('me/sky-chart')
+  async getMySkyChart(@CurrentUser() user: UserDocument) {
+    // Utilise les infos du user pour générer la carte du ciel
+    const birthData = {
+      nom: user.nom || '',
+      prenoms: user.prenoms || '',
+      genre: user.genre || user.gender || '',
+      dateNaissance: user.dateNaissance ? user.dateNaissance.toISOString().slice(0, 10) : '',
+      heureNaissance: user.heureNaissance || '',
+      paysNaissance: user.paysNaissance || user.country || '',
+      villeNaissance: user.villeNaissance || '',
+      email: user.email,
+    };
+    return this.deepseekService.genererAnalyseComplete(birthData);
+  }
 
   @Get('count')
   @ApiOperation({

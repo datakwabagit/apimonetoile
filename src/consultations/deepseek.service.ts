@@ -1,3 +1,5 @@
+
+ 
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
@@ -723,5 +725,13 @@ Ton : Professionnel, empathique, encourageant.`,
   purgeCache(): void {
     this.analysisCache.clear();
     this.logger.log('Cache purgé');
+  }
+
+    getCachedAnalysis(cacheKey: string) {
+    const cached = this.analysisCache.get(cacheKey);
+    if (!cached) {
+      throw new HttpException('Aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
+    }
+    return cached.result;
   }
 }

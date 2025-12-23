@@ -1,3 +1,4 @@
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { Role } from '../../common/enums/role.enum';
@@ -21,7 +22,9 @@ export class User {
 
   @Prop({ required: true })
   phone: string;
-
+  
+  @Prop({ type: Object })
+  carteDuCiel?: any;
 
   @Prop({ trim: true })
   nom?: string; // Nom de famille

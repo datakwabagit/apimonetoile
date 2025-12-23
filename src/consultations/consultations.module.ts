@@ -6,6 +6,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
 import { OfferingsModule } from '../offerings/offerings.module';
 import { ConsultationsController } from './consultations.controller';
+import { DeepseekController } from './deepseek.controller';
 import { ConsultationsService } from './consultations.service';
 import { DeepseekService } from './deepseek.service';
 import {
@@ -26,7 +27,7 @@ import { Consultation, ConsultationSchema } from './schemas/consultation.schema'
     ]),
     NotificationsModule,
   ],
-  controllers: [ConsultationsController],
+  controllers: [ConsultationsController, DeepseekController],
   providers: [ConsultationsService, DeepseekService],
   exports: [ConsultationsService, DeepseekService],
 })
