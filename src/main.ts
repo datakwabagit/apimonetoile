@@ -25,6 +25,5 @@ async function bootstrap() {
   server.setTimeout(180000); // 3 minutes
 
   console.log(`🚀 Application démarrée sur le port ${process.env.PORT || 3000}`);
-  console.log(`⏱️  Timeout serveur: 180 secondes`);
 }
 bootstrap();
