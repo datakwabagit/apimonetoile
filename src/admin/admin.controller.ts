@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, UseGuards, Query, Param, Body } from '@nestjs/common';
+import { Controller, Get, Patch, UseGuards, Query, Param, Body, Post } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -13,6 +14,10 @@ import { UpdateUserDto } from '../users/dto/update-user.dto';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  @Post('users')
+  async createUser(@Body() createUserDto: CreateUserDto) {
+    return this.adminService.createUser(createUserDto);
+  }
   @Get('stats')
   @ApiOperation({ summary: "Récupérer les statistiques d'administration" })
   @ApiResponse({ status: 200, description: 'Statistiques retournées.' })

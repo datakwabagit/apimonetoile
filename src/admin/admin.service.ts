@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+ 
+
+ 
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import * as bcrypt from 'bcrypt';
 import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
 import { Payment, PaymentDocument } from '../payments/schemas/payment.schema';
 import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from '../consultations/schemas/astrological-analysis.schema';
@@ -19,12 +24,60 @@ export class AdminService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(WalletTransaction.name) private walletTransactionModel: Model<WalletTransactionDocument>,
     @InjectModel(AstrologicalAnalysis.name) private astrologicalAnalysisModel: Model<AstrologicalAnalysisDocument>,
+    private readonly configService: ConfigService,
   ) {}
 
   private startOfDay(date = new Date()) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
     return d;
+  }
+
+  async createUser(createUserDto: any): Promise<User> {
+    const { username, password, gender, phone, phoneNumber, ...rest } = createUserDto;
+
+    // Générer l'email automatiquement
+    const email = `${username}@monetoile.org`;
+
+    // Vérifier si le username ou l'email existe déjà
+    const existingUser = await this.userModel.findOne({ $or: [{ email }, { username }] }).exec();
+    if (existingUser) {
+      throw new ConflictException('Username or email already exists');
+    }
+
+    // Mapper le genre français vers anglais
+    let mappedGender = gender;
+    if (gender === 'Homme') mappedGender = 'male';
+    else if (gender === 'Femme') mappedGender = 'female';
+    else if (gender === 'Autre') mappedGender = 'other';
+
+    // Prendre phone ou phoneNumber
+    const finalPhone = phone || phoneNumber;
+
+    // Générer un mot de passe temporaire si non fourni
+    const plainPassword = password || Math.random().toString(36).slice(-8);
+
+    // Hasher le password
+    const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
+    const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
+
+    // Créer l'utilisateur
+    const user = new this.userModel({
+      ...rest,
+      username,
+      gender: mappedGender,
+      phoneNumber: finalPhone,
+      email,
+      password: hashedPassword,
+    });
+
+    await user.save();
+
+    // Retourner sans le password
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    return userObject;
   }
 
   async getStats() {
