@@ -1,4 +1,5 @@
-﻿import { Type } from 'class-transformer';
+﻿
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsEnum,
@@ -61,6 +62,9 @@ export class CreateConsultationDto {
    */
   @IsString()
   serviceId: string;
+
+    @IsOptional()
+  visible?: boolean;
 
   @IsEnum(ConsultationType)
   type: ConsultationType;
