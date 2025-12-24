@@ -370,13 +370,12 @@ export class AdminService {
     ]);
 
     const users = docs.map((u: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { _id, password, ...userData } = u;
-      return {
-        ...userData,
-        id: _id.toString(),
-      };
+      // Retirer uniquement le mot de passe, tout le reste est retourné
+      const { password, ...userData } = u;
+      return userData;
     });
+
+ 
 
     return { users, total };
   }
@@ -528,6 +527,14 @@ export class AdminService {
       throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
     }
     return user;
+  }
+
+    async deleteUser(id: string) {
+    const user = await this.userModel.findByIdAndDelete(id).select('-password').exec();
+    if (!user) {
+      throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
+    }
+    return { message: `Utilisateur avec l'ID ${id} supprimé.` };
   }
 
   async updateUser(id: string, updateUserDto: UpdateUserDto) {

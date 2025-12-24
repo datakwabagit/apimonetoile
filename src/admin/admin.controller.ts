@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, UseGuards, Query, Param, Body, Post } from '@nestjs/common';
+import { Controller, Get, Patch, UseGuards, Query, Param, Body, Post, Delete } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -12,7 +12,18 @@ import { UpdateUserDto } from '../users/dto/update-user.dto';
 @Controller('admin')
 @UseGuards(JwtAuthGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+
+  constructor(private readonly adminService: AdminService) { }
+
+
+  @Delete('users/:id')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.DELETE_ANY_USER)
+  @ApiOperation({ summary: 'Supprimer un utilisateur' })
+  @ApiResponse({ status: 200, description: 'Utilisateur supprimé' })
+  async deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
+  }
 
   @Post('users')
   async createUser(@Body() createUserDto: CreateUserDto) {
@@ -55,6 +66,8 @@ export class AdminController {
       page: parseInt(page as string, 10) || 1,
       limit: parseInt(limit as string, 10) || 10,
     });
+
+   
 
     return result;
   }
