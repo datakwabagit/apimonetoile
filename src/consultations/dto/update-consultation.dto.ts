@@ -38,4 +38,7 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsOptional()
+  analysisNotified?: boolean;
 }

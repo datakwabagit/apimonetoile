@@ -155,6 +155,12 @@ export class Consultation {
 
   @Prop({ default: null })
   notes: string; // Notes privées du consultant
+  
+  /**
+   * Indique si l'analyse a déjà été notifiée au client
+   */
+  @Prop({ type: Boolean, default: false })
+  analysisNotified: boolean;
 }
 
 export const ConsultationSchema = SchemaFactory.createForClass(Consultation);

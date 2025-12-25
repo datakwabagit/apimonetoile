@@ -68,6 +68,8 @@ export class ConsultationsController {
       message: `Vous avez reçu une notification pour la consultation "${consultation.title || id}"`,
       metadata: { consultationId: id },
     });
+    // Mettre à jour le champ analysisNotified à true
+    await this.consultationsService.update(id, { analysisNotified: true });
     return {
       success: true,
       message: "Notification envoyée à l'utilisateur.",
@@ -220,6 +222,8 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
   async getAnalysisByConsultationId(@Param('consultationId') consultationId: string) {
     try {
+      // Récupérer la consultation pour le champ analysisNotified
+      const consultation: any = await this.consultationsService.findOne(consultationId);
       const analysis = await this.consultationsService.getAstrologicalAnalysis(consultationId);
 
       if (!analysis) {
@@ -236,6 +240,7 @@ export class ConsultationsController {
         success: true,
         consultationId,
         analyse: analysis.toObject(),
+        analysisNotified: consultation?.analysisNotified ?? false,
       };
     } catch (error) {
       if (error instanceof HttpException) {
