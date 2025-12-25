@@ -408,9 +408,10 @@ export class ConsultationsController {
   ) {
     try {
       const { birthData } = body || {};
-
+console.log('DEBUG received birthData:', birthData);
       // Récupérer la consultation pour fallback des données de naissance
       const consultation: any = await this.consultationsService.findOne(id);
+      console.log('DEBUG consultation formData:', consultation);
       const form = consultation?.formData || {};
 
       const mergedBirthData: BirthData = {
@@ -422,6 +423,9 @@ export class ConsultationsController {
         paysNaissance: birthData?.paysNaissance ?? form.paysNaissance ?? form.countryOfBirth ?? '',
         email: birthData?.email ?? form.email ?? '',
       } as BirthData;
+
+      // Log temporaire pour debug : afficher les données de naissance fusionnées
+      console.log('DEBUG mergedBirthData:', mergedBirthData);
 
       // Validation des données
       if (

@@ -389,7 +389,7 @@ export class AdminService {
   }) {
     const { search, status = 'all', type = 'all', page = 1, limit = 18 } = options || {};
 
-    const filter: any = { visible: true };
+    const filter: any = { type: { $ne: 'CINQ_ETOILES' } };
 
     if (search && search.trim().length > 0) {
       const re = new RegExp(search.trim(), 'i');

@@ -1,15 +1,10 @@
-﻿
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+﻿import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 import { Offering } from '@/offerings/schemas/offering.schema';
 
 export type ConsultationDocument = Consultation & Document;
 
-
-/**
- * Alternative d'offrande obligatoire (animal, végétal, boisson)
- */
 @Schema({ _id: false })
 export class OfferingAlternative {
   @Prop({ required: true })
@@ -41,9 +36,6 @@ export class OfferingAlternative {
   description?: string;
 }
 
-/**
- * Sous-schéma pour l'offrande obligatoire unique avec alternatives
- */
 @Schema({ _id: false })
 export class RequiredOffering {
   @Prop({ required: true, enum: ['animal', 'vegetal', 'boisson'] })
