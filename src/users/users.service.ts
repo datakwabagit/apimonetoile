@@ -45,8 +45,8 @@ export class UsersService {
     // Mapper le genre français vers anglais
     let mappedGender = gender;
     if (gender === 'Homme') mappedGender = 'male';
-    else if (gender === 'Femme') mappedGender = 'female';
-    else if (gender === 'Autre') mappedGender = 'other';
+    else   mappedGender = 'female';
+ 
 
     // Prendre phone ou phoneNumber
     const finalPhone = phone || phoneNumber;
@@ -147,8 +147,7 @@ export class UsersService {
    * Mettre à jour un utilisateur
    */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    // Vérifier si l'email est déjà utilisé par un autre utilisateur
-    if (updateUserDto.email) {
+     if (updateUserDto.email) {
       const existingUser = await this.userModel.findOne({ email: updateUserDto.email }).exec();
       if (existingUser && existingUser._id.toString() !== id) {
         throw new ConflictException('Email already exists');

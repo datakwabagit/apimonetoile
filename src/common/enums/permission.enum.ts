@@ -33,7 +33,7 @@ export enum Permission {
   DELETE_SERVICE = 'delete:service',
 
   // ========== CONTENT & SPIRITUALITY ==========
-  MANAGE_CONTENT = 'manage:content', // Gérer le contenu spirituel et autres contenus
+  MANAGE_CONTENT = 'manage:content',  
   CREATE_CONTENT = 'create:content',
   UPDATE_CONTENT = 'update:content',
   DELETE_CONTENT = 'delete:content',

@@ -22,7 +22,7 @@ export class User {
 
   @Prop({ required: true })
   phone: string;
-  
+
   @Prop({ type: Object })
   carteDuCiel?: any;
 
@@ -33,7 +33,7 @@ export class User {
   prenoms?: string; // Prénoms
 
   @Prop({ trim: true })
-  genre?: string; // Genre (Homme/Femme/Autre)
+  genre?: string;
 
   @Prop({ type: Date })
   dateNaissance?: Date;
@@ -87,7 +87,7 @@ export class User {
   @Prop({ default: true })
   isActive?: boolean;
 
-    @Prop({ default: false })
+  @Prop({ default: false })
   premium?: boolean;
 
   @Prop({ default: false })

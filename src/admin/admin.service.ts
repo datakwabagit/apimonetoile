@@ -1,6 +1,6 @@
- 
 
- 
+
+
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -25,7 +25,7 @@ export class AdminService {
     @InjectModel(WalletTransaction.name) private walletTransactionModel: Model<WalletTransactionDocument>,
     @InjectModel(AstrologicalAnalysis.name) private astrologicalAnalysisModel: Model<AstrologicalAnalysisDocument>,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   private startOfDay(date = new Date()) {
     const d = new Date(date);
@@ -48,8 +48,7 @@ export class AdminService {
     // Mapper le genre français vers anglais
     let mappedGender = gender;
     if (gender === 'Homme') mappedGender = 'male';
-    else if (gender === 'Femme') mappedGender = 'female';
-    else if (gender === 'Autre') mappedGender = 'other';
+    else mappedGender = 'female';
 
     // Prendre phone ou phoneNumber
     const finalPhone = phone || phoneNumber;
@@ -375,7 +374,7 @@ export class AdminService {
       return userData;
     });
 
- 
+
 
     return { users, total };
   }
@@ -529,7 +528,7 @@ export class AdminService {
     return user;
   }
 
-    async deleteUser(id: string) {
+  async deleteUser(id: string) {
     const user = await this.userModel.findByIdAndDelete(id).select('-password').exec();
     if (!user) {
       throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);

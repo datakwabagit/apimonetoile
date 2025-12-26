@@ -10,9 +10,7 @@ export enum Role {
   GUEST = 'GUEST', // Visiteur non authentifié
 }
 
-/**
- * Vérifie si un rôle est supérieur ou égal à un autre
- */
+ 
 export const isRoleHigherOrEqual = (userRole: Role, requiredRole: Role): boolean => {
   const hierarchy = {
     [Role.SUPER_ADMIN]: 5,

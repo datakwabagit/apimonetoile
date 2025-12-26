@@ -18,7 +18,7 @@ export class CreateUserDto {
   username: string;
 
   @IsString()
-  gender: string; // Peut être 'male', 'female', 'other', 'Homme', 'Femme', 'Autre'
+  gender: string;  
 
   @IsString()
   country: string;

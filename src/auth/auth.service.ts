@@ -21,13 +21,12 @@ export class AuthService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   /**
    * Inscription d'un nouvel utilisateur
    */
   async register(registerDto: RegisterDto) {
-    // Nouveau RegisterDto : username, gender, country, phone, password, autres champs optionnels
     const { username, gender, country, phone, password, ...optionals } = registerDto;
 
     // Générer l'email automatiquement à partir du username
@@ -42,8 +41,7 @@ export class AuthService {
     // Mapper le genre français vers anglais
     let mappedGender = gender;
     if (gender === 'Homme') mappedGender = 'male';
-    else if (gender === 'Femme') mappedGender = 'female';
-    else if (gender === 'Autre') mappedGender = 'other';
+    else mappedGender = 'female';
 
     // Hasher le password
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);

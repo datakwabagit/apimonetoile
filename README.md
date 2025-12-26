@@ -202,7 +202,7 @@ npm run build
 npm run start:prod
 ```
 
-### Autres commandes
+###   commandes
 
 ```bash
 # Format du code
