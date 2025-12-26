@@ -12,6 +12,12 @@ import {
 } from '../analysis/analysis-progress.service';
 
 export interface BirthData {
+  zodiacSign?: any;
+  horoscopeType?: any;
+  dateOfBirth?: any;
+  partnerSign?: any;
+  element?: any;
+  symbol?: any;
   nom: string;
   prenoms: string;
   genre: string;

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AdminController } from './admin.controller';
+import { HoroscopeController } from './horoscope.controller';
 import { AdminService } from './admin.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { Consultation, ConsultationSchema } from '../consultations/schemas/consultation.schema';
@@ -18,7 +19,7 @@ import { AstrologicalAnalysis, AstrologicalAnalysisSchema } from '../consultatio
       { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
     ]),
   ],
-  controllers: [AdminController],
+  controllers: [AdminController, HoroscopeController],
   providers: [AdminService],
   exports: [AdminService],
 })
