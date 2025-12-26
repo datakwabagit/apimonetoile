@@ -379,14 +379,8 @@ export class ConsultationsService {
    * Récupérer les consultations d'un client
    */
   async findByClient(clientId: string, query: { page?: number; limit?: number }) {
-    // Exclure explicitement les consultations de type HOROSCOPE
-    const filter: any = {
-      clientId,
-      status: ConsultationStatus.COMPLETED,
-      type: { $ne: 'HOROSCOPE' }
-    };
-    const { page = 1, limit = 10 } = query;
-    return this.findAll({ page, limit, ...filter });
+    // Utilise l'enum pour le statut
+    return this.findAll({ ...query, clientId, status: ConsultationStatus.COMPLETED });
   }
 
   /**
