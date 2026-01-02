@@ -51,6 +51,99 @@ export class ServicesController {
   ) {
     return this.servicesService.findAll({ page, limit, type, isActive });
   }
+    // --- Consultations ---
+    @Post('consultation')
+    createConsultation(@Body() dto: any) {
+      return this.servicesService.createConsultation(dto);
+    }
+
+    @Get('consultations')
+    findAllConsultations() {
+      return this.servicesService.findAllConsultations();
+    }
+
+    @Get('consultation/:id')
+    findOneConsultation(@Param('id') id: string) {
+      return this.servicesService.findOneConsultation(id);
+    }
+
+    @Patch('consultation/:id')
+    updateConsultation(@Param('id') id: string, @Body() dto: any) {
+      return this.servicesService.updateConsultation(id, dto);
+    }
+
+    @Delete('consultation/:id')
+    async removeConsultation(@Param('id') id: string) {
+      await this.servicesService.removeConsultation(id);
+    }
+
+    // --- Offrandes ---
+    @Post('offrande')
+    createOffrande(@Body() dto: any) {
+      return this.servicesService.createOffrande(dto);
+    }
+
+    @Get('offrandes')
+    findAllOffrandes() {
+      return this.servicesService.findAllOffrandes();
+    }
+
+    @Get('offrande/:id')
+    findOneOffrande(@Param('id') id: string) {
+      return this.servicesService.findOneOffrande(id);
+    }
+
+    @Patch('offrande/:id')
+    updateOffrande(@Param('id') id: string, @Body() dto: any) {
+      return this.servicesService.updateOffrande(id, dto);
+    }
+
+    @Delete('offrande/:id')
+    async removeOffrande(@Param('id') id: string) {
+      await this.servicesService.removeOffrande(id);
+    }
+
+    // --- Paniers ---
+    @Post('panier')
+    createPanier(@Body() dto: any) {
+      return this.servicesService.createPanier(dto);
+    }
+
+    @Get('paniers')
+    findAllPaniers() {
+      return this.servicesService.findAllPaniers();
+    }
+
+    @Get('panier/:id')
+    findOnePanier(@Param('id') id: string) {
+      return this.servicesService.findOnePanier(id);
+    }
+
+    @Patch('panier/:id')
+    updatePanier(@Param('id') id: string, @Body() dto: any) {
+      return this.servicesService.updatePanier(id, dto);
+    }
+
+    @Delete('panier/:id')
+    async removePanier(@Param('id') id: string) {
+      await this.servicesService.removePanier(id);
+    }
+
+    // --- Achats dans le panier ---
+    @Post('panier/:panierId/achat')
+    addAchat(@Param('panierId') panierId: string, @Body() dto: any) {
+      return this.servicesService.addAchat(panierId, dto);
+    }
+
+    @Get('panier/:panierId/achats')
+    findAchats(@Param('panierId') panierId: string) {
+      return this.servicesService.findAchats(panierId);
+    }
+
+    @Delete('panier/:panierId/achat/:achatId')
+    async removeAchat(@Param('panierId') panierId: string, @Param('achatId') achatId: string) {
+      await this.servicesService.removeAchat(panierId, achatId);
+    }
 
   @Public()
   @Get(':id')
