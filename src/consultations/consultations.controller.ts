@@ -547,11 +547,63 @@ DATE ACTUELLE: ${currentDay}/${currentMonth}/${currentYear}
 
 Type d'analyse: ${consultation.type === 'NOMBRES_PERSONNELS' ? 'Nombres personnels détaillés' : consultation.type === 'CYCLES_PERSONNELS' ? 'Cycles personnels et timing' : 'Numérologie complète'}
 
-INSTRUCTIONS:
-1. Calcule TOUS les nombres avec précision (respecte les maîtres-nombres 11, 22, 33)
-2. Analyse les cycles en cours (année, mois, jour personnels)
-3. Croise le thème de naissance avec les énergies actuelles
-4. Fournis des conseils pratiques sur le TIMING des décisions
+═══════════════════════════════════════════════════════════════════════
+📐 MÉTHODES DE CALCUL OBLIGATOIRES
+═══════════════════════════════════════════════════════════════════════
+
+1️⃣ CHEMIN DE VIE (Mission de vie)
+Méthode : Jour de naissance + Mois de naissance + Année de naissance (réduits séparément)
+Exemple : 7 janvier 1974
+  • Jour: 7 → 7
+  • Mois: 1 → 1  
+  • Année: 1+9+7+4 = 21 → 2+1 = 3
+  • Total: 7+1+3 = 11 (maître-nombre, on ne réduit pas)
+⚠️ Respecte les maîtres-nombres 11, 22, 33 dans le résultat FINAL uniquement
+
+2️⃣ NOMBRE D'EXPRESSION (Talents et mode d'expression)
+Méthode : Valeur de TOUTES les lettres du nom complet
+Correspondance alphabétique :
+  A J S = 1  |  B K T = 2  |  C L U = 3
+  D M V = 4  |  E N W = 5  |  F O X = 6
+  G P Y = 7  |  H Q Z = 8  |  I R = 9
+
+Exemple : KOUASSI JEAN
+  • KOUASSI: K(2)+O(6)+U(3)+A(1)+S(1)+S(1)+I(9) = 23 → 5
+  • JEAN: J(1)+E(5)+A(1)+N(5) = 12 → 3
+  • Total: 5+3 = 8
+⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
+
+3️⃣ NOMBRE DE L'ÂME (Désirs profonds et motivations intérieures)
+Méthode : Valeur des VOYELLES uniquement (A E I O U Y)
+Exemple : KOUASSI JEAN → voyelles : O U A I E A
+  • O(6)+U(3)+A(1)+I(9)+E(5)+A(1) = 25 → 2+5 = 7
+⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
+
+4️⃣ NOMBRE DE PERSONNALITÉ (Image projetée)
+Méthode : Valeur des CONSONNES uniquement
+⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
+
+5️⃣ ANNÉE PERSONNELLE (Tendance de l'année)
+Méthode : Jour naissance + Mois naissance + Année courante
+Exemple : Né le 7 janvier, année 2025
+  • 7 + 1 + (2+0+2+5=9) = 17 → 1+7 = 8
+⚠️ Toujours réduire entre 1 et 9 (PAS de maîtres-nombres pour les cycles)
+
+6️⃣ MOIS PERSONNEL (Ambiance du mois)
+Méthode : Année Personnelle + Numéro du mois courant
+Exemple : Année Perso 8 + Mars (3) = 11 → 2
+⚠️ Toujours réduire entre 1 et 9
+
+7️⃣ JOUR PERSONNEL (Énergie de la journée)
+Méthode : Mois Personnel + Jour du mois
+Exemple : Mois Perso 2 + jour 15 = 2+1+5 = 8
+⚠️ Toujours réduire entre 1 et 9
+
+8️⃣ ANNÉE UNIVERSELLE (Énergie collective mondiale)
+Méthode : Réduction de l'année civile
+Exemple : 2025 = 2+0+2+5 = 9
+
+═══════════════════════════════════════════════════════════════════════
 
 STRUCTURE JSON ATTENDUE:
 
@@ -559,23 +611,27 @@ STRUCTURE JSON ATTENDUE:
   "themeDeNaissance": {
     "description": "Ta carte numérologique fixe - ta partition de vie",
     "cheminDeVie": {
-      "valeur": <nombre ou maître-nombre>,
+      "valeur": <nombre ou maître-nombre 11/22/33>,
+      "calcul": "<détail du calcul effectué>",
       "signification": "Mission de vie, défis et talents fondamentaux (le plus important)",
       "interpretation": "<analyse détaillée 3-4 phrases>"
     },
     "nombreExpression": {
-      "valeur": <nombre>,
-      "signification": "Personnalité et capacités innées (calculé du nom complet)",
+      "valeur": <nombre ou maître-nombre>,
+      "calcul": "<détail du calcul avec toutes les lettres>",
+      "signification": "Talents naturels et manière de s'exprimer dans le monde",
       "interpretation": "<analyse détaillée>"
     },
     "nombreAme": {
-      "valeur": <nombre>,
-      "signification": "Motivations profondes et désirs secrets (voyelles du nom)",
+      "valeur": <nombre ou maître-nombre>,
+      "calcul": "<détail du calcul avec les voyelles uniquement>",
+      "signification": "Désirs profonds et motivations intérieures secrètes",
       "interpretation": "<analyse détaillée>"
     },
     "nombrePersonnalite": {
-      "valeur": <nombre>,
-      "signification": "Image projetée, première impression (consonnes du nom)",
+      "valeur": <nombre ou maître-nombre>,
+      "calcul": "<détail du calcul avec les consonnes uniquement>",
+      "signification": "Image projetée et première impression donnée aux autres",
       "interpretation": "<analyse détaillée>"
     }
   },
@@ -583,26 +639,29 @@ STRUCTURE JSON ATTENDUE:
   "cyclesEnMouvement": {
     "description": "Les énergies du moment - la mélodie jouée maintenant",
     "anneeUniverselle": {
-      "valeur": <nombre pour ${currentYear}>,
+      "valeur": <nombre entre 1-9 pour ${currentYear}>,
+      "calcul": "<détail du calcul>",
       "signification": "Énergie collective mondiale pour ${currentYear}",
       "interpretation": "<contexte global>"
     },
     "anneePersonnelle": {
-      "valeur": <nombre>,
-      "calcul": "Jour naissance + mois naissance + ${currentYear}",
-      "signification": "Thème principal de ton année (de janvier à décembre)",
-      "interpretation": "<analyse détaillée des opportunités et défis de cette année 3-4 phrases>",
+      "valeur": <nombre entre 1-9>,
+      "calcul": "<détail du calcul: jour + mois + année courante>",
+      "signification": "Thème principal de l'année (janvier à décembre)",
+      "interpretation": "<analyse détaillée des opportunités et défis 3-4 phrases>",
       "conseil": "<actions à privilégier ou éviter cette année>"
     },
     "moisPersonnel": {
-      "valeur": <nombre>,
+      "valeur": <nombre entre 1-9>,
       "mois": "${new Date().toLocaleDateString('fr-FR', { month: 'long' })}",
-      "signification": "Couleur du mois actuel",
+      "calcul": "<Année Perso + mois courant>",
+      "signification": "Ambiance et couleur du mois actuel",
       "interpretation": "<analyse du mois en cours 2-3 phrases>"
     },
     "jourPersonnel": {
-      "valeur": <nombre>,
+      "valeur": <nombre entre 1-9>,
       "date": "${currentDay}/${currentMonth}/${currentYear}",
+      "calcul": "<Mois Perso + jour du mois>",
       "signification": "Tonalité énergétique d'aujourd'hui",
       "interpretation": "<conseil pour la journée>"
     }
@@ -617,21 +676,21 @@ STRUCTURE JSON ATTENDUE:
       "<Action 2 à privilégier>",
       "<Action 3 à éviter ou reporter>"
     ],
-    "meilleursJours": [
+    "prochainsJoursFavorables": [
       {
-        "date": "<date proche>",
+        "date": "<date dans les 7 prochains jours>",
         "jourPersonnel": <nombre>,
-        "pourquoi": "<idéal pour quoi (signature, rendez-vous, lancement, etc.)>"
+        "pourquoi": "<idéal pour quoi (signature, rendez-vous, lancement, déclaration, etc.)>"
       }
     ]
   },
   
   "cyclesDeVieGrands": [
     {
-      "periode": "<Cycle actuel ou prochain cycle de vie>",
+      "periode": "<Cycle de vie actuel ou prochain>",
       "ages": "<tranche d'âge>",
       "nombre": <nombre>,
-      "theme": "<thème principal de ce cycle de vie>"
+      "theme": "<thème principal de ce grand cycle de vie>"
     }
   ],
   
@@ -642,14 +701,36 @@ STRUCTURE JSON ATTENDUE:
   }
 }
 
-PRINCIPES ESSENTIELS:
-- Le libre arbitre est roi: tu décris le "temps qu'il fait", pas le destin
-- Année 1 = nouveaux départs, initiative | Année 9 = fin de cycle, lâcher-prise
-- Année 4 = structure, travail laborieux | Année 5 = liberté, changement
-- Année 7 = introspection, étude | Année 3 = créativité, expression
-- Respecte les maîtres-nombres (11, 22, 33) sans les réduire quand ils apparaissent
-- Sois pragmatique: la numérologie est un outil de conscience, pas de prédiction
-- Intègre la sagesse africaine authentiquement`;
+PRINCIPES ESSENTIELS À RESPECTER:
+
+✅ RÈGLES DES MAÎTRES-NOMBRES:
+• Pour le THÈME DE NAISSANCE (Chemin de Vie, Expression, Âme, Personnalité):
+  Respecter les maîtres-nombres 11, 22, 33 dans le résultat FINAL uniquement
+• Pour les CYCLES (Année/Mois/Jour Personnel):
+  TOUJOURS réduire entre 1 et 9 (PAS de maîtres-nombres pour les cycles)
+
+✅ SIGNIFICATIONS DES ANNÉES PERSONNELLES:
+• Année 1 = nouveaux départs, initiative, indépendance, lancement de projets
+• Année 2 = coopération, patience, relations, diplomatie
+• Année 3 = créativité, expression, communication, socialisation
+• Année 4 = structure, travail laborieux, discipline, fondations solides
+• Année 5 = liberté, changement, aventure, adaptabilité
+• Année 6 = responsabilité, famille, service, harmonie relationnelle
+• Année 7 = introspection, étude, spiritualité, période d'isolement bénéfique
+• Année 8 = pouvoir, réussite matérielle, autorité, récolte
+• Année 9 = fin de cycle, lâcher-prise, conclusions, préparation au renouveau
+
+✅ PHILOSOPHIE:
+• Le libre arbitre est roi: tu décris le "temps qu'il fait", pas le destin
+• La numérologie est un outil de conscience, pas de prédiction d'événements
+• Sois pragmatique, empathique et encourageant
+• Intègre la sagesse africaine authentiquement (pas de clichés)
+
+✅ COMPARAISONS UTILES:
+• Chemin de Vie = ce que vous êtes venu vivre
+• Nombre d'Expression = comment vous agissez et vous montrez
+• Nombre de l'Âme = ce que vous désirez profondément
+• Nombre de Personnalité = l'image que vous projetez`;
         };
         
         if (DEEPSEEK_API_KEY) {
