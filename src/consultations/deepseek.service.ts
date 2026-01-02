@@ -120,9 +120,9 @@ export class DeepseekService {
 Tes analyses sont précises, structurées et basées sur l'astrologie traditionnelle et moderne.
 Tu fournis des insights pratiques, empathiques et personnalisés.
 Format de réponse : clair, organisé en sections, avec des bullet points pour les éléments clés.`,
-    carteDuCiel: `Tu es un calculateur de carte du ciel extrêmement précis.
+    carteDuCiel: `Tu es un calculateur de carte du ciel extrêmement précis utilisant les Éphémérides de la NASA (Swiss Ephemeris).
 Tu réponds UNIQUEMENT avec les données astronomiques sans commentaire.
-Format strict requis.`,
+Format strict requis. Utilise les positions planétaires exactes basées sur les Swiss Ephemeris pour la date, l'heure et le lieu de naissance spécifiés.`,
   };
 
   // Templates de prompts
@@ -136,6 +136,11 @@ DATE: ${data.dateNaissance}
 HEURE: ${data.heureNaissance}
 LIEU: ${data.villeNaissance}, ${data.paysNaissance}
 GENRE: ${data.genre}
+
+INSTRUCTIONS DE CALCUL:
+Utilise les Éphémérides de la NASA (Swiss Ephemeris) pour calculer les positions planétaires exactes à la date, heure et lieu spécifiés.
+Calcule la position géographique précise pour déterminer l'Ascendant et les maisons astrologiques.
+Indique les planètes rétrogrades avec la mention [RÉTROGRADE].
 
 FORMAT DE RÉPONSE:
 Soleil en [Signe] - Maison [X]
