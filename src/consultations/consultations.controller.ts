@@ -94,7 +94,7 @@ export class ConsultationsController {
   @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-
+console.log('DEBUG create consultation body:', body);
     // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
 
@@ -447,6 +447,7 @@ console.log('DEBUG received birthData:', birthData);
   
       let analyseComplete: any;
       let horoscopeResult: any = null;
+      const isNumerology = ['NUMEROLOGIE', 'CYCLES_PERSONNELS', 'NOMBRES_PERSONNELS'].includes(consultation.type);
 
       if (consultation.type === 'HOROSCOPE') {
         // Détermination automatique du signe, élément et symbole
@@ -523,6 +524,106 @@ console.log('DEBUG received birthData:', birthData);
         // Enregistrer dans resultData.horoscope
         await this.consultationsService.update(id, { resultData: { horoscope: horoscopeResult } });
         analyseComplete = horoscopeResult;
+      } else if (isNumerology) {
+        // Numérologie (NUMEROLOGIE, CYCLES_PERSONNELS, NOMBRES_PERSONNELS)
+        const birthDateStr = form.dateNaissance || form.dateOfBirth || birthData?.dateNaissance || birthData?.dateOfBirth || '';
+        const configService = (this as any).configService;
+        const DEEPSEEK_API_KEY = configService?.get?.('DEEPSEEK_API_KEY') || process.env.DEEPSEEK_API_KEY || '';
+        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        
+        const SYSTEM_PROMPT = `Tu es un expert en numérologie avec plus de 25 ans d'expérience. Tu fournis des analyses numériques précises, détaillées et bienveillantes intégrant la sagesse africaine ancestrale. Tes interprétations sont basées sur la numérologie moderne et ancienne.`;
+        
+        const generateNumerologyPrompt = (): string => {
+          return `Analyse numérique complète pour:
+NOM: ${mergedBirthData.nom}
+PRÉNOMS: ${mergedBirthData.prenoms}
+DATE DE NAISSANCE: ${birthDateStr}
+
+Type d'analyse demandé: ${consultation.type === 'NOMBRES_PERSONNELS' ? 'Nombres personnels' : consultation.type === 'CYCLES_PERSONNELS' ? 'Cycles personnels' : 'Numérologie générale'}
+
+Fournis une analyse complète en JSON valide avec cette structure:
+
+{
+  "nombreDuDestinee": {
+    "valeur": <nombre>,
+    "signification": "<interprétation détaillée>"
+  },
+  "nombreExpression": {
+    "valeur": <nombre>,
+    "signification": "<interprétation détaillée>"
+  },
+  "nombrePersonnalite": {
+    "valeur": <nombre>,
+    "signification": "<interprétation détaillée>"
+  },
+  "nombreCheminDeVie": {
+    "valeur": <nombre>,
+    "signification": "<interprétation détaillée>"
+  },
+  "cyclesPersonnels": [
+    {
+      "age": "<intervalle>",
+      "numero": <nombre>,
+      "signification": "<description>"
+    }
+  ],
+  "anNumerique": {
+    "valeur": <nombre>,
+    "signification": "<prédictions pour l'année numérique courante>"
+  },
+  "moisPersonnels": [
+    {
+      "mois": "<nom mois>",
+      "numero": <nombre>,
+      "signification": "<conseil mensuel>"
+    }
+  ],
+  "conseils": "<3-4 conseils pratiques basés sur la numérologie>",
+  "sagessAfricaine": "<Un proverbe ou sagesse africaine pertinente avec sa source>"
+}
+
+EXIGENCES:
+- Calculs numériques précis
+- Interprétations profondes et personnalisées
+- Intègre la sagesse africaine authentique
+- Ton empathique et encourageant
+- Conseils pratiques et actionnables`;
+        };
+        
+        if (DEEPSEEK_API_KEY) {
+          try {
+            const messages = [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: generateNumerologyPrompt() }
+            ];
+            const response = await fetch(DEEPSEEK_API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages,
+                temperature: 0.8,
+                max_tokens: 3000,
+              }),
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              const aiResponse = data.choices[0].message.content;
+              const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                analyseComplete = JSON.parse(jsonMatch[0]);
+              }
+            }
+          } catch (e) {
+            console.error('Erreur génération numérologie:', e);
+          }
+        }
+        // Enregistrer dans resultData
+        await this.consultationsService.update(id, { resultData: analyseComplete });
       } else {
         // Analyse astrologique classique
         const analyse = await this.deepseekService.genererAnalyseComplete(mergedBirthData, id);
@@ -550,11 +651,18 @@ console.log('DEBUG received birthData:', birthData);
       // Mettre à jour le statut de la consultation à COMPLETED
       await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
 
+      let messageSuccess = 'Analyse générée avec succès';
+      if (consultation.type === 'HOROSCOPE') {
+        messageSuccess = 'Horoscope généré avec succès';
+      } else if (isNumerology) {
+        messageSuccess = `Analyse numérologique (${consultation.type}) générée avec succès`;
+      }
+
       return {
         success: true,
         consultationId: id,
         statut: ConsultationStatus.COMPLETED,
-        message: consultation.type === 'HOROSCOPE' ? 'Horoscope généré avec succès' : 'Analyse astrologique générée avec succès',
+        message: messageSuccess,
         analyse: analyseComplete,
       };
     } catch (error) {
