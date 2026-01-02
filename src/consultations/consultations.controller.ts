@@ -531,63 +531,125 @@ console.log('DEBUG received birthData:', birthData);
         const DEEPSEEK_API_KEY = configService?.get?.('DEEPSEEK_API_KEY') || process.env.DEEPSEEK_API_KEY || '';
         const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
         
-        const SYSTEM_PROMPT = `Tu es un expert en numérologie avec plus de 25 ans d'expérience. Tu fournis des analyses numériques précises, détaillées et bienveillantes intégrant la sagesse africaine ancestrale. Tes interprétations sont basées sur la numérologie moderne et ancienne.`;
+        const SYSTEM_PROMPT = `Tu es un expert en numérologie avec plus de 25 ans d'expérience. Tu fournis des analyses numériques précises, détaillées et bienveillantes intégrant la sagesse africaine ancestrale. Tes interprétations sont basées sur la numérologie pythagoricienne et kabbalistique. Tu maîtrises parfaitement les cycles personnels et le timing numérique.`;
+        
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+        const currentDay = new Date().getDate();
         
         const generateNumerologyPrompt = (): string => {
-          return `Analyse numérique complète pour:
-NOM: ${mergedBirthData.nom}
-PRÉNOMS: ${mergedBirthData.prenoms}
+          return `ANALYSE NUMÉROLOGIQUE COMPLÈTE
+
+DONNÉES DE NAISSANCE:
+NOM COMPLET: ${mergedBirthData.nom} ${mergedBirthData.prenoms}
 DATE DE NAISSANCE: ${birthDateStr}
+DATE ACTUELLE: ${currentDay}/${currentMonth}/${currentYear}
 
-Type d'analyse demandé: ${consultation.type === 'NOMBRES_PERSONNELS' ? 'Nombres personnels' : consultation.type === 'CYCLES_PERSONNELS' ? 'Cycles personnels' : 'Numérologie générale'}
+Type d'analyse: ${consultation.type === 'NOMBRES_PERSONNELS' ? 'Nombres personnels détaillés' : consultation.type === 'CYCLES_PERSONNELS' ? 'Cycles personnels et timing' : 'Numérologie complète'}
 
-Fournis une analyse complète en JSON valide avec cette structure:
+INSTRUCTIONS:
+1. Calcule TOUS les nombres avec précision (respecte les maîtres-nombres 11, 22, 33)
+2. Analyse les cycles en cours (année, mois, jour personnels)
+3. Croise le thème de naissance avec les énergies actuelles
+4. Fournis des conseils pratiques sur le TIMING des décisions
+
+STRUCTURE JSON ATTENDUE:
 
 {
-  "nombreDuDestinee": {
-    "valeur": <nombre>,
-    "signification": "<interprétation détaillée>"
+  "themeDeNaissance": {
+    "description": "Ta carte numérologique fixe - ta partition de vie",
+    "cheminDeVie": {
+      "valeur": <nombre ou maître-nombre>,
+      "signification": "Mission de vie, défis et talents fondamentaux (le plus important)",
+      "interpretation": "<analyse détaillée 3-4 phrases>"
+    },
+    "nombreExpression": {
+      "valeur": <nombre>,
+      "signification": "Personnalité et capacités innées (calculé du nom complet)",
+      "interpretation": "<analyse détaillée>"
+    },
+    "nombreAme": {
+      "valeur": <nombre>,
+      "signification": "Motivations profondes et désirs secrets (voyelles du nom)",
+      "interpretation": "<analyse détaillée>"
+    },
+    "nombrePersonnalite": {
+      "valeur": <nombre>,
+      "signification": "Image projetée, première impression (consonnes du nom)",
+      "interpretation": "<analyse détaillée>"
+    }
   },
-  "nombreExpression": {
-    "valeur": <nombre>,
-    "signification": "<interprétation détaillée>"
+  
+  "cyclesEnMouvement": {
+    "description": "Les énergies du moment - la mélodie jouée maintenant",
+    "anneeUniverselle": {
+      "valeur": <nombre pour ${currentYear}>,
+      "signification": "Énergie collective mondiale pour ${currentYear}",
+      "interpretation": "<contexte global>"
+    },
+    "anneePersonnelle": {
+      "valeur": <nombre>,
+      "calcul": "Jour naissance + mois naissance + ${currentYear}",
+      "signification": "Thème principal de ton année (de janvier à décembre)",
+      "interpretation": "<analyse détaillée des opportunités et défis de cette année 3-4 phrases>",
+      "conseil": "<actions à privilégier ou éviter cette année>"
+    },
+    "moisPersonnel": {
+      "valeur": <nombre>,
+      "mois": "${new Date().toLocaleDateString('fr-FR', { month: 'long' })}",
+      "signification": "Couleur du mois actuel",
+      "interpretation": "<analyse du mois en cours 2-3 phrases>"
+    },
+    "jourPersonnel": {
+      "valeur": <nombre>,
+      "date": "${currentDay}/${currentMonth}/${currentYear}",
+      "signification": "Tonalité énergétique d'aujourd'hui",
+      "interpretation": "<conseil pour la journée>"
+    }
   },
-  "nombrePersonnalite": {
-    "valeur": <nombre>,
-    "signification": "<interprétation détaillée>"
+  
+  "syntheseEtTiming": {
+    "accord": "<Comment ton Chemin de Vie s'accorde avec ton Année Personnelle actuelle (complémentarité ou friction)>",
+    "opportunites": "<Quelles portes sont ouvertes maintenant grâce aux cycles en cours>",
+    "defisActuels": "<Quels défis ou frictions peuvent survenir avec les énergies du moment>",
+    "conseilsPratiques": [
+      "<Action 1 alignée avec le timing actuel>",
+      "<Action 2 à privilégier>",
+      "<Action 3 à éviter ou reporter>"
+    ],
+    "meilleursJours": [
+      {
+        "date": "<date proche>",
+        "jourPersonnel": <nombre>,
+        "pourquoi": "<idéal pour quoi (signature, rendez-vous, lancement, etc.)>"
+      }
+    ]
   },
-  "nombreCheminDeVie": {
-    "valeur": <nombre>,
-    "signification": "<interprétation détaillée>"
-  },
-  "cyclesPersonnels": [
+  
+  "cyclesDeVieGrands": [
     {
-      "age": "<intervalle>",
-      "numero": <nombre>,
-      "signification": "<description>"
+      "periode": "<Cycle actuel ou prochain cycle de vie>",
+      "ages": "<tranche d'âge>",
+      "nombre": <nombre>,
+      "theme": "<thème principal de ce cycle de vie>"
     }
   ],
-  "anNumerique": {
-    "valeur": <nombre>,
-    "signification": "<prédictions pour l'année numérique courante>"
-  },
-  "moisPersonnels": [
-    {
-      "mois": "<nom mois>",
-      "numero": <nombre>,
-      "signification": "<conseil mensuel>"
-    }
-  ],
-  "conseils": "<3-4 conseils pratiques basés sur la numérologie>",
-  "sagessAfricaine": "<Un proverbe ou sagesse africaine pertinente avec sa source>"
+  
+  "sagessAfricaine": {
+    "proverbe": "<Proverbe africain pertinent pour la situation numérologique actuelle>",
+    "source": "<Origine: Bambara, Yoruba, Swahili, Akan, Peul, Wolof, etc.>",
+    "lien": "<Pourquoi ce proverbe résonne avec les nombres actuels>"
+  }
 }
 
-EXIGENCES:
-- Calculs numériques précis
-- Interprétations profondes et personnalisées
-- Intègre la sagesse africaine authentique
-- Ton empathique et encourageant
-- Conseils pratiques et actionnables`;
+PRINCIPES ESSENTIELS:
+- Le libre arbitre est roi: tu décris le "temps qu'il fait", pas le destin
+- Année 1 = nouveaux départs, initiative | Année 9 = fin de cycle, lâcher-prise
+- Année 4 = structure, travail laborieux | Année 5 = liberté, changement
+- Année 7 = introspection, étude | Année 3 = créativité, expression
+- Respecte les maîtres-nombres (11, 22, 33) sans les réduire quand ils apparaissent
+- Sois pragmatique: la numérologie est un outil de conscience, pas de prédiction
+- Intègre la sagesse africaine authentiquement`;
         };
         
         if (DEEPSEEK_API_KEY) {
@@ -606,7 +668,7 @@ EXIGENCES:
                 model: 'deepseek-chat',
                 messages,
                 temperature: 0.8,
-                max_tokens: 3000,
+                max_tokens: 4500,
               }),
             });
             
