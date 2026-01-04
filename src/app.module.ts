@@ -23,7 +23,9 @@ import { AnalysisModule } from './analysis/analysis.module';
 import { WalletModule } from './wallet/wallet.module';
 import { OfferingsModule } from './offerings/offerings.module';
 import { OfferingStockModule } from './offerings/offering-stock.module';
+
 import { RubriqueModule } from './rubriques/rubrique.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -79,6 +81,7 @@ import { RubriqueModule } from './rubriques/rubrique.module';
     OfferingsModule,
     OfferingStockModule,
     RubriqueModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [

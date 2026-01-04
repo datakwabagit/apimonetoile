@@ -1,0 +1,44 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Categorie, CategorieDocument } from './categorie.schema';
+import { CreateCategorieDto, UpdateCategorieDto } from './categorie.dto';
+
+@Injectable()
+export class CategoriesService {
+  constructor(
+    @InjectModel(Categorie.name) private categorieModel: Model<CategorieDocument>,
+  ) {}
+
+  async findAll() {
+    return this.categorieModel.find().populate('rubriques').exec();
+  }
+
+  async create(dto: CreateCategorieDto) {
+    return this.categorieModel.create({
+      ...dto,
+      rubriques: dto.rubriques?.map(id => new Types.ObjectId(id)) || [],
+    });
+  }
+
+  async update(id: string, dto: UpdateCategorieDto) {
+    const updated = await this.categorieModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          ...dto,
+          rubriques: dto.rubriques?.map(rid => new Types.ObjectId(rid)),
+        },
+      },
+      { new: true },
+    ).populate('rubriques');
+    if (!updated) throw new NotFoundException('Catégorie non trouvée');
+    return updated;
+  }
+
+  async remove(id: string) {
+    const deleted = await this.categorieModel.findByIdAndDelete(id);
+    if (!deleted) throw new NotFoundException('Catégorie non trouvée');
+    return deleted;
+  }
+}
