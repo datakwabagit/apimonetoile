@@ -1,5 +1,3 @@
- 
-  
 import {
   Body,
   Controller,
@@ -889,6 +887,8 @@ PRINCIPES ESSENTIELS À RESPECTER:
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.UPDATE_OWN_CONSULTATION)
   update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto) {
+   console.log('DEBUG updateConsultationDto:', updateConsultationDto);
+   
     return this.consultationsService.update(id, updateConsultationDto);
   }
 

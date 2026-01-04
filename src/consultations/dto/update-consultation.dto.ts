@@ -1,7 +1,8 @@
+
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateConsultationDto } from './create-consultation.dto';
 import { IsEnum, IsOptional, IsString, IsObject, IsNumber, Max, Min } from 'class-validator';
-import { ConsultationStatus } from '../../common/enums/consultation-status.enum';
+import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 
 export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   @IsEnum(ConsultationStatus)
@@ -34,6 +35,10 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   @IsString()
   @IsOptional()
   review?: string;
+
+  @IsString()
+  @IsOptional()
+  type?: ConsultationType;
 
   @IsString()
   @IsOptional()

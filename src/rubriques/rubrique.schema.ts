@@ -1,3 +1,4 @@
+import { ConsultationType } from '@/common/enums/consultation-status.enum';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -13,6 +14,9 @@ export class Rubrique {
 
   @Prop({ required: true })
   description: string;
+
+  @Prop({ type: String, enum: ConsultationType, default: ConsultationType.AUTRE })
+  typeconsultation: ConsultationType;
 
   @Prop({
     type: [

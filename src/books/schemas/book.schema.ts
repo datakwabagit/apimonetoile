@@ -48,6 +48,5 @@ export class Book {
 export const BookSchema = SchemaFactory.createForClass(Book);
 
 // Index pour recherche rapide
-BookSchema.index({ bookId: 1 });
 BookSchema.index({ category: 1 });
 BookSchema.index({ isAvailable: 1 });

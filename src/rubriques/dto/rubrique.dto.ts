@@ -34,6 +34,14 @@ export class RubriqueDto {
   @IsString()
   description: string;
 
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @IsString()
+  @IsOptional()
+  typeconsultation?: string;
+
   @IsOptional()
   @IsString()
   categorie?: string = 'GENERAL';
