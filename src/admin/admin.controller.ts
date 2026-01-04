@@ -15,7 +15,6 @@ export class AdminController {
 
   constructor(private readonly adminService: AdminService) { }
 
-
   @Delete('users/:id')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.DELETE_ANY_USER)
@@ -65,9 +64,7 @@ export class AdminController {
       role,
       page: parseInt(page as string, 10) || 1,
       limit: parseInt(limit as string, 10) || 10,
-    });
-
-   
+    });  
 
     return result;
   }
