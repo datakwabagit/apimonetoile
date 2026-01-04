@@ -6,14 +6,19 @@ import { CreateCategorieDto, UpdateCategorieDto } from './categorie.dto';
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+
   @Get()
   findAll() {
     return this.categoriesService.findAll();
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.categoriesService.findOne(id);
+  }
+
   @Post()
   create(@Body() dto: CreateCategorieDto) {
-    console.log('Creating category with data:', dto);
     return this.categoriesService.create(dto);
   }
 

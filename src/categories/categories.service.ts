@@ -1,8 +1,10 @@
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Categorie, CategorieDocument } from './categorie.schema';
 import { CreateCategorieDto, UpdateCategorieDto } from './categorie.dto';
+
 
 @Injectable()
 export class CategoriesService {
@@ -11,7 +13,13 @@ export class CategoriesService {
   ) {}
 
   async findAll() {
-    return this.categorieModel.find().populate('rubriques').exec();
+    return this.categorieModel.find().populate({ path: 'rubriques', model: 'Rubrique' }).exec();
+  }
+
+  async findOne(id: string) {
+    const cat = await this.categorieModel.findById(id).populate({ path: 'rubriques', model: 'Rubrique' });
+    if (!cat) throw new NotFoundException('Catégorie non trouvée');
+    return cat;
   }
 
   async create(dto: CreateCategorieDto) {
