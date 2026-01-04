@@ -49,6 +49,5 @@ export const BookPurchaseSchema = SchemaFactory.createForClass(BookPurchase);
 
 // Index pour recherche rapide
 BookPurchaseSchema.index({ userId: 1, bookId: 1 });
-BookPurchaseSchema.index({ downloadToken: 1 });
 BookPurchaseSchema.index({ paymentId: 1 });
 BookPurchaseSchema.index({ customerPhone: 1 });

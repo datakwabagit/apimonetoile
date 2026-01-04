@@ -13,6 +13,7 @@ export class CategoriesController {
 
   @Post()
   create(@Body() dto: CreateCategorieDto) {
+    console.log('Creating category with data:', dto);
     return this.categoriesService.create(dto);
   }
 
