@@ -10,12 +10,13 @@ export class UserConsultationChoiceService {
     private userConsultationChoiceModel: Model<UserConsultationChoiceDocument>,
   ) {}
 
-  async recordChoicesForConsultation(userId: string, consultationId: string, choices: Array<{ title: string; frequence: string; participants: string }>) {
+  async recordChoicesForConsultation(userId: string, consultationId: string, choices: Array<{ title: string; choiceId?: string; frequence: string; participants: string }>) {
     const now = new Date();
     const docs = choices.map(choice => ({
       userId,
       consultationId,
       choiceTitle: choice.title,
+      choiceId: choice.choiceId,
       frequence: choice.frequence,
       participants: choice.participants,
       createdAt: now,

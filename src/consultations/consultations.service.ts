@@ -301,12 +301,24 @@ export class ConsultationsService {
 
     // Enregistrer les choix de consultation utilisateur pour manipulation des fréquences
     if (consultation.clientId && consultation.requiredOffering && consultation.requiredOffering.alternatives) {
-      // On suppose que chaque alternative correspond à un choix utilisateur
-      const choices = consultation.requiredOffering.alternatives.map(alt => ({
-        title: consultation.title,
-        frequence: (consultation as any).frequence || 'LIBRE',
-        participants: (consultation as any).participants || 'SOLO',
-      }));
+      // Si la consultation provient d'une rubrique, on peut avoir consultationChoices
+      // On va chercher les _id des choix de consultation si possible
+      let rubriqueChoices: any[] = [];
+      if ((consultation as any).rubrique && (consultation as any).rubrique.consultationChoices) {
+        rubriqueChoices = (consultation as any).rubrique.consultationChoices;
+      }
+      const choices = consultation.requiredOffering.alternatives.map((alt, idx) => {
+        let choiceId = undefined;
+        if (rubriqueChoices[idx] && rubriqueChoices[idx]._id) {
+          choiceId = rubriqueChoices[idx]._id.toString();
+        }
+        return {
+          title: consultation.title,
+          choiceId,
+          frequence: (consultation as any).frequence || 'LIBRE',
+          participants: (consultation as any).participants || 'SOLO',
+        };
+      });
       await this.userConsultationChoiceService.recordChoicesForConsultation(
         consultation.clientId.toString(),
         consultation._id.toString(),

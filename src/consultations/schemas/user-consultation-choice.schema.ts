@@ -14,6 +14,9 @@ export class UserConsultationChoice {
   @Prop({ required: true })
   choiceTitle: string;
 
+   @Prop({ required: true })
+  choiceId: string;
+
   @Prop({ required: true })
   frequence: 'UNE_FOIS_VIE' | 'ANNUELLE' | 'MENSUELLE' | 'QUOTIDIENNE' | 'LIBRE';
 
