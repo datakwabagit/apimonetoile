@@ -23,6 +23,16 @@ export class Rubrique {
       {
         title: String,
         description: String,
+        frequence: {
+          type: String,
+          enum: ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'],
+          default: 'LIBRE',
+        },
+        participants: {
+          type: String,
+          enum: ['SOLO', 'AVEC_TIERS', 'GROUPE'],
+          default: 'SOLO',
+        },
         offering: {
           alternatives: [
             {

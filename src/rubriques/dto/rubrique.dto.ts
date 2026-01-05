@@ -19,6 +19,14 @@ class ConsultationChoiceDto {
   @IsString()
   description: string;
 
+  @IsString()
+  @IsOptional()
+  frequence?: 'UNE_FOIS_VIE' | 'ANNUELLE' | 'MENSUELLE' | 'QUOTIDIENNE' | 'LIBRE';
+
+  @IsString()
+  @IsOptional()
+  participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE';
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ConsultationOfferingDto)

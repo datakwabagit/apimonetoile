@@ -14,6 +14,9 @@ import {
   AstrologicalAnalysisSchema,
 } from './schemas/astrological-analysis.schema';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
+import { UserConsultationChoice, UserConsultationChoiceSchema } from './schemas/user-consultation-choice.schema';
+import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { UserConsultationChoiceController } from './user-consultation-choice.controller';
 
 @Module({
   imports: [
@@ -24,11 +27,12 @@ import { Consultation, ConsultationSchema } from './schemas/consultation.schema'
       { name: Consultation.name, schema: ConsultationSchema },
       { name: Notification.name, schema: NotificationSchema },
       { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
+      { name: UserConsultationChoice.name, schema: UserConsultationChoiceSchema },
     ]),
     NotificationsModule,
   ],
-  controllers: [ConsultationsController, DeepseekController],
-  providers: [ConsultationsService, DeepseekService],
-  exports: [ConsultationsService, DeepseekService],
+  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController],
+  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService],
+  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService],
 })
 export class ConsultationsModule {}

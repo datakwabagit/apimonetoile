@@ -21,7 +21,34 @@ export class RubriqueService {
   }
 
   async create(dto: RubriqueDto) {
-    // S'assurer que chaque choix a bien 3 alternatives différentes
+    // Validation des choix de consultation
+    dto.consultationChoices.forEach(choice => {
+      // Validation alternatives
+      const cats = choice.offering.alternatives.map(a => a.category);
+      if (
+        cats.length !== 3 ||
+        !cats.includes('animal') ||
+        !cats.includes('vegetal') ||
+        !cats.includes('beverage')
+      ) {
+        throw new Error('Chaque choix doit avoir 3 alternatives différentes : animal, vegetal, beverage');
+      }
+      // Validation frequence
+      const freqEnum = ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'];
+      if (choice.frequence && !freqEnum.includes(choice.frequence)) {
+        throw new Error(`Fréquence invalide pour le choix ${choice.title}`);
+      }
+      // Validation participants
+      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE'];
+      if (choice.participants && !partEnum.includes(choice.participants)) {
+        throw new Error(`Participants invalide pour le choix ${choice.title}`);
+      }
+    });
+    return this.rubriqueModel.create(dto);
+  }
+
+  async update(id: string, dto: RubriqueDto) {
+    // Même validation que pour create
     dto.consultationChoices.forEach(choice => {
       const cats = choice.offering.alternatives.map(a => a.category);
       if (
@@ -32,11 +59,15 @@ export class RubriqueService {
       ) {
         throw new Error('Chaque choix doit avoir 3 alternatives différentes : animal, vegetal, beverage');
       }
+      const freqEnum = ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'];
+      if (choice.frequence && !freqEnum.includes(choice.frequence)) {
+        throw new Error(`Fréquence invalide pour le choix ${choice.title}`);
+      }
+      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE'];
+      if (choice.participants && !partEnum.includes(choice.participants)) {
+        throw new Error(`Participants invalide pour le choix ${choice.title}`);
+      }
     });
-    return this.rubriqueModel.create(dto);
-  }
-
-  async update(id: string, dto: RubriqueDto) {
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
   }
 

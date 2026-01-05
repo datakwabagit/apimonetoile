@@ -17,6 +17,7 @@ import {
   AstrologicalAnalysisDocument,
 } from './schemas/astrological-analysis.schema';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
+import { UserConsultationChoiceService } from './user-consultation-choice.service';
 
 @Injectable()
 export class ConsultationsService {
@@ -26,6 +27,7 @@ export class ConsultationsService {
     private analysisModel: Model<AstrologicalAnalysisDocument>,
     private notificationsService: NotificationsService,
     private offeringsService: OfferingsService,
+    private userConsultationChoiceService: UserConsultationChoiceService,
   ) { }
 
   /**
@@ -284,7 +286,7 @@ export class ConsultationsService {
    * Sauvegarder l'analyse générée
    */
   async saveAnalysis(id: string, saveAnalysisDto: SaveAnalysisDto) {
-        const consultation = await this.consultationModel.findById(id).exec();
+    const consultation = await this.consultationModel.findById(id).exec();
 
     if (!consultation) {
       throw new NotFoundException('Consultation not found');
@@ -296,6 +298,21 @@ export class ConsultationsService {
       saveAnalysisDto.statut === 'completed'
         ? ConsultationStatus.COMPLETED
         : ConsultationStatus.PENDING;
+
+    // Enregistrer les choix de consultation utilisateur pour manipulation des fréquences
+    if (consultation.clientId && consultation.requiredOffering && consultation.requiredOffering.alternatives) {
+      // On suppose que chaque alternative correspond à un choix utilisateur
+      const choices = consultation.requiredOffering.alternatives.map(alt => ({
+        title: consultation.title,
+        frequence: (consultation as any).frequence || 'LIBRE',
+        participants: (consultation as any).participants || 'SOLO',
+      }));
+      await this.userConsultationChoiceService.recordChoicesForConsultation(
+        consultation.clientId.toString(),
+        consultation._id.toString(),
+        choices
+      );
+    }
 
     if (saveAnalysisDto.statut === 'completed') {
       consultation.completedDate = new Date();
