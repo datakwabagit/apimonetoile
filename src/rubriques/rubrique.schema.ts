@@ -21,6 +21,7 @@ export class Rubrique {
   @Prop({
     type: [
       {
+        _id: { type: 'ObjectId', auto: true },
         title: String,
         description: String,
         frequence: {
@@ -36,6 +37,7 @@ export class Rubrique {
         offering: {
           alternatives: [
             {
+              _id: { type: 'ObjectId', auto: true },
               category: { type: String, enum: ['animal', 'vegetal', 'beverage'], required: true },
               offeringId: { type: String, required: true },
               quantity: { type: Number, required: true, default: 1 },
