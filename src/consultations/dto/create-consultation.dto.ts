@@ -1,4 +1,30 @@
-﻿
+﻿export class ConsultationChoiceDto {
+  @IsObject()
+  offering: {
+    alternatives: Array<{
+      category: string;
+      offeringId: string;
+      quantity: number;
+      _id: string;
+    }>;
+  };
+
+  @IsString()
+  title: string;
+
+  @IsString()
+  description: string;
+
+  @IsString()
+  frequence: string;
+
+  @IsString()
+  participants: string;
+
+  @IsString()
+  _id: string;
+}
+
 import { Type } from 'class-transformer';
 import {
   IsString,
@@ -69,6 +95,10 @@ export class CreateConsultationDto {
   @IsEnum(ConsultationType)
   type: ConsultationType;
 
+  @IsOptional()
+  @IsString()
+  status?: string;
+
   @IsString()
   @MaxLength(200)
   title: string;
@@ -83,9 +113,43 @@ export class CreateConsultationDto {
     firstName?: string;
     lastName?: string;
     dateOfBirth?: Date;
+    timeOfBirth?: string;
+    countryOfBirth?: string;
+    cityOfBirth?: string;
+    gender?: string;
+    phone?: string;
+    email?: string;
+    country?: string;
     question?: string;
+    username?: string;
+    _id?: string;
+    role?: string;
+    customPermissions?: any[];
+    isActive?: boolean;
+    emailVerified?: boolean;
+    preferences?: any;
+    specialties?: any[];
+    rating?: number;
+    totalConsultations?: number;
+    credits?: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+    __v?: number;
+    lastLogin?: Date;
+    dateNaissance?: Date;
+    genre?: string;
+    heureNaissance?: string;
+    nom?: string;
+    paysNaissance?: string;
+    prenoms?: string;
+    villeNaissance?: string;
+    premium?: boolean;
+    carteDuCiel?: any;
     [key: string]: any;
   };
+  @IsOptional()
+  @Type(() => ConsultationChoiceDto)
+  choice?: ConsultationChoiceDto;
 
   @IsDateString()
   @IsOptional()

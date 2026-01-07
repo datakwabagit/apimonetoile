@@ -1,4 +1,33 @@
-﻿import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+﻿@Schema({ _id: false })
+export class ConsultationChoice {
+  @Prop({ type: Object, required: true })
+  offering: {
+    alternatives: [
+      {
+        category: String,
+        offeringId: String,
+        quantity: Number,
+        _id: String,
+      },
+    ];
+  };
+
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ required: true })
+  frequence: string;
+
+  @Prop({ required: true })
+  participants: string;
+
+  @Prop({ required: true })
+  _id: string;
+}
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 import { Offering } from '@/offerings/schemas/offering.schema';
@@ -90,7 +119,7 @@ export class Consultation {
   type: ConsultationType;
 
   @Prop({ type: String, enum: ConsultationStatus, default: ConsultationStatus.PENDING })
-  status: ConsultationStatus;
+  status: string;
 
   @Prop({ required: true })
   title: string;
@@ -103,9 +132,42 @@ export class Consultation {
     firstName?: string;
     lastName?: string;
     dateOfBirth?: Date;
+    timeOfBirth?: string;
+    countryOfBirth?: string;
+    cityOfBirth?: string;
+    gender?: string;
+    phone?: string;
+    email?: string;
+    country?: string;
     question?: string;
-    [key: string]: any; // Données spécifiques à chaque type de consultation
+    username?: string;
+    _id?: string;
+    role?: string;
+    customPermissions?: any[];
+    isActive?: boolean;
+    emailVerified?: boolean;
+    preferences?: any;
+    specialties?: any[];
+    rating?: number;
+    totalConsultations?: number;
+    credits?: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+    __v?: number;
+    lastLogin?: Date;
+    dateNaissance?: Date;
+    genre?: string;
+    heureNaissance?: string;
+    nom?: string;
+    paysNaissance?: string;
+    prenoms?: string;
+    villeNaissance?: string;
+    premium?: boolean;
+    carteDuCiel?: any;
+    [key: string]: any;
   };
+  @Prop({ type: ConsultationChoice, default: null })
+  choice?: ConsultationChoice;
 
 
   @Prop({ type: RequiredOffering, required: false, default: null })

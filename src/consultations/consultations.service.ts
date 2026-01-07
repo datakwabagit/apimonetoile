@@ -70,24 +70,40 @@ export class ConsultationsService {
    * Créer une nouvelle consultation
    */
   async create(clientId: string, createConsultationDto: CreateConsultationDto) {
-    // Si une offrande obligatoire est fournie, valider sa structure
-    if (createConsultationDto.requiredOffering) {
-      const { requiredOffering } = createConsultationDto;
-      if (!['animal', 'vegetal', 'boisson'].includes(requiredOffering.selectedAlternative)) {
-        throw new Error('L’alternative choisie doit être animal, vegetal ou boisson.');
-      }
-      if (!requiredOffering.alternatives || requiredOffering.alternatives.length !== 3) {
-        throw new Error('Il doit y avoir exactement trois alternatives (animal, vegetal, boisson).');
-      }
-      if (!requiredOffering.alternatives.find(a => a.offeringId && a.quantity)) {
-        throw new Error('Chaque alternative doit avoir un offeringId et une quantité.');
-      }
+    // Adaptation du payload frontend
+    const {
+      type,
+      title,
+      description,
+      formData,
+      status,
+      alternatives,
+      choice,
+      requiredOffering,
+      requiredOfferingsDetails,
+    } = createConsultationDto;
+
+    // Mapping des alternatives et choix
+    let mappedAlternatives = alternatives || [];
+    if (choice && choice.offering && Array.isArray(choice.offering.alternatives)) {
+      mappedAlternatives = choice.offering.alternatives;
     }
 
+    // Mapping du formData (incluant carteDuCiel, missionDeVie, etc.)
+    const mappedFormData = formData || {};
+
+    // Création de la consultation
     const consultation = new this.consultationModel({
-      ...createConsultationDto,
       clientId,
-      status: ConsultationStatus.PENDING,
+      type,
+      title,
+      description,
+      formData: mappedFormData,
+      status: status || ConsultationStatus.PENDING,
+      alternatives: mappedAlternatives,
+      requiredOffering: requiredOffering || null,
+      requiredOfferingsDetails: requiredOfferingsDetails || [],
+      choice: choice || null,
     });
 
     await consultation.save();
@@ -292,6 +308,15 @@ export class ConsultationsService {
       throw new NotFoundException('Consultation not found');
     }
 
+    // Vérifier si une analyse existe déjà pour ce choix de consultation
+    const choiceId = consultation.choice?._id;
+    if (choiceId && consultation.clientId) {
+      const executedChoiceIds = await this.userConsultationChoiceService.getExecutedChoiceIds(consultation.clientId.toString(), id);
+      if (executedChoiceIds.includes(choiceId)) {
+        throw new ForbiddenException('Une analyse existe déjà pour ce choix de consultation.');
+      }
+    }
+
     // Mettre à jour avec l'analyse
     consultation.resultData = saveAnalysisDto.analyse;
     consultation.status =
@@ -299,30 +324,17 @@ export class ConsultationsService {
         ? ConsultationStatus.COMPLETED
         : ConsultationStatus.PENDING;
 
-    // Enregistrer les choix de consultation utilisateur pour manipulation des fréquences
-    if (consultation.clientId && consultation.requiredOffering && consultation.requiredOffering.alternatives) {
-      // Si la consultation provient d'une rubrique, on peut avoir consultationChoices
-      // On va chercher les _id des choix de consultation si possible
-      let rubriqueChoices: any[] = [];
-      if ((consultation as any).rubrique && (consultation as any).rubrique.consultationChoices) {
-        rubriqueChoices = (consultation as any).rubrique.consultationChoices;
-      }
-      const choices = consultation.requiredOffering.alternatives.map((alt, idx) => {
-        let choiceId = undefined;
-        if (rubriqueChoices[idx] && rubriqueChoices[idx]._id) {
-          choiceId = rubriqueChoices[idx]._id.toString();
-        }
-        return {
-          title: consultation.title,
-          choiceId,
-          frequence: (consultation as any).frequence || 'LIBRE',
-          participants: (consultation as any).participants || 'SOLO',
-        };
-      });
+    // Enregistrer le choix de consultation utilisateur pour manipulation des fréquences (une seule fois)
+    if (consultation.clientId && choiceId) {
       await this.userConsultationChoiceService.recordChoicesForConsultation(
         consultation.clientId.toString(),
         consultation._id.toString(),
-        choices
+        [{
+          title: consultation.title,
+          choiceId,
+          frequence: consultation.choice?.frequence || 'LIBRE',
+          participants: consultation.choice?.participants || 'SOLO',
+        }]
       );
     }
 
