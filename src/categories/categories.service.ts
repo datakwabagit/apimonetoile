@@ -33,7 +33,7 @@ export class CategoriesService {
       const rubriqueModel = this.categorieModel.db.model('Rubrique');
       await rubriqueModel.updateMany(
         { _id: { $in: dto.rubriques } },
-        { $set: { categorie: created.nom } }
+        { $set: { categorieId: created._id } }
       );
     }
     return created;
@@ -57,7 +57,7 @@ export class CategoriesService {
       const rubriqueModel = this.categorieModel.db.model('Rubrique');
       await rubriqueModel.updateMany(
         { _id: { $in: dto.rubriques } },
-        { $set: { categorie: updated.nom } }
+        { $set: { categorieId: updated._id } }
       );
     }
     return updated;

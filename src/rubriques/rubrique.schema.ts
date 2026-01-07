@@ -6,8 +6,12 @@ export type RubriqueDocument = Rubrique & Document;
 
 @Schema({ timestamps: true })
 export class Rubrique {
+
   @Prop({ required: true, default: 'GENERAL' })
   categorie: string;
+
+  @Prop({ type: 'ObjectId', ref: 'Categorie', required: false })
+  categorieId?: string;
 
   @Prop({ required: true })
   titre: string;
