@@ -11,11 +11,11 @@ export class RubriqueService {
   ) {}
 
   async findAll() {
-    return this.rubriqueModel.find().exec();
+    return this.rubriqueModel.find().populate('categorieId').exec();
   }
 
   async findOne(id: string) {
-    const rubrique = await this.rubriqueModel.findById(id).exec();
+    const rubrique = await this.rubriqueModel.findById(id).populate('categorieId').exec();
     if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
     return rubrique;
   }
