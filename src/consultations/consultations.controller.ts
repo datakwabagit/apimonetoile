@@ -33,11 +33,13 @@ import { getZodiacSign, getZodiacElement, getZodiacSymbol } from '../common/util
 @Controller('consultations')
 @UseGuards(JwtAuthGuard)
 export class ConsultationsController {
+
   constructor(
     private readonly consultationsService: ConsultationsService,
     private readonly deepseekService: DeepseekService,
     private readonly notificationsService: NotificationsService,
-  ) {}
+  ) { }
+
   /**
    * POST /consultations/:id/notify-user
    * Envoyer une notification à l'utilisateur de la consultation
@@ -92,11 +94,11 @@ export class ConsultationsController {
   @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-console.log('DEBUG create consultation body:', body);
+    console.log('DEBUG create consultation body:', body);
     // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
 
-       return {
+    return {
       success: true,
       message: 'Consultation créée avec succès',
       ...consultation,
@@ -412,7 +414,7 @@ console.log('DEBUG create consultation body:', body);
   ) {
     try {
       const { birthData } = body || {};
-console.log('DEBUG received birthData:', birthData);
+      console.log('DEBUG received birthData:', birthData);
       // Récupérer la consultation pour fallback des données de naissance
       const consultation: any = await this.consultationsService.findOne(id);
       console.log('DEBUG consultation formData:', consultation);
@@ -442,7 +444,7 @@ console.log('DEBUG received birthData:', birthData);
       ) {
         throw new HttpException('Données de naissance incomplètes', HttpStatus.BAD_REQUEST);
       }
-  
+
       let analyseComplete: any;
       let horoscopeResult: any = null;
       const isNumerology = ['NUMEROLOGIE', 'CYCLES_PERSONNELS', 'NOMBRES_PERSONNELS'].includes(consultation.type);
@@ -470,7 +472,7 @@ console.log('DEBUG received birthData:', birthData);
         const generateHoroscopePrompt = (req: any): string => {
           const date = new Date(req.birthDate);
           let periodContext = '';
-          switch(req.horoscopeType) {
+          switch (req.horoscopeType) {
             case 'Quotidien':
               periodContext = `pour aujourd'hui ${date.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
               break;
@@ -481,7 +483,7 @@ console.log('DEBUG received birthData:', birthData);
               periodContext = `pour l'année ${date.getFullYear()}`;
               break;
             case 'Amoureux':
-              periodContext = req.partnerSign 
+              periodContext = req.partnerSign
                 ? `concernant la compatibilité amoureuse avec le signe ${req.partnerSign}`
                 : `concernant les prévisions sentimentales`;
               break;
@@ -528,13 +530,13 @@ console.log('DEBUG received birthData:', birthData);
         const configService = (this as any).configService;
         const DEEPSEEK_API_KEY = configService?.get?.('DEEPSEEK_API_KEY') || process.env.DEEPSEEK_API_KEY || '';
         const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-        
+
         const SYSTEM_PROMPT = `Tu es un expert en numérologie avec plus de 25 ans d'expérience. Tu fournis des analyses numériques précises, détaillées et bienveillantes intégrant la sagesse africaine ancestrale. Tes interprétations sont basées sur la numérologie pythagoricienne et kabbalistique. Tu maîtrises parfaitement les cycles personnels et le timing numérique.`;
-        
+
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
         const currentDay = new Date().getDate();
-        
+
         const generateNumerologyPrompt = (): string => {
           return `ANALYSE NUMÉROLOGIQUE COMPLÈTE
 
@@ -730,7 +732,7 @@ PRINCIPES ESSENTIELS À RESPECTER:
 • Nombre de l'Âme = ce que vous désirez profondément
 • Nombre de Personnalité = l'image que vous projetez`;
         };
-        
+
         if (DEEPSEEK_API_KEY) {
           try {
             const messages = [
@@ -750,7 +752,7 @@ PRINCIPES ESSENTIELS À RESPECTER:
                 max_tokens: 4500,
               }),
             });
-            
+
             if (response.ok) {
               const data = await response.json();
               const aiResponse = data.choices[0].message.content;
@@ -845,7 +847,7 @@ PRINCIPES ESSENTIELS À RESPECTER:
 
       // Vérifier si l'analyse existe dans resultData
       if (consultation.resultData && consultation.resultData.analyse) {
-        
+
         return {
           success: true,
           consultationId: id,
@@ -887,8 +889,8 @@ PRINCIPES ESSENTIELS À RESPECTER:
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.UPDATE_OWN_CONSULTATION)
   update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto) {
-   console.log('DEBUG updateConsultationDto:', updateConsultationDto);
-   
+    console.log('DEBUG updateConsultationDto:', updateConsultationDto);
+
     return this.consultationsService.update(id, updateConsultationDto);
   }
 

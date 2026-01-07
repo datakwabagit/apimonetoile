@@ -27,4 +27,12 @@ export class UserConsultationChoiceService {
   async getChoicesForUser(userId: string) {
     return this.userConsultationChoiceModel.find({ userId }).exec();
   }
+
+    // Retourne la liste des choiceId déjà exécutés pour un utilisateur (optionnellement filtré par consultationId)
+    async getExecutedChoiceIds(userId: string, consultationId?: string): Promise<string[]> {
+      const filter: any = { userId };
+      if (consultationId) filter.consultationId = consultationId;
+      const docs = await this.userConsultationChoiceModel.find(filter, { choiceId: 1, _id: 0 }).exec();
+      return docs.map(doc => doc.choiceId);
+    }
 }
