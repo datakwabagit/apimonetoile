@@ -41,6 +41,15 @@ export class CategoriesService {
       { new: true },
     ).populate('rubriques');
     if (!updated) throw new NotFoundException('Catégorie non trouvée');
+
+    // Mettre à jour le champ categorie des rubriques associées
+    if (dto.rubriques && dto.rubriques.length > 0) {
+      const rubriqueModel = this.categorieModel.db.model('Rubrique');
+      await rubriqueModel.updateMany(
+        { _id: { $in: dto.rubriques } },
+        { $set: { categorie: updated.nom } }
+      );
+    }
     return updated;
   }
 
