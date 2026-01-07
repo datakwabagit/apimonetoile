@@ -23,10 +23,20 @@ export class CategoriesService {
   }
 
   async create(dto: CreateCategorieDto) {
-    return this.categorieModel.create({
+    const created = await this.categorieModel.create({
       ...dto,
       rubriques: dto.rubriques?.map(id => new Types.ObjectId(id)) || [],
     });
+
+    // Mettre à jour le champ categorie des rubriques associées
+    if (dto.rubriques && dto.rubriques.length > 0) {
+      const rubriqueModel = this.categorieModel.db.model('Rubrique');
+      await rubriqueModel.updateMany(
+        { _id: { $in: dto.rubriques } },
+        { $set: { categorie: created.nom } }
+      );
+    }
+    return created;
   }
 
   async update(id: string, dto: UpdateCategorieDto) {
