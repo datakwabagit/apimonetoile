@@ -537,44 +537,7 @@ export class ConsultationsController {
         const currentMonth = new Date().getMonth() + 1;
         const currentDay = new Date().getDate();
 
-═══════════════════════════════════════════════════════════════════════
-📐 MÉTHODES DE CALCUL OBLIGATOIRES
-═══════════════════════════════════════════════════════════════════════
-
-1️⃣ CHEMIN DE VIE (Mission de vie)
-Méthode : Jour de naissance + Mois de naissance + Année de naissance (réduits séparément)
-Exemple : 7 janvier 1974
-  • Jour: 7 → 7
-  • Mois: 1 → 1  
-  • Année: 1+9+7+4 = 21 → 2+1 = 3
-  • Total: 7+1+3 = 11 (maître-nombre, on ne réduit pas)
-⚠️ Respecte les maîtres-nombres 11, 22, 33 dans le résultat FINAL uniquement
-
-2️⃣ NOMBRE D'EXPRESSION (Talents et mode d'expression)
-Méthode : Valeur de TOUTES les lettres du nom complet
-Correspondance alphabétique :
-  A J S = 1  |  B K T = 2  |  C L U = 3
-  D M V = 4  |  E N W = 5  |  F O X = 6
-  G P Y = 7  |  H Q Z = 8  |  I R = 9
-
-Exemple : KOUASSI JEAN
-  • KOUASSI: K(2)+O(6)+U(3)+A(1)+S(1)+S(1)+I(9) = 23 → 5
-  • JEAN: J(1)+E(5)+A(1)+N(5) = 12 → 3
-  • Total: 5+3 = 8
-⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
-
-3️⃣ NOMBRE DE L'ÂME (Désirs profonds et motivations intérieures)
-Méthode : Valeur des VOYELLES uniquement (A E I O U Y)
-Exemple : KOUASSI JEAN → voyelles : O U A I E A
-  • O(6)+U(3)+A(1)+I(9)+E(5)+A(1) = 25 → 2+5 = 7
-⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
         const generateNumerologyPrompt = (): string => {
-          // Ajout du choix de consultation dans le prompt
-          const choice = consultation.choice;
-          let choiceBlock = '';
-          if (choice) {
-            choiceBlock = `\nCHOIX DE CONSULTATION:\nTitre: ${choice.title}\nDescription: ${choice.description}\nFréquence: ${choice.frequence}\nParticipants: ${choice.participants}\nAlternatives: ${JSON.stringify(choice.offering?.alternatives || [])}`;
-          }
           return `ANALYSE NUMÉROLOGIQUE COMPLÈTE
 
 DONNÉES DE NAISSANCE:
@@ -583,7 +546,6 @@ DATE DE NAISSANCE: ${birthDateStr}
 DATE ACTUELLE: ${currentDay}/${currentMonth}/${currentYear}
 
 Type d'analyse: ${consultation.type === 'NOMBRES_PERSONNELS' ? 'Nombres personnels détaillés' : consultation.type === 'CYCLES_PERSONNELS' ? 'Cycles personnels et timing' : 'Numérologie complète'}
-${choiceBlock}
 
 ═══════════════════════════════════════════════════════════════════════
 📐 MÉTHODES DE CALCUL OBLIGATOIRES
@@ -615,8 +577,8 @@ Exemple : KOUASSI JEAN
 Méthode : Valeur des VOYELLES uniquement (A E I O U Y)
 Exemple : KOUASSI JEAN → voyelles : O U A I E A
   • O(6)+U(3)+A(1)+I(9)+E(5)+A(1) = 25 → 2+5 = 7
-⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire`;
-        };
+⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
+
 4️⃣ NOMBRE DE PERSONNALITÉ (Image projetée)
 Méthode : Valeur des CONSONNES uniquement
 ⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
