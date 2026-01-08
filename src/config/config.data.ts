@@ -1,6 +1,7 @@
 
+import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const servicesStructure = require('../../docs/services_structure.json');
+const servicesStructure = require(path.resolve(__dirname, '../../docs/services_structure.json'));
 
 // Expose the raw structure for /config/domaines
 export function getDomaines() {

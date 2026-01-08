@@ -69,8 +69,6 @@ import { CategoriesModule } from './categories/categories.module';
           PaymentsModule,
           NotificationsModule,
           KnowledgeModule,
-          AppController,
-          AppService,
           MoneyfusionModule,
           SiteMetricsModule,
           AdminModule,
