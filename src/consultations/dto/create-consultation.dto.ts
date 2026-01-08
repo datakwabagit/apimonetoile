@@ -1,4 +1,19 @@
-﻿export class ConsultationChoiceDto {
+﻿
+import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  Min,
+  MaxLength,
+  IsArray,
+} from 'class-validator';
+import { ConsultationType } from '../../common/enums/consultation-status.enum';
+
+export class ConsultationChoiceDto {
   @IsObject()
   offering: {
     alternatives: Array<{
@@ -24,20 +39,6 @@
   @IsString()
   _id: string;
 }
-
-import { Type } from 'class-transformer';
-import {
-  IsString,
-  IsEnum,
-  IsObject,
-  IsOptional,
-  IsNumber,
-  IsDateString,
-  Min,
-  MaxLength,
-  IsArray,
-} from 'class-validator';
-import { ConsultationType } from '../../common/enums/consultation-status.enum';
 
 
 export class OfferingAlternativeDto {

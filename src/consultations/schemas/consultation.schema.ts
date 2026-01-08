@@ -1,4 +1,10 @@
-﻿@Schema({ _id: false })
+﻿
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
+import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
+import { Offering } from '@/offerings/schemas/offering.schema';
+
+@Schema({ _id: false })
 export class ConsultationChoice {
   @Prop({ type: Object, required: true })
   offering: {
@@ -27,10 +33,6 @@ export class ConsultationChoice {
   @Prop({ required: true })
   _id: string;
 }
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
-import { Offering } from '@/offerings/schemas/offering.schema';
 
 export type ConsultationDocument = Consultation & Document;
 
