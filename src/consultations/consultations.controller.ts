@@ -94,7 +94,7 @@ export class ConsultationsController {
   @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-    console.log('DEBUG create consultation body:', body);
+
     // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
 
@@ -409,25 +409,29 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
   async generateAnalysis(
     @Param('id') id: string,
-    @Body() body: { birthData: BirthData },
     @CurrentUser() user: UserDocument,
   ) {
     try {
-      const { birthData } = body || {};
-      console.log('DEBUG received birthData:', birthData);
-      // Récupérer la consultation pour fallback des données de naissance
+      // Récupérer la consultation et utiliser formData uniquement
       const consultation: any = await this.consultationsService.findOne(id);
       console.log('DEBUG consultation formData:', consultation);
       const form = consultation?.formData || {};
 
       const mergedBirthData: BirthData = {
-        nom: birthData?.nom ?? form.nom ?? form.lastName ?? '',
-        prenoms: birthData?.prenoms ?? form.prenoms ?? form.firstName ?? '',
-        dateNaissance: birthData?.dateNaissance ?? form.dateNaissance ?? form.dateOfBirth ?? '',
-        heureNaissance: birthData?.heureNaissance ?? form.heureNaissance ?? '',
-        villeNaissance: birthData?.villeNaissance ?? form.villeNaissance ?? form.cityOfBirth ?? '',
-        paysNaissance: birthData?.paysNaissance ?? form.paysNaissance ?? form.countryOfBirth ?? '',
-        email: birthData?.email ?? form.email ?? '',
+        nom: form.nom ?? form.lastName ?? '',
+        prenoms: form.prenoms ?? form.firstName ?? '',
+        dateNaissance: form.dateNaissance ?? form.dateOfBirth ?? '',
+        heureNaissance: form.heureNaissance ?? form.timeOfBirth ?? '',
+        villeNaissance: form.villeNaissance ?? form.cityOfBirth ?? '',
+        paysNaissance:
+          form.paysNaissance && form.paysNaissance.trim() !== ''
+            ? form.paysNaissance
+            : form.countryOfBirth && form.countryOfBirth.trim() !== ''
+              ? form.countryOfBirth
+              : form.country && form.country.trim() !== ''
+                ? form.country
+                : '',
+        email: form.email ?? '',
       } as BirthData;
 
       // Log temporaire pour debug : afficher les données de naissance fusionnées
@@ -451,16 +455,16 @@ export class ConsultationsController {
 
       if (consultation.type === 'HOROSCOPE') {
         // Détermination automatique du signe, élément et symbole
-        const birthDateStr = form.dateNaissance || form.dateOfBirth || birthData?.dateNaissance || birthData?.dateOfBirth || '';
+        const birthDateStr = form.dateNaissance || form.dateOfBirth || '';
         const birthDateObj = birthDateStr ? new Date(birthDateStr) : null;
-        const zodiacSign = birthDateObj ? getZodiacSign(birthDateObj) : (form.zodiacSign || birthData?.zodiacSign || '');
+        const zodiacSign = birthDateObj ? getZodiacSign(birthDateObj) : (form.zodiacSign || '');
         const element = getZodiacElement(zodiacSign);
         const symbol = getZodiacSymbol(zodiacSign);
         const horoscopePayload = {
           zodiacSign,
-          horoscopeType: form.horoscopeType || birthData?.horoscopeType || '',
+          horoscopeType: form.horoscopeType || '',
           birthDate: birthDateStr,
-          partnerSign: form.partnerSign || birthData?.partnerSign || '',
+          partnerSign: form.partnerSign || '',
           element,
           symbol,
         };
@@ -526,7 +530,7 @@ export class ConsultationsController {
         analyseComplete = horoscopeResult;
       } else if (isNumerology) {
         // Numérologie (NUMEROLOGIE, CYCLES_PERSONNELS, NOMBRES_PERSONNELS)
-        const birthDateStr = form.dateNaissance || form.dateOfBirth || birthData?.dateNaissance || birthData?.dateOfBirth || '';
+        const birthDateStr = form.dateNaissance || form.dateOfBirth || '';
         const configService = (this as any).configService;
         const DEEPSEEK_API_KEY = configService?.get?.('DEEPSEEK_API_KEY') || process.env.DEEPSEEK_API_KEY || '';
         const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
@@ -765,8 +769,8 @@ PRINCIPES ESSENTIELS À RESPECTER:
             console.error('Erreur génération numérologie:', e);
           }
         }
-        // Enregistrer dans resultData
-        await this.consultationsService.update(id, { resultData: analyseComplete });
+        // Enregistrer dans resultData.analyse pour cohérence
+        await this.consultationsService.update(id, { resultData: { analyse: analyseComplete } });
       } else {
         // Analyse astrologique classique
         const analyse = await this.deepseekService.genererAnalyseComplete(mergedBirthData, id);
@@ -775,6 +779,8 @@ PRINCIPES ESSENTIELS À RESPECTER:
           ...analyse,
           dateGeneration: new Date().toISOString(),
         };
+        // Enregistrer dans resultData.analyse pour cohérence
+        await this.consultationsService.update(id, { resultData: { analyse: analyseComplete } });
         // Sauvegarder l'analyse dans la collection AstrologicalAnalysis
         try {
           const userId = user._id.toString();

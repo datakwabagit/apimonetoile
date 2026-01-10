@@ -1,7 +1,3 @@
-/**
- * Générer le PDF d'une consultation
- */
-
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,7 +6,7 @@ import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OfferingsService } from '../offerings/offerings.service';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
-import { SaveAnalysisDto } from './dto/save-analysis.dto';
+import { AnalysisStatus, SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import {
   AstrologicalAnalysis,
@@ -573,8 +569,12 @@ export class ConsultationsService {
         analyseComplete = { type: 'CLASSIC', data: 'TODO' };
       }
 
-      // Mettre à jour le statut de la consultation à COMPLETED
-      await this.update(id, { status: ConsultationStatus.COMPLETED });
+      // Appeler saveAnalysis pour enregistrer l'analyse et les choix utilisateur
+      const saveAnalysisDto = {
+        analyse: analyseComplete,
+        statut: AnalysisStatus.COMPLETED,
+      };
+      await this.saveAnalysis(id, saveAnalysisDto);
 
       let messageSuccess = 'Analyse générée avec succès';
       if (consultation.type === 'HOROSCOPE') {
