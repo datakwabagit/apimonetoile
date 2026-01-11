@@ -34,6 +34,8 @@ export class ConsultationChoice {
   _id: string;
 }
 
+
+export type ConsultationChoiceDocument = ConsultationChoice & Document;
 export type ConsultationDocument = Consultation & Document;
 
 @Schema({ _id: false })
