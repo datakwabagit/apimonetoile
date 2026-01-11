@@ -14,8 +14,8 @@ export class UserConsultationChoice {
   @Prop({ required: true })
   choiceTitle: string;
 
-   @Prop({ required: true })
-  choiceId: string;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ConsultationChoice', required: true })
+  choiceId: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true })
   frequence: 'UNE_FOIS_VIE' | 'ANNUELLE' | 'MENSUELLE' | 'QUOTIDIENNE' | 'LIBRE';
