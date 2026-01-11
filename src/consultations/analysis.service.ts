@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from './schemas/astrological-analysis.schema';
 import { ConsultationsService } from './consultations.service';
+import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { DeepseekService, BirthData } from './deepseek.service';
 import { getZodiacSign, getZodiacElement, getZodiacSymbol } from '../common/utils/zodiac.utils';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
@@ -15,6 +16,7 @@ export class AnalysisService {
     private analysisModel: Model<AstrologicalAnalysisDocument>,
     private consultationsService: ConsultationsService,
     private deepseekService: DeepseekService,
+    private userConsultationChoiceService: UserConsultationChoiceService,
   ) {}
 
   async getAstrologicalAnalysis(consultationId: string) {
@@ -422,6 +424,19 @@ PRINCIPES ESSENTIELS À RESPECTER:
         messageSuccess = `Analyse numérologique (${consultation.type}) générée avec succès`;
       }
 
+      // Appeler recordChoicesForConsultation après la génération de l'analyse
+      if (consultation.clientId && consultation.choice?._id) {
+        await this.userConsultationChoiceService.recordChoicesForConsultation(
+          consultation.clientId.toString(),
+          consultation._id.toString(),
+          [{
+            title: consultation.title,
+            choiceId: consultation.choice._id,
+            frequence: consultation.choice.frequence || 'LIBRE',
+            participants: consultation.choice.participants || 'SOLO',
+          }]
+        );
+      }
       return {
         success: true,
         consultationId: id,
@@ -442,18 +457,6 @@ PRINCIPES ESSENTIELS À RESPECTER:
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
-    }
-
-
-
-
-
-    // return {
-    //   success: true,
-    //   consultationId: id,
-    //   statut: ConsultationStatus.COMPLETED,
-    //   message: messageSuccess,
-    //   analyse: analyseComplete,
-    // };
+    } 
   }
 }
