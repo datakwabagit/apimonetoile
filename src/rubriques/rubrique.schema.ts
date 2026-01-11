@@ -1,4 +1,4 @@
-import { ConsultationType } from '@/common/enums/consultation-status.enum';
+import { ConsultationType } from '../common/enums/consultation-status.enum';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 

@@ -5,7 +5,7 @@ import { WalletService } from './wallet.service';
 import { WalletOfferingsService } from './wallet-offerings.service';
 import { WalletTransaction, WalletTransactionSchema } from './schemas/wallet-transaction.schema';
 import { OfferingsModule } from '../offerings/offerings.module';
-import { OfferingStockModule } from '@/offerings/offering-stock.module';
+import { OfferingStockModule } from '../offerings/offering-stock.module';
 import { Consultation, ConsultationSchema } from '../consultations/schemas/consultation.schema';
 
 @Module({

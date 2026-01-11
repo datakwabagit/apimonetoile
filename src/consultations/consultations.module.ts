@@ -15,7 +15,8 @@ import {
   AstrologicalAnalysis,
   AstrologicalAnalysisSchema,
 } from './schemas/astrological-analysis.schema';
-import { Consultation, ConsultationSchema, ConsultationChoice, ConsultationChoiceDocument, ConsultationChoiceDocument as ConsultationChoiceSchema } from './schemas/consultation.schema';
+import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
+import { ConsultationChoice, ConsultationChoiceSchema } from './schemas/consultation-choice.schema';
 import { UserConsultationChoice, UserConsultationChoiceSchema } from './schemas/user-consultation-choice.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { UserConsultationChoiceController } from './user-consultation-choice.controller';
@@ -30,7 +31,7 @@ import { UserConsultationChoiceController } from './user-consultation-choice.con
       { name: Notification.name, schema: NotificationSchema },
       { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
       { name: UserConsultationChoice.name, schema: UserConsultationChoiceSchema },
-      { name: 'ConsultationChoice', schema: SchemaFactory.createForClass(ConsultationChoice) },
+      { name: 'ConsultationChoice', schema: ConsultationChoiceSchema },
     ]),
     NotificationsModule,
   ],

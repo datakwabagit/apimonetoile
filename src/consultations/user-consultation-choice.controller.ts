@@ -7,13 +7,17 @@ export class UserConsultationChoiceController {
 
   @Get('user/:userId')
   async getChoicesForUser(@Param('userId') userId: string) {
-    return this.userConsultationChoiceService.getChoicesForUser(userId);
+    const newLocal = this.userConsultationChoiceService.getChoicesForUser(userId);
+    console.log('Retrieved choices for user:', newLocal);
+    return newLocal;
   }
 
   // Pour filtrer par consultation ou autre critère, ajouter d'autres endpoints ici
     // Endpoint pour récupérer les choiceId déjà exécutés pour un utilisateur (optionnellement filtré par consultationId)
     @Get()
     async getChoicesForUserQuery(@Query('userId') userId: string) {
-      return this.userConsultationChoiceService.getChoicesForUser(userId);
+      const result = await this.userConsultationChoiceService.getChoicesForUser(userId);
+      console.log('getChoicesForUserQuery result:', JSON.stringify(result, null, 2));
+      return result;
     }
 }

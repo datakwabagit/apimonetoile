@@ -25,7 +25,9 @@ export class UserConsultationChoiceService {
   }
 
   async getChoicesForUser(userId: string) {
-    return this.userConsultationChoiceModel.find({ userId }).populate('choiceId').exec();
+    // return this.userConsultationChoiceModel.find({ userId }).populate('choiceId').exec();
+        return this.userConsultationChoiceModel.find({ userId }).exec();
+
   }
 
     // Retourne la liste des choiceId déjà exécutés pour un utilisateur (optionnellement filtré par consultationId)
