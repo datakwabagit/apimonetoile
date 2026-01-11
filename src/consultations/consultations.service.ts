@@ -344,12 +344,10 @@ export class ConsultationsService {
             consultation.clientId.toString(),
             id,
             consultation.title,
-          );       
+          );
         } catch (error) {
           console.error('[ConsultationService] Erreur création notification:', error);
         }
-      } else {
-        console.log('[ConsultationService] Pas de clientId, notification ignorée');
       }
     }
 
@@ -464,7 +462,7 @@ export class ConsultationsService {
     });
 
     try {
-      const savedAnalysis = await analysis.save();      
+      const savedAnalysis = await analysis.save();
       return savedAnalysis;
     } catch (error) {
       console.error('[ConsultationService] ❌ Erreur lors de la sauvegarde:', {

@@ -31,8 +31,7 @@ export class AnalysisService {
      try {
       // Récupérer la consultation et utiliser formData uniquement
       const consultation: any = await this.consultationsService.findOne(id);
-      console.log('DEBUG consultation formData:', consultation);
-      const form = consultation?.formData || {};
+       const form = consultation?.formData || {};
 
       const mergedBirthData: BirthData = {
         nom: form.nom ?? form.lastName ?? '',
@@ -51,10 +50,7 @@ export class AnalysisService {
         email: form.email ?? '',
       } as BirthData;
 
-      // Log temporaire pour debug : afficher les données de naissance fusionnées
-      console.log('DEBUG mergedBirthData:', mergedBirthData);
-
-      // Validation des données
+  
       if (
         !mergedBirthData.nom ||
         !mergedBirthData.prenoms ||
@@ -423,7 +419,7 @@ PRINCIPES ESSENTIELS À RESPECTER:
       } else if (isNumerology) {
         messageSuccess = `Analyse numérologique (${consultation.type}) générée avec succès`;
       }
-console.log('Consultation:', consultation);
+ 
       // Appeler recordChoicesForConsultation après la génération de l'analyse
       if (consultation.choice?._id) {
         const choice = consultation.choice;

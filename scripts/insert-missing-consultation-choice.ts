@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { ConsultationChoice, ConsultationChoiceSchema } from '../src/consultations/schemas/consultation-choice.schema';
 import { Connection } from 'mongoose';
+import { AppModule } from '../src/app.module';
+import { ConsultationChoiceSchema } from '../src/consultations/schemas/consultation-choice.schema';
 
 async function run() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -20,10 +20,7 @@ async function run() {
       participants: 'SOLO',
       offering: {},
     });
-    console.log('ConsultationChoice inséré avec _id', missingChoiceId);
-  } else {
-    console.log('ConsultationChoice déjà présent');
-  }
+   }  
   await app.close();
 }
 

@@ -338,7 +338,7 @@ export class ConsultationsController {
         analyse = astroAnalysis.toObject();
       }
     } catch (error) {
-      console.log(
+      console.warn(
         "[API] Pas d'analyse trouvée dans AstrologicalAnalysis, utilisation de resultData",
       );
     }
@@ -489,9 +489,7 @@ export class ConsultationsController {
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.UPDATE_OWN_CONSULTATION)
   update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto) {
-    console.log('DEBUG updateConsultationDto:', updateConsultationDto);
-
-    return this.consultationsService.update(id, updateConsultationDto);
+     return this.consultationsService.update(id, updateConsultationDto);
   }
 
   /**
