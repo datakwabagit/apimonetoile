@@ -1,16 +1,14 @@
-
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Categorie, CategorieDocument } from './categorie.schema';
 import { CreateCategorieDto, UpdateCategorieDto } from './categorie.dto';
 
-
 @Injectable()
 export class CategoriesService {
   constructor(
     @InjectModel(Categorie.name) private categorieModel: Model<CategorieDocument>,
-  ) {}
+  ) { }
 
   async findAll() {
     return this.categorieModel.find().populate({ path: 'rubriques', model: 'Rubrique' }).exec();

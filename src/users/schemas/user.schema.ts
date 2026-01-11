@@ -14,7 +14,7 @@ export class User {
   @Prop({ required: true, unique: true, trim: true, index: true })
   username: string;
 
-  @Prop({ required: true, enum: ['male', 'female', 'other'] })
+  @Prop({ required: true, enum: ['male', 'female'] })
   gender: string;
 
   @Prop({ required: true })

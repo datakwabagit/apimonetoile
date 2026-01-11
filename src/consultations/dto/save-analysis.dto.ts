@@ -7,12 +7,12 @@ export enum AnalysisStatus {
 
 export class SaveAnalysisDto {
   @IsObject()
-  analyse: any; // Objet AnalyseAstrologique complet
+  analyse: any;
 
   @IsEnum(AnalysisStatus)
   statut: AnalysisStatus;
 
   @IsOptional()
   @IsObject()
-  metadata?: any; // Métadonnées additionnelles si nécessaire
+  metadata?: any;
 }

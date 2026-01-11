@@ -479,15 +479,7 @@ export class ConsultationsService {
   /**
    * Récupérer l'analyse astrologique d'une consultation
    */
-  async getAstrologicalAnalysis(consultationId: string) {
-    const analysis = await this.analysisModel.findOne({ consultationId }).exec();
 
-    if (!analysis) {
-      throw new NotFoundException('Analyse non trouvée');
-    }
-
-    return analysis;
-  }
 
   /**
    * Récupérer toutes les analyses d'un utilisateur

@@ -24,6 +24,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UserDocument } from '../users/schemas/user.schema';
 import { ConsultationsService } from './consultations.service';
+import { AnalysisService } from './analysis.service';
 import { BirthData, DeepseekService } from './deepseek.service';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
@@ -38,6 +39,7 @@ export class ConsultationsController {
     private readonly consultationsService: ConsultationsService,
     private readonly deepseekService: DeepseekService,
     private readonly notificationsService: NotificationsService,
+    private readonly analysisService: AnalysisService,
   ) { }
 
   /**
@@ -225,7 +227,7 @@ export class ConsultationsController {
     try {
       // Récupérer la consultation pour le champ analysisNotified
       const consultation: any = await this.consultationsService.findOne(consultationId);
-      const analysis = await this.consultationsService.getAstrologicalAnalysis(consultationId);
+      const analysis = await this.analysisService.getAstrologicalAnalysis(consultationId);
 
       if (!analysis) {
         throw new HttpException(
@@ -335,7 +337,7 @@ export class ConsultationsController {
     // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
     let analyse = consultation.resultData;
     try {
-      const astroAnalysis = await this.consultationsService.getAstrologicalAnalysis(id);
+      const astroAnalysis = await this.analysisService.getAstrologicalAnalysis(id);
       if (astroAnalysis) {
         analyse = astroAnalysis.toObject();
       }

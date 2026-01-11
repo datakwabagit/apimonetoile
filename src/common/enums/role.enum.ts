@@ -9,7 +9,6 @@ export enum Role {
   USER = 'USER', // Client standard
   GUEST = 'GUEST', // Visiteur non authentifié
 }
-
  
 export const isRoleHigherOrEqual = (userRole: Role, requiredRole: Role): boolean => {
   const hierarchy = {

@@ -8,6 +8,7 @@ import { OfferingsModule } from '../offerings/offerings.module';
 import { ConsultationsController } from './consultations.controller';
 import { DeepseekController } from './deepseek.controller';
 import { ConsultationsService } from './consultations.service';
+import { AnalysisService } from './analysis.service';
 import { DeepseekService } from './deepseek.service';
 import {
   AstrologicalAnalysis,
@@ -32,7 +33,7 @@ import { UserConsultationChoiceController } from './user-consultation-choice.con
     NotificationsModule,
   ],
   controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController],
-  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService],
-  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService],
+  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService],
+  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService],
 })
 export class ConsultationsModule {}

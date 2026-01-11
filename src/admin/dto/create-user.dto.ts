@@ -1,9 +1,8 @@
 import { IsString, IsOptional, IsBoolean, IsEnum, IsObject, MinLength } from 'class-validator';
 
 export enum Gender {
-  M = 'M',
-  F = 'F',
-  Other = 'Other',
+  MALE = 'male',
+  FEMALE = 'female',
 }
 
 export enum Role {

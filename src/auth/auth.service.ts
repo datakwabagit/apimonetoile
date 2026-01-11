@@ -28,8 +28,6 @@ export class AuthService {
    */
   async register(registerDto: RegisterDto) {
     const { username, gender, country, phone, password, ...optionals } = registerDto;
-
-    // Générer l'email automatiquement à partir du username
     const email = `${username}@monetoile.org`;
 
     // Vérifier si le username ou l'email existe déjà

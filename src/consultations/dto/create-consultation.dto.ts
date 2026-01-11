@@ -1,5 +1,4 @@
-﻿
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsString,
   IsEnum,
@@ -39,7 +38,6 @@ export class ConsultationChoiceDto {
   @IsString()
   _id: string;
 }
-
 
 export class OfferingAlternativeDto {
   @IsString()
@@ -84,13 +82,10 @@ export class RequiredOfferingDetailDto {
 }
 
 export class CreateConsultationDto {
-  /**
-   * AVERTISSEMENT : L'analyse spirituelle, astrologique et numérologique sera réalisée uniquement à partir des informations que vous fournissez dans ce formulaire. Vous pouvez demander une consultation pour un tiers.
-   */
   @IsString()
   serviceId: string;
 
-    @IsOptional()
+  @IsOptional()
   visible?: boolean;
 
   @IsEnum(ConsultationType)
@@ -160,8 +155,6 @@ export class CreateConsultationDto {
   @Min(0)
   @IsOptional()
   price?: number;
-
-
 
   @IsObject()
   @IsOptional()

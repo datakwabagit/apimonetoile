@@ -28,6 +28,7 @@ export class AdminController {
   async createUser(@Body() createUserDto: CreateUserDto) {
     return this.adminService.createUser(createUserDto);
   }
+
   @Get('stats')
   @ApiOperation({ summary: "Récupérer les statistiques d'administration" })
   @ApiResponse({ status: 200, description: 'Statistiques retournées.' })
@@ -64,7 +65,7 @@ export class AdminController {
       role,
       page: parseInt(page as string, 10) || 1,
       limit: parseInt(limit as string, 10) || 10,
-    });  
+    });
 
     return result;
   }

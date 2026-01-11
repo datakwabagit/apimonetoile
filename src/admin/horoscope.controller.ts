@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 @ApiTags('Admin')
 @Controller('admin')
 export class HoroscopeController {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   @Post('generate-horoscope')
   @ApiOperation({ summary: 'Générer un horoscope via DeepSeek' })
@@ -20,7 +20,7 @@ export class HoroscopeController {
     const generateHoroscopePrompt = (req: any): string => {
       const date = new Date(req.birthDate);
       let periodContext = '';
-      switch(req.horoscopeType) {
+      switch (req.horoscopeType) {
         case 'Quotidien':
           periodContext = `pour aujourd'hui ${date.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
           break;
@@ -31,7 +31,7 @@ export class HoroscopeController {
           periodContext = `pour l'année ${date.getFullYear()}`;
           break;
         case 'Amoureux':
-          periodContext = req.partnerSign 
+          periodContext = req.partnerSign
             ? `concernant la compatibilité amoureuse avec le signe ${req.partnerSign}`
             : `concernant les prévisions sentimentales`;
           break;
@@ -81,7 +81,7 @@ export class HoroscopeController {
       }
       const date = new Date(body.birthDate);
       let periodText = '';
-      switch(body.horoscopeType) {
+      switch (body.horoscopeType) {
         case 'Quotidien':
           periodText = date.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
           break;

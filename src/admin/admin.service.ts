@@ -1,6 +1,3 @@
-
-
-
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -35,28 +32,19 @@ export class AdminService {
 
   async createUser(createUserDto: any): Promise<User> {
     const { username, password, gender, phone, phoneNumber, ...rest } = createUserDto;
-
-    // Générer l'email automatiquement
     const email = `${username}@monetoile.org`;
 
-    // Vérifier si le username ou l'email existe déjà
     const existingUser = await this.userModel.findOne({ $or: [{ email }, { username }] }).exec();
     if (existingUser) {
       throw new ConflictException('Username or email already exists');
     }
-
-    // Mapper le genre français vers anglais
+  
     let mappedGender = gender;
     if (gender === 'Homme') mappedGender = 'male';
     else mappedGender = 'female';
 
-    // Prendre phone ou phoneNumber
     const finalPhone = phone || phoneNumber;
-
-    // Générer un mot de passe temporaire si non fourni
     const plainPassword = password || Math.random().toString(36).slice(-8);
-
-    // Hasher le password
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
     const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
 

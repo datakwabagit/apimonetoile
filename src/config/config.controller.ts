@@ -6,6 +6,7 @@ export class ConfigController {
   constructor(
     @Inject(CategoriesService) private readonly categoriesService: CategoriesService,
   ) {}
+  
   /**
    * GET /config/domaines
    * Retourne la liste complète des domaines (arborescence complète)
