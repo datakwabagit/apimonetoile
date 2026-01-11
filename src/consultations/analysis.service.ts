@@ -423,12 +423,16 @@ PRINCIPES ESSENTIELS À RESPECTER:
       } else if (isNumerology) {
         messageSuccess = `Analyse numérologique (${consultation.type}) générée avec succès`;
       }
-console.log('DEBUG analyseComplete:', consultation);
+console.log('Consultation:', consultation);
       // Appeler recordChoicesForConsultation après la génération de l'analyse
       if (consultation.choice?._id) {
         const choice = consultation.choice;
+        // Extract userId as string from clientId object
+        const userId = typeof consultation.clientId === 'object' && consultation.clientId._id
+          ? consultation.clientId._id.toString()
+          : consultation.clientId?.toString?.() || '';
         await this.userConsultationChoiceService.recordChoicesForConsultation(
-          consultation.clientId?.toString?.() || '',
+          userId,
           consultation._id?.toString?.() || '',
           [{
             title: choice.title,
