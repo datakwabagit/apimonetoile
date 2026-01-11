@@ -423,17 +423,18 @@ PRINCIPES ESSENTIELS À RESPECTER:
       } else if (isNumerology) {
         messageSuccess = `Analyse numérologique (${consultation.type}) générée avec succès`;
       }
-
+console.log('DEBUG analyseComplete:', consultation);
       // Appeler recordChoicesForConsultation après la génération de l'analyse
-      if (consultation.clientId && consultation.choice?._id) {
+      if (consultation.choice?._id) {
+        const choice = consultation.choice;
         await this.userConsultationChoiceService.recordChoicesForConsultation(
-          consultation.clientId.toString(),
-          consultation._id.toString(),
+          consultation.clientId?.toString?.() || '',
+          consultation._id?.toString?.() || '',
           [{
-            title: consultation.title,
-            choiceId: consultation.choice._id,
-            frequence: consultation.choice.frequence || 'LIBRE',
-            participants: consultation.choice.participants || 'SOLO',
+            title: choice.title,
+            choiceId: choice._id,
+            frequence: choice.frequence || 'LIBRE',
+            participants: choice.participants || 'SOLO',
           }]
         );
       }
