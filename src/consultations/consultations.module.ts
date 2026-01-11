@@ -36,4 +36,4 @@ import { UserConsultationChoiceController } from './user-consultation-choice.con
   providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService],
   exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService],
 })
-export class ConsultationsModule {}
+export class ConsultationsModule { }

@@ -23,12 +23,10 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UserDocument } from '../users/schemas/user.schema';
-import { ConsultationsService } from './consultations.service';
 import { AnalysisService } from './analysis.service';
-import { BirthData, DeepseekService } from './deepseek.service';
+import { ConsultationsService } from './consultations.service';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { getZodiacSign, getZodiacElement, getZodiacSymbol } from '../common/utils/zodiac.utils';
 
 @ApiTags('Consultations')
 @Controller('consultations')
@@ -37,7 +35,6 @@ export class ConsultationsController {
 
   constructor(
     private readonly consultationsService: ConsultationsService,
-    private readonly deepseekService: DeepseekService,
     private readonly notificationsService: NotificationsService,
     private readonly analysisService: AnalysisService,
   ) { }
@@ -96,7 +93,6 @@ export class ConsultationsController {
   @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-
     // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
 
