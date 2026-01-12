@@ -170,8 +170,22 @@ export class Consultation {
     carteDuCiel?: any;
     [key: string]: any;
   };
+
   @Prop({ type: ConsultationChoice, default: null })
   choice?: ConsultationChoice;
+
+  /**
+   * Données tierce personne (pour AVEC_TIERS)
+   */
+  @Prop({ type: Object, required: false, default: null })
+  tierce?: {
+    nom?: string;
+    prenoms?: string;
+    dateNaissance?: string;
+    villeNaissance?: string;
+    heureNaissance?: string;
+    [key: string]: any;
+  };
 
 
   @Prop({ type: RequiredOffering, required: false, default: null })
