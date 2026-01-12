@@ -37,83 +37,9 @@ export class ConsultationsController {
     private readonly consultationsService: ConsultationsService,
     private readonly notificationsService: NotificationsService,
     private readonly analysisService: AnalysisService,
-  ) { }
-
-  /**
-   * POST /consultations/:id/notify-user
-   * Envoyer une notification à l'utilisateur de la consultation
-   */
-  @Post(':id/notify-user')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.UPDATE_OWN_CONSULTATION)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: "Notifier l'utilisateur de la consultation",
-    description: "Envoie une notification à l'utilisateur lié à la consultation.",
-  })
-  @ApiResponse({ status: 200, description: 'Notification envoyée avec succès.' })
-  @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
-  async notifyUser(@Param('id') id: string) {
-    // Récupérer la consultation pour obtenir le client
-    const consultation: any = await this.consultationsService.findOne(id);
-    if (!consultation || !consultation.clientId) {
-      throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
-    }
-    // Correction : extraire l'_id si clientId est un objet
-    const userId = consultation.clientId._id ? consultation.clientId._id.toString() : consultation.clientId.toString();
-    await this.notificationsService.create({
-      userId,
-      type: NotificationType.CONSULTATION_RESULT,
-      title: 'Notification de consultation',
-      message: `Vous avez reçu une notification pour la consultation "${consultation.title || id}"`,
-      metadata: { consultationId: id },
-    });
-    // Mettre à jour le champ analysisNotified à true
-    await this.consultationsService.update(id, { analysisNotified: true });
-    return {
-      success: true,
-      message: "Notification envoyée à l'utilisateur.",
-    };
-  }
-
-  /**
-   * POST /consultations
-   * Créer une consultation pour un utilisateur authentifié
-   * L'ID du client est automatiquement récupéré depuis le token JWT
-   */
-  @Post()
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.CREATE_CONSULTATION)
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Créer une consultation (utilisateur connecté)',
-    description:
-      "Crée une consultation en associant automatiquement l'utilisateur connecté comme client.",
-  })
-  @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
-  @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-    // Utiliser la méthode create() qui enregistre correctement le clientId
-    const consultation = await this.consultationsService.create(user._id.toString(), body);
-
-    return {
-      success: true,
-      message: 'Consultation créée avec succès',
-      ...consultation,
-    };
-  }
-
-  /**
-   * POST /consultations/personal
-   * Créer une consultation personnelle
-   */
-  @Post('personal')
-  async createPersonalConsultation(@Body() body: any) {
-    // body contiendra tous les champs du formulaire
-    // Exemples de champs attendus :
-    // nom, prenoms, genre, dateNaissance, paysNaissance, villeNaissance, heureNaissance, choixConsultation
-    return this.consultationsService.createPersonalConsultation(body);
-  }
+    @InjectModel(Consultation.name)
+    private readonly consultationModel: Model<ConsultationDocument>,
+  ) {}
 
   /**
    * GET /consultations
@@ -150,6 +76,38 @@ export class ConsultationsController {
           consultationId: c._id.toString(),
           titre: c.title,
           prenoms: c.formData?.firstName || '',
+
+  /**
+   * GET /consultations/analysis/:id
+   * Retourne l'analyse astrologique et analysisNotified
+   */
+  @Get('analysis/:id')
+  async getAnalysis(@Param('id') id: string) {
+    const consultation = await this.consultationModel.findById(id).lean();
+    if (!consultation) {
+      throw new NotFoundException('Consultation non trouvée');
+    }
+    return {
+      analyse: consultation.resultData?.astrology || null,
+      analysisNotified: consultation.analysisNotified || false,
+    };
+  }
+
+  /**
+   * POST /consultations/:id/notify-user
+   * Met à jour analysisNotified à true et (optionnel) envoie une notification
+   */
+  @Post(':id/notify-user')
+  async notifyUser(@Param('id') id: string) {
+    const consultation = await this.consultationModel.findById(id);
+    if (!consultation) {
+      throw new NotFoundException('Consultation non trouvée');
+    }
+    consultation.analysisNotified = true;
+    await consultation.save();
+    // TODO: Ajouter l'envoi de notification (email, etc.) si besoin
+    return { success: true };
+  }
           nom: c.formData?.lastName || '',
           dateNaissance: c.formData?.dateOfBirth || '',
           dateGeneration: cObj.createdAt || new Date(),
