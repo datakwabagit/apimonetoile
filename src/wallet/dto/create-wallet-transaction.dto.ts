@@ -39,15 +39,16 @@ export class CreateWalletTransactionDto {
   userId: string;
 
   @IsString()
-  @IsNotEmpty()
-  transactionId: string;
+  @IsOptional()
+  transactionId?: string;
 
   @IsString()
-  @IsNotEmpty()
-  paymentToken: string;
+  @IsOptional()
+  paymentToken?: string;
 
   @IsEnum(['pending', 'completed', 'failed', 'cancelled'])
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  @IsOptional()
+  status?: 'pending' | 'completed' | 'failed' | 'cancelled';
 
   @IsNumber()
   totalAmount: number;
@@ -58,7 +59,12 @@ export class CreateWalletTransactionDto {
   items: OfferingItemDto[];
 
   @IsString()
-  paymentMethod: string;
+  @IsOptional()
+  paymentMethod?: string;
+
+  @IsString()
+  @IsOptional()
+  type?: 'purchase' | 'consumption' | 'refund';
 
   @IsOptional()
   metadata?: Record<string, any>;

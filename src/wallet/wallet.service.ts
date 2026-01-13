@@ -70,7 +70,20 @@ export class WalletService {
     });
 
     const totalAmount = normalizedItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const payload = { ...dto, items: normalizedItems, totalAmount };
+    
+    // Générer les champs manquants avec des valeurs par défaut
+    const payload = {
+      ...dto,
+      items: normalizedItems,
+      totalAmount,
+      // Valeurs par défaut si non fournie
+      userId: dto.userId,
+      transactionId: dto.transactionId || `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      paymentToken: dto.paymentToken || `TOKEN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: dto.status || 'completed',
+      paymentMethod: dto.paymentMethod || 'wallet_offering',
+      type: dto.type || 'purchase',
+    };
 
     try {
       const created = new this.walletTransactionModel(payload);

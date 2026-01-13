@@ -34,14 +34,14 @@ export class WalletTransaction {
   @Prop({ required: true })
   userId: string;
 
-  @Prop({ required: true, unique: true })
-  transactionId: string;
+  @Prop({ required: false, unique: false, sparse: true })
+  transactionId?: string;
 
-  @Prop({ required: true })
-  paymentToken: string;
+  @Prop({ required: false })
+  paymentToken?: string;
 
-  @Prop({ required: true, enum: ['pending', 'completed', 'failed', 'cancelled'] })
-  status: string;
+  @Prop({ required: false, enum: ['pending', 'completed', 'failed', 'cancelled'] })
+  status?: string;
 
   @Prop({ required: true })
   totalAmount: number;
@@ -49,11 +49,11 @@ export class WalletTransaction {
   @Prop({ type: [OfferingItemSchema], default: [] })
   items: OfferingItem[];
 
-  @Prop({ required: true })
-  paymentMethod: string;
+  @Prop({ required: false })
+  paymentMethod?: string;
 
   @Prop({ type: Object })
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
 
   @Prop({ type: 'objectId', ref: 'Consultation', required: false })
   consultationId?: string;
