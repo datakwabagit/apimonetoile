@@ -79,6 +79,7 @@ export class ConsultationsService {
       choice,
       requiredOffering,
       requiredOfferingsDetails,
+      tierce,
     } = createConsultationDto;
 
     // Mapping des alternatives et choix
@@ -97,6 +98,7 @@ export class ConsultationsService {
       title,
       description,
       formData: mappedFormData,
+      tierce: tierce || null,
       status: status || ConsultationStatus.PENDING,
       alternatives: mappedAlternatives,
       requiredOffering: requiredOffering || null,

@@ -93,7 +93,6 @@ export class ConsultationsController {
    */
   @Post()
   @UseGuards(PermissionsGuard)
-  @Permissions(Permission.CREATE_CONSULTATION)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Créer une consultation (utilisateur connecté)',
