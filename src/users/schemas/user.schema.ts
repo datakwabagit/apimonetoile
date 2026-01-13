@@ -130,6 +130,9 @@ export class User {
   rating?: number;
 
   @Prop({ default: 0, min: 0 })
+  consultationsCount?: number;
+
+  @Prop({ default: 0, min: 0 })
   totalConsultations?: number;
 
   @Prop({ default: 0, min: 0 })

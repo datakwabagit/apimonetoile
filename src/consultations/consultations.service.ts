@@ -14,6 +14,7 @@ import {
 } from './schemas/astrological-analysis.schema';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { User, UserDocument } from '../users/schemas/user.schema';
 
 @Injectable()
 export class ConsultationsService {
@@ -21,6 +22,7 @@ export class ConsultationsService {
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
     @InjectModel(AstrologicalAnalysis.name)
     private analysisModel: Model<AstrologicalAnalysisDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private notificationsService: NotificationsService,
     private offeringsService: OfferingsService,
     private userConsultationChoiceService: UserConsultationChoiceService,
@@ -103,6 +105,18 @@ export class ConsultationsService {
     });
 
     await consultation.save();
+
+    // Incrémenter les compteurs de consultations de l'utilisateur
+    await this.userModel.findByIdAndUpdate(
+      clientId,
+      {
+        $inc: {
+          totalConsultations: 1,
+          consultationsCount: 1,
+        },
+      },
+      { new: true }
+    ).exec();
 
     const populatedConsultation = await consultation.populate(['clientId', 'serviceId']);
 
@@ -226,8 +240,11 @@ export class ConsultationsService {
       throw new NotFoundException('Consultation not found');
     }
 
+    const previousStatus = currentConsultation.status;
+    const newStatus = updateConsultationDto.status;
+
     // Si le statut passe à COMPLETED, mettre la date de complétion
-    if (updateConsultationDto.status === ConsultationStatus.COMPLETED) {
+    if (newStatus === ConsultationStatus.COMPLETED) {
       updateConsultationDto['completedDate'] = new Date();
 
       // Créer une notification si un résultat a été ajouté
@@ -242,6 +259,28 @@ export class ConsultationsService {
           console.error('Erreur lors de la création de la notification:', error);
           // Ne pas bloquer la mise à jour si la notification échoue
         }
+      }
+    }
+
+    // Gérer les changements de statut affectant les compteurs
+    if (previousStatus !== newStatus) {
+      const wasActive = previousStatus !== ConsultationStatus.CANCELLED;
+      const willBeActive = newStatus !== ConsultationStatus.CANCELLED;
+      
+      if (wasActive && !willBeActive) {
+        // Passage à CANCELLED: décrémenter consultationsCount
+        await this.userModel.findByIdAndUpdate(
+          currentConsultation.clientId,
+          { $inc: { consultationsCount: -1 } },
+          { new: true }
+        ).exec();
+      } else if (!wasActive && willBeActive) {
+        // Passage de CANCELLED à un statut actif: incrémenter consultationsCount
+        await this.userModel.findByIdAndUpdate(
+          currentConsultation.clientId,
+          { $inc: { consultationsCount: 1 } },
+          { new: true }
+        ).exec();
       }
     }
 
@@ -373,6 +412,19 @@ export class ConsultationsService {
     ) {
       throw new ForbiddenException('You can only delete your own consultations');
     }
+
+    // Décrémenter les compteurs de consultations de l'utilisateur
+    const isActive = consultation.status !== ConsultationStatus.CANCELLED;
+    await this.userModel.findByIdAndUpdate(
+      consultation.clientId,
+      {
+        $inc: {
+          totalConsultations: -1,
+          consultationsCount: isActive ? -1 : 0,
+        },
+      },
+      { new: true }
+    ).exec();
 
     await this.consultationModel.findByIdAndDelete(id).exec();
   }
