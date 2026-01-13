@@ -131,8 +131,11 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   GUEST: [
     // Services (public access)
     Permission.READ_SERVICE,
-    // Create consultations (guests can also create)
+    // Own consultations (guests can create and manage their own)
     Permission.CREATE_CONSULTATION,
+    Permission.READ_OWN_CONSULTATION,
+    Permission.UPDATE_OWN_CONSULTATION,
+    Permission.DELETE_OWN_CONSULTATION,
   ],
 };
 

@@ -235,11 +235,18 @@ export class ConsultationsService {
   /**
    * Mettre à jour une consultation
    */
-  async update(id: string, updateConsultationDto: UpdateConsultationDto) {
+  async update(id: string, updateConsultationDto: UpdateConsultationDto, user?: any) {
     const currentConsultation = await this.consultationModel.findById(id).exec();
 
     if (!currentConsultation) {
       throw new NotFoundException('Consultation not found');
+    }
+
+    // Vérifier que l'utilisateur est bien le propriétaire (sauf admin)
+    if (user && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
+      if (currentConsultation.clientId.toString() !== user._id.toString()) {
+        throw new ForbiddenException('You can only update your own consultations');
+      }
     }
 
     const previousStatus = currentConsultation.status;
