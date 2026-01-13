@@ -126,10 +126,6 @@ export class ConsultationsController {
     return this.consultationsService.createPersonalConsultation(body);
   }
 
-
-
-  
-
   /**
    * GET /consultations
    * Récupérer toutes les consultations (PUBLIC)
