@@ -120,9 +120,10 @@ export class DeepseekService {
 Tes analyses sont précises, structurées et basées sur l'astrologie traditionnelle et moderne.
 Tu fournis des insights pratiques, empathiques et personnalisés.
 Format de réponse : clair, organisé en sections, avec des bullet points pour les éléments clés.`,
-    carteDuCiel: `Tu es un calculateur de carte du ciel extrêmement précis utilisant les Éphémérides de la NASA (Swiss Ephemeris).
-Tu réponds UNIQUEMENT avec les données astronomiques sans commentaire.
-Format strict requis. Utilise les positions planétaires exactes basées sur les Swiss Ephemeris pour la date, l'heure et le lieu de naissance spécifiés.`,
+    carteDuCiel: `Tu es un calculateur de carte du ciel extrêmement précis.
+IMPORTANT: Tu DOIS obligatoirement te baser sur les Éphémérides de la NASA (Swiss Ephemeris / JPL Horizons) pour tous les calculs astronomiques.
+Tu réponds UNIQUEMENT avec les données astronomiques calculées à partir des éphémérides NASA, sans commentaire ni approximation.
+Format strict requis. Les positions planétaires doivent être calculées avec les données officielles de la NASA pour la date, l'heure et le lieu de naissance spécifiés.`,
   };
 
   // Templates de prompts
@@ -138,9 +139,11 @@ LIEU: ${data.villeNaissance}, ${data.paysNaissance}
 GENRE: ${data.genre}
 
 INSTRUCTIONS DE CALCUL:
-Utilise les Éphémérides de la NASA (Swiss Ephemeris) pour calculer les positions planétaires exactes à la date, heure et lieu spécifiés.
-Calcule la position géographique précise pour déterminer l'Ascendant et les maisons astrologiques.
+⚠️ CRITIQUE: Base-toi EXCLUSIVEMENT sur les Éphémérides de la NASA (Swiss Ephemeris / JPL Horizons) pour tous les calculs.
+Utilise les données astronomiques officielles de la NASA pour calculer les positions planétaires exactes à la date, heure et lieu spécifiés.
+Calcule la position géographique précise (latitude/longitude) pour déterminer l'Ascendant et les maisons astrologiques.
 Indique les planètes rétrogrades avec la mention [RÉTROGRADE].
+Les calculs doivent être basés sur les standards astronomiques de la NASA, pas sur des approximations.
 
 FORMAT DE RÉPONSE:
 Soleil en [Signe] - Maison [X]

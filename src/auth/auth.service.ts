@@ -17,6 +17,7 @@ import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
 export class AuthService {
+ 
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
@@ -101,6 +102,8 @@ export class AuthService {
       ...tokens,
     };
   }
+
+
 
   /**
    * Valider les credentials d'un utilisateur
