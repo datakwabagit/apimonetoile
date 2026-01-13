@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpException,
@@ -18,6 +19,7 @@ import { Permissions } from '../common/decorators/permissions.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Permission } from '../common/enums/permission.enum';
+import { Role } from '../common/enums/role.enum';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -407,8 +409,7 @@ export class ConsultationsController {
    * Générer l'analyse astrologique complète via DeepSeek (Authentifié)
    */
   @Post(':id/generate-analysis')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.READ_OWN_CONSULTATION)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Générer l'analyse astrologique",
@@ -423,6 +424,20 @@ export class ConsultationsController {
     @CurrentUser() user: UserDocument,
   ) {
     try {
+      // Vérifier que l'utilisateur est propriétaire de la consultation (sauf admin)
+      const consultation = await this.consultationsService.findOne(id);
+      if (consultation && user) {
+        const userRole = user.role || (typeof user.toObject === 'function' ? user.toObject().role : undefined);
+        const userId = user._id?.toString() || (typeof user.toObject === 'function' ? user.toObject()._id?.toString() : undefined);
+        const consultationClientId = consultation.clientId?.toString();
+        
+        if (userRole && userRole !== Role.ADMIN && userRole !== Role.SUPER_ADMIN) {
+          if (consultationClientId && userId && consultationClientId !== userId) {
+            throw new ForbiddenException('You can only view your own consultations');
+          }
+        }
+      }
+      
       return await this.analysisService.generateAnalysis(id, user);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
