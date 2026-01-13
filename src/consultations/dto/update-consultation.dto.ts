@@ -44,4 +44,8 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
 
   @IsOptional()
   analysisNotified?: boolean;
+  
+  @IsObject()
+  @IsOptional()
+  tierce?: any;
 }

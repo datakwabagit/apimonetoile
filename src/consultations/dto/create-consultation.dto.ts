@@ -168,4 +168,8 @@ export class CreateConsultationDto {
   @IsArray()
   @IsOptional()
   requiredOfferingsDetails?: RequiredOfferingDetailDto[];
+
+  @IsObject()
+  @IsOptional()
+  tierce?: any;
 }
