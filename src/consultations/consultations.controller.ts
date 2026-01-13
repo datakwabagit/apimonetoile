@@ -409,7 +409,6 @@ export class ConsultationsController {
    * Générer l'analyse astrologique complète via DeepSeek (Authentifié)
    */
   @Post(':id/generate-analysis')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Générer l'analyse astrologique",
