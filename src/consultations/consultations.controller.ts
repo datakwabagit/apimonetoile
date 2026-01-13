@@ -499,10 +499,8 @@ export class ConsultationsController {
    * Mettre à jour une consultation
    */
   @Patch(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.UPDATE_OWN_CONSULTATION)
   update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto, @CurrentUser() user: UserDocument) {
-     return this.consultationsService.update(id, updateConsultationDto, user);
+     return this.consultationsService.update(id, updateConsultationDto);
   }
 
   /**

@@ -17,6 +17,12 @@ export class WalletController {
     return { transaction };
   }
 
+  @Post('offerings/add')
+  async addOfferings(@Body() dto: CreateWalletTransactionDto) {
+    const transaction = await this.walletService.createTransaction(dto);
+    return { transaction };
+  }
+
   @Get('transactions')
   async findAll(@Query('userId') userId: string) {
     const transactions = await this.walletService.getTransactionsByUser(userId);
