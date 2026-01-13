@@ -5,7 +5,8 @@ import { Permission, getRolePermissions } from '../enums/permission.enum';
 
 /**
  * Guard qui vérifie si l'utilisateur a les permissions requises
- * Vérifie d'abord les permissions du rôle, puis les permissions personnalisées de l'utilisateur
+ * Pour les permissions "OWN" (:own:), on vérifie juste que l'utilisateur a la permission
+ * La vérification de propriété se fait au niveau du service
  * À utiliser après JwtAuthGuard
  */
 @Injectable()
@@ -41,6 +42,8 @@ export class PermissionsGuard implements CanActivate {
     const userPermissions = [...rolePermissions, ...customPermissions];
 
     // Vérifier si l'utilisateur a toutes les permissions requises
+    // Note: Pour les permissions "OWN", on vérifie juste que l'utilisateur a la permission
+    // La vérification de propriété réelle se fait au niveau du service
     const hasAllPermissions = requiredPermissions.every((permission) =>
       userPermissions.includes(permission),
     );

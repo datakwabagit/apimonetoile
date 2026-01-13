@@ -243,9 +243,15 @@ export class ConsultationsService {
     }
 
     // Vérifier que l'utilisateur est bien le propriétaire (sauf admin)
-    if (user && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
-      if (currentConsultation.clientId.toString() !== user._id.toString()) {
-        throw new ForbiddenException('You can only update your own consultations');
+    if (user) {
+      const userRole = user.role || (typeof user.toObject === 'function' ? user.toObject().role : undefined);
+      const userId = user._id?.toString() || (typeof user.toObject === 'function' ? user.toObject()._id?.toString() : undefined);
+      
+      if (userRole && userRole !== Role.ADMIN && userRole !== Role.SUPER_ADMIN) {
+        const consultationClientId = currentConsultation.clientId?.toString();
+        if (consultationClientId && userId && consultationClientId !== userId) {
+          throw new ForbiddenException('You can only update your own consultations');
+        }
       }
     }
 
