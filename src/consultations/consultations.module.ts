@@ -6,6 +6,7 @@ import { AnalysisModule } from '../analysis/analysis.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
 import { OfferingsModule } from '../offerings/offerings.module';
+import { User, UserSchema } from '../users/schemas/user.schema';
 import { ConsultationsController } from './consultations.controller';
 import { DeepseekController } from './deepseek.controller';
 import { ConsultationsService } from './consultations.service';
@@ -32,6 +33,7 @@ import { UserConsultationChoiceController } from './user-consultation-choice.con
       { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
       { name: UserConsultationChoice.name, schema: UserConsultationChoiceSchema },
       { name: 'ConsultationChoice', schema: ConsultationChoiceSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     NotificationsModule,
   ],
