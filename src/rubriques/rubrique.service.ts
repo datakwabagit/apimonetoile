@@ -4,11 +4,14 @@ import { Model } from 'mongoose';
 import { Rubrique, RubriqueDocument } from './rubrique.schema';
 import { RubriqueDto } from './dto/rubrique.dto';
 import { ReorderChoicesDto } from './dto/reorder-choices.dto';
+import { RubriqueWithChoiceCountDto, ConsultationChoiceWithCountDto } from './dto/rubrique-with-count.dto';
+import { UserConsultationChoice, UserConsultationChoiceDocument } from '../consultations/schemas/user-consultation-choice.schema';
 
 @Injectable()
 export class RubriqueService {
   constructor(
     @InjectModel(Rubrique.name) private rubriqueModel: Model<RubriqueDocument>,
+    @InjectModel(UserConsultationChoice.name) private userConsultationChoiceModel: Model<UserConsultationChoiceDocument>,
   ) {}
 
   async findAll() {
@@ -97,5 +100,41 @@ export class RubriqueService {
     rubrique.consultationChoices.sort((a, b) => (a.order || 0) - (b.order || 0));
 
     return await rubrique.save();
+  }
+
+  async getChoicesWithConsultationCount(rubriqueId: string, userId: string): Promise<RubriqueWithChoiceCountDto> {
+    const rubrique = await this.rubriqueModel.findById(rubriqueId).populate('categorieId').exec();
+    if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
+
+    // Récupérer les comptages de consultations pour chaque choix
+    const choicesWithCount: ConsultationChoiceWithCountDto[] = await Promise.all(
+      rubrique.consultationChoices.map(async (choice) => {
+        const consultationCount = await this.userConsultationChoiceModel.countDocuments({
+          userId,
+          choiceId: choice._id,
+        });
+
+        return {
+          _id: choice._id,
+          title: choice.title,
+          description: choice.description,
+          frequence: choice.frequence,
+          participants: choice.participants,
+          order: choice.order,
+          offering: choice.offering,
+          consultationCount,
+          showButtons: choice.frequence !== 'UNE_FOIS_VIE',
+        };
+      })
+    );
+
+    return {
+      _id: rubrique._id.toString(),
+      titre: rubrique.titre,
+      description: rubrique.description,
+      categorie: rubrique.categorie,
+      typeconsultation: rubrique.typeconsultation,
+      consultationChoices: choicesWithCount,
+    };
   }
 }
