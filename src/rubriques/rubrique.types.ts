@@ -11,7 +11,7 @@ export interface ConsultationChoice {
   title: string;
   description: string;
   frequence?: 'UNE_FOIS_VIE' | 'ANNUELLE' | 'MENSUELLE' | 'QUOTIDIENNE' | 'LIBRE';
-  participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE';
+  participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE' | 'POUR_TIERS';
   offering: {
     alternatives: ConsultationOffering[];
   };

@@ -35,7 +35,7 @@ export class Rubrique {
         },
         participants: {
           type: String,
-          enum: ['SOLO', 'AVEC_TIERS', 'GROUPE'],
+          enum: ['SOLO', 'AVEC_TIERS', 'GROUPE', 'POUR_TIERS'],
           default: 'SOLO',
         },
         offering: {

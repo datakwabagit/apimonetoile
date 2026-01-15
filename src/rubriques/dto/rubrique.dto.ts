@@ -25,7 +25,7 @@ class ConsultationChoiceDto {
 
   @IsString()
   @IsOptional()
-  participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE';
+  participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE' | 'POUR_TIERS';
 
   @IsArray()
   @ValidateNested({ each: true })

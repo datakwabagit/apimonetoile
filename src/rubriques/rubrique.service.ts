@@ -39,7 +39,7 @@ export class RubriqueService {
         throw new Error(`Fréquence invalide pour le choix ${choice.title}`);
       }
       // Validation participants
-      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE'];
+      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE', 'POUR_TIERS'];
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
@@ -63,7 +63,7 @@ export class RubriqueService {
       if (choice.frequence && !freqEnum.includes(choice.frequence)) {
         throw new Error(`Fréquence invalide pour le choix ${choice.title}`);
       }
-      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE'];
+      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE', 'POUR_TIERS'];
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }

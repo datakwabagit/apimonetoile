@@ -21,7 +21,7 @@ export class UserConsultationChoice {
   frequence: 'UNE_FOIS_VIE' | 'ANNUELLE' | 'MENSUELLE' | 'QUOTIDIENNE' | 'LIBRE';
 
   @Prop({ required: true })
-  participants: 'SOLO' | 'AVEC_TIERS' | 'GROUPE';
+  participants: 'SOLO' | 'AVEC_TIERS' | 'GROUPE' | 'POUR_TIERS';
 
   @Prop({ required: true })
   createdAt: Date;
