@@ -28,6 +28,7 @@ export class Rubrique {
         _id: { type: 'ObjectId', auto: true },
         title: String,
         description: String,
+        order: { type: Number, default: 0 },
         frequence: {
           type: String,
           enum: ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'],

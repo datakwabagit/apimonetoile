@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Rubrique, RubriqueDocument } from './rubrique.schema';
 import { RubriqueDto } from './dto/rubrique.dto';
+import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 
 @Injectable()
 export class RubriqueService {
@@ -75,5 +76,26 @@ export class RubriqueService {
     const rubrique = await this.rubriqueModel.findByIdAndDelete(id).exec();
     if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
     return { deleted: true };
+  }
+
+  async reorderChoices(id: string, dto: ReorderChoicesDto) {
+    const rubrique = await this.rubriqueModel.findById(id).exec();
+    if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
+
+    // Créer une map pour accès rapide aux nouveaux ordres
+    const orderMap = new Map(dto.choices.map(c => [c.choiceId, c.order]));
+
+    // Mettre à jour l'ordre de chaque choix
+    rubrique.consultationChoices.forEach(choice => {
+      const newOrder = orderMap.get(choice._id.toString());
+      if (newOrder !== undefined) {
+        choice.order = newOrder;
+      }
+    });
+
+    // Trier les choix par ordre
+    rubrique.consultationChoices.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    return await rubrique.save();
   }
 }

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Param, Body, Delete } from '@nestjs/common';
 import { RubriqueService } from './rubrique.service';
 import { RubriqueDto } from './dto/rubrique.dto';
+import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 
 @Controller('rubriques')
 export class RubriqueController {
@@ -24,6 +25,11 @@ export class RubriqueController {
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: RubriqueDto) {
     return this.rubriqueService.update(id, dto);
+  }
+
+  @Put(':id/reorder-choices')
+  reorderChoices(@Param('id') id: string, @Body() dto: ReorderChoicesDto) {
+    return this.rubriqueService.reorderChoices(id, dto);
   }
 
   @Delete(':id')
