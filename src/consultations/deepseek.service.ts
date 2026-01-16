@@ -746,4 +746,30 @@ Ton : Professionnel, empathique, encourageant.`,
     }
     return cached.result;
   }
+
+  /**
+   * Génère du contenu à partir d'un prompt simple (pour les templates d'analyses)
+   */
+  async generateContentFromPrompt(prompt: string, temperature = 0.7, maxTokens = 4000): Promise<string> {
+    const messages: DeepSeekMessage[] = [
+      {
+        role: 'system',
+        content: 'Tu es un expert en astrologie, analyses psychologiques et développement personnel. Fournir des réponses détaillées, bienveillantes et éducatives.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ];
+
+    try {
+      const response = await this.callDeepSeekApi(messages, temperature, maxTokens);
+      return response.choices[0]?.message?.content || '';
+    } catch (error) {
+      throw new HttpException(
+        `Failed to generate content: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
