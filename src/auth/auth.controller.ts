@@ -55,13 +55,13 @@ export class AuthController {
     return this.authService.refreshToken(refreshToken);
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Logout' })
   @ApiResponse({ status: 200, description: 'Logout successful.' })
-  async logout(@CurrentUser() user: UserDocument) {
-    return this.authService.logout(user._id.toString());
+  async logout() {
+    return this.authService.logout();
   }
 
   @Get('me')
