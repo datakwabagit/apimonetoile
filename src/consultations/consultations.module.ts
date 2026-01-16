@@ -1,5 +1,5 @@
 import { HttpModule } from '@nestjs/axios';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SchemaFactory } from '@nestjs/mongoose';
 import { AnalysisModule } from '../analysis/analysis.module';
@@ -25,7 +25,7 @@ import { UserConsultationChoiceController } from './user-consultation-choice.con
 @Module({
   imports: [
     HttpModule,
-    AnalysisModule,
+    forwardRef(() => AnalysisModule),
     OfferingsModule,
     MongooseModule.forFeature([
       { name: Consultation.name, schema: ConsultationSchema },

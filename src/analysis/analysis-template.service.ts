@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { DeepseekService } from '../consultations/deepseek.service';
@@ -13,6 +13,7 @@ export class AnalysisTemplateService {
     private analysisTemplateModel: Model<AnalysisTemplateDocument>,
     @InjectModel(GeneratedAnalysis.name)
     private generatedAnalysisModel: Model<GeneratedAnalysisDocument>,
+    @Inject(forwardRef(() => DeepseekService))
     private deepseekService: DeepseekService,
   ) {}
 

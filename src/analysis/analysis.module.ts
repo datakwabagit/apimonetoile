@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AnalysisProgressService } from './analysis-progress.service';
 import { AnalysisProgressController } from './analysis-progress.controller';
@@ -14,7 +14,7 @@ import { ConsultationsModule } from '../consultations/consultations.module';
       { name: AnalysisTemplate.name, schema: AnalysisTemplateSchema },
       { name: GeneratedAnalysis.name, schema: GeneratedAnalysisSchema },
     ]),
-    ConsultationsModule,
+    forwardRef(() => ConsultationsModule),
   ],
   controllers: [AnalysisProgressController, AnalysisTemplateController],
   providers: [AnalysisProgressService, AnalysisTemplateService],
