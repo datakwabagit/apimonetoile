@@ -55,15 +55,15 @@ export class AuthController {
     return this.authService.refreshToken(refreshToken);
   }
 
-  /**
-   * GET /auth/me
-   * Récupérer le profil de l'utilisateur connecté
-   */
-  @ApiOperation({
-    summary: 'Profil utilisateur',
-    description: 'Retourne le profil de l’utilisateur connecté.',
-  })
-  @ApiResponse({ status: 200, description: 'Profil utilisateur.' })
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Logout' })
+  @ApiResponse({ status: 200, description: 'Logout successful.' })
+  async logout(@CurrentUser() user: UserDocument) {
+    return this.authService.logout(user._id.toString());
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getProfile(@CurrentUser() user: UserDocument) {

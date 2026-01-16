@@ -192,4 +192,17 @@ export class AuthService {
 
     return user;
   }
+
+  /**
+   * Déconnexion de l'utilisateur
+   */
+  async logout(userId: string) {
+    // Dans une implémentation simple, on retourne juste un succès
+    // Dans une implémentation plus complexe, on pourrait invalider les tokens
+    // ou mettre à jour l'utilisateur pour déconnecter toutes les sessions
+    return {
+      message: 'Déconnexion réussie',
+      success: true,
+    };
+  }
 }
