@@ -176,8 +176,6 @@ export class ConsultationsController {
    * Récupérer ses propres consultations
    */
   @Get('my')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.READ_OWN_CONSULTATION)
   findMyConsultations(
     @CurrentUser() user: UserDocument,
     @Query('page') page?: number,
