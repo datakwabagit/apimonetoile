@@ -82,8 +82,7 @@ export class AnalysisService {
           symbol,
         };
         // Appel HTTP local ou refactoriser la logique dans un service injectable
-        const configService = (this as any).configService;
-        const DEEPSEEK_API_KEY = configService?.get?.('DEEPSEEK_API_KEY') || process.env.DEEPSEEK_API_KEY || '';
+        const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
         const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
         const SYSTEM_PROMPT = `Tu es un astrologue professionnel expert spécialisé dans l'astrologie africaine et moderne. Tu génères des horoscopes précis, profonds et inspirants qui intègrent la sagesse ancestrale africaine. Tes prédictions sont empathiques, pratiques et riches en insights spirituels.`;
         const generateHoroscopePrompt = (req: any): string => {
@@ -144,8 +143,7 @@ export class AnalysisService {
       } else if (isNumerology) {
         // Numérologie (NUMEROLOGIE, CYCLES_PERSONNELS, NOMBRES_PERSONNELS)
         const birthDateStr = form.dateNaissance || form.dateOfBirth || '';
-        const configService = (this as any).configService;
-        const DEEPSEEK_API_KEY = configService?.get?.('DEEPSEEK_API_KEY') || process.env.DEEPSEEK_API_KEY || '';
+        const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
         const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
         const SYSTEM_PROMPT = `Tu es un expert en numérologie avec plus de 25 ans d'expérience. Tu fournis des analyses numériques précises, détaillées et bienveillantes intégrant la sagesse africaine ancestrale. Tes interprétations sont basées sur la numérologie pythagoricienne et kabbalistique. Tu maîtrises parfaitement les cycles personnels et le timing numérique.`;
