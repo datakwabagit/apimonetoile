@@ -230,11 +230,44 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
   async getAnalysisByConsultationId(@Param('consultationId') consultationId: string) {
     try {
-      // Récupérer la consultation pour le champ analysisNotified
+      // Récupérer la consultation
       const consultation: any = await this.consultationsService.findOne(consultationId);
-      const analysis = await this.analysisService.getAstrologicalAnalysis(consultationId);
 
-      if (!analysis) {
+      if (!consultation) {
+        throw new HttpException(
+          {
+            success: false,
+            message: 'Consultation non trouvée',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
+      let analysisData = null;
+      try {
+        const analysis = await this.analysisService.getAstrologicalAnalysis(consultationId);
+        if (analysis) {
+          analysisData = analysis.toObject();
+        }
+      } catch (error) {
+        // Si pas trouvé dans AstrologicalAnalysis, on essaie dans resultData
+        console.log('Analyse non trouvée dans AstrologicalAnalysis, tentative dans resultData');
+      }
+
+      // Fallback: vérifier dans resultData de la consultation
+      if (!analysisData && consultation.resultData) {
+        // Vérifier les différents types d'analyses
+        if (consultation.resultData.analyse) {
+          analysisData = consultation.resultData.analyse;
+        } else if (consultation.resultData.horoscope) {
+          analysisData = consultation.resultData.horoscope;
+        } else if (consultation.resultData.numerology) {
+          analysisData = consultation.resultData.numerology;
+        }
+      }
+
+      if (!analysisData) {
         throw new HttpException(
           {
             success: false,
@@ -247,8 +280,9 @@ export class ConsultationsController {
       return {
         success: true,
         consultationId,
-        analyse: analysis.toObject(),
-        analysisNotified: consultation?.analysisNotified ?? false,
+        analyse: analysisData,
+        analysisNotified: consultation.analysisNotified ?? false,
+        consultationType: consultation.type,
       };
     } catch (error) {
       if (error instanceof HttpException) {
