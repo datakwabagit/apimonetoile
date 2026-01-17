@@ -10,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -314,6 +315,69 @@ export class ConsultationsController {
   async getAnalysisAlternative(@Param('id') id: string) {
     // Réutiliser la même logique que getAnalysisByConsultationId
     return this.getAnalysisByConsultationId(id);
+  }
+
+  /**
+   * PUT /consultations/:id/analysis
+   * Sauvegarder/Mettre à jour l'analyse d'une consultation
+   */
+  @Put(':id/analysis')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.UPDATE_OWN_CONSULTATION)
+  @ApiOperation({
+    summary: "Sauvegarder l'analyse d'une consultation",
+    description: "Sauvegarde ou met à jour l'analyse astrologique d'une consultation.",
+  })
+  @ApiResponse({ status: 200, description: 'Analyse sauvegardée avec succès.' })
+  @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
+  async updateAnalysis(
+    @Param('id') id: string,
+    @Body() analysisData: any,
+    @CurrentUser() user: UserDocument,
+  ) {
+    try {
+      // Vérifier que la consultation existe
+      const consultation = await this.consultationsService.findOne(id);
+
+      if (!consultation) {
+        throw new HttpException(
+          {
+            success: false,
+            message: 'Consultation non trouvée',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // Mettre à jour la consultation avec l'analyse
+      const updatedConsultation = await this.consultationsService.update(id, {
+        resultData: {
+          ...consultation.resultData,
+          analyse: analysisData,
+        },
+        analysisNotified: false, // Réinitialiser la notification
+        status: ConsultationStatus.COMPLETED,
+      });
+
+      return {
+        success: true,
+        message: 'Analyse sauvegardée avec succès',
+        consultationId: id,
+        analyse: analysisData,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          error: "Erreur lors de la sauvegarde de l'analyse",
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**
