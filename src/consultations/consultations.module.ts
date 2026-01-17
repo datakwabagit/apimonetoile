@@ -21,6 +21,8 @@ import { ConsultationChoice, ConsultationChoiceSchema } from './schemas/consulta
 import { UserConsultationChoice, UserConsultationChoiceSchema } from './schemas/user-consultation-choice.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { UserConsultationChoiceController } from './user-consultation-choice.controller';
+import { ConsultationChoiceStatusService } from './consultation-choice-status.service';
+import { ConsultationChoiceStatusController } from './consultation-choice-status.controller';
 
 @Module({
   imports: [
@@ -37,8 +39,8 @@ import { UserConsultationChoiceController } from './user-consultation-choice.con
     ]),
     NotificationsModule,
   ],
-  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController],
-  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService],
-  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService],
+  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController, ConsultationChoiceStatusController],
+  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService],
+  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService],
 })
 export class ConsultationsModule { }
