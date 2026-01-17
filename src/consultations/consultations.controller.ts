@@ -300,6 +300,23 @@ export class ConsultationsController {
   }
 
   /**
+   * GET /consultations/:id/analysis
+   * Récupérer l'analyse d'une consultation spécifique - Route alternative (PUBLIC)
+   */
+  @Get(':id/analysis')
+  @Public()
+  @ApiOperation({
+    summary: "Récupérer l'analyse d'une consultation (route alternative)",
+    description: "Retourne l'analyse astrologique d'une consultation donnée.",
+  })
+  @ApiResponse({ status: 200, description: 'Analyse trouvée.' })
+  @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
+  async getAnalysisAlternative(@Param('id') id: string) {
+    // Réutiliser la même logique que getAnalysisByConsultationId
+    return this.getAnalysisByConsultationId(id);
+  }
+
+  /**
    * GET /consultations/my-analyses
    * Récupérer toutes les analyses astrologiques de l'utilisateur connecté
    */
