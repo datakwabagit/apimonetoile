@@ -40,6 +40,9 @@ export class Prompt {
   @Prop({ type: [String], required: false })
   tags?: string[];
 
+  @Prop({ type: String, required: true, unique: true })
+  choiceId: string;
+
   @Prop({ default: true })
   isActive: boolean;
 }

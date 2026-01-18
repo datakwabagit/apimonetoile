@@ -65,6 +65,9 @@ export class CreatePromptDto {
   @IsString({ each: true })
   tags?: string[];
 
+  @IsString()
+  choiceId: string;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

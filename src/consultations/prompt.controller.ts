@@ -50,6 +50,15 @@ export class PromptController {
     return this.promptService.findById(id);
   }
 
+  @Get('by-choice/:choiceId')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_ANY_CONSULTATION)
+  @ApiOperation({ summary: 'Récupérer un prompt par choiceId' })
+  @ApiResponse({ status: 200, description: 'Prompt retourné.' })
+  async findByChoiceId(@Param('choiceId') choiceId: string) {
+    return this.promptService.findByChoiceId(choiceId);
+  }
+
   @Patch(':id')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.UPDATE_ANY_CONSULTATION)

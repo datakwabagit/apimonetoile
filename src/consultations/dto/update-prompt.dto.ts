@@ -39,6 +39,10 @@ export class UpdatePromptDto {
   tags?: string[];
 
   @IsOptional()
+  @IsString()
+  choiceId?: string;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }
