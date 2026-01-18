@@ -28,6 +28,7 @@ import { ConsultationChoiceService } from './consultation-choice.service';
 import { ConsultationChoiceController } from './consultation-choice.controller';
 import { PromptService } from './prompt.service';
 import { PromptController } from './prompt.controller';
+import { Rubrique, RubriqueSchema } from '../rubriques/rubrique.schema';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { PromptController } from './prompt.controller';
       { name: 'ConsultationChoice', schema: ConsultationChoiceSchema },
       { name: Prompt.name, schema: PromptSchema },
       { name: User.name, schema: UserSchema },
+      { name: Rubrique.name, schema: RubriqueSchema },
     ]),
     NotificationsModule,
   ],

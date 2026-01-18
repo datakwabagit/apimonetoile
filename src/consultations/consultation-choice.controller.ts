@@ -22,6 +22,15 @@ export class ConsultationChoiceController {
     return this.consultationChoiceService.findAll();
   }
 
+  @Get('with-prompts')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.READ_ANY_CONSULTATION)
+  @ApiOperation({ summary: 'Récupérer tous les choix de consultation avec prompts et rubriques' })
+  @ApiResponse({ status: 200, description: 'Liste des choix avec prompts retournée.' })
+  async getAllChoicesWithPrompts() {
+    return this.consultationChoiceService.findAllWithPrompts();
+  }
+
   @Get(':id')
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.READ_ANY_CONSULTATION)
