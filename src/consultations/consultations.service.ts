@@ -379,6 +379,7 @@ export class ConsultationsService {
 
     if (saveAnalysisDto.statut === 'completed') {
       consultation.completedDate = new Date();
+      consultation.analysisNotified = true; // Marquer comme notifié
 
       // Créer une notification pour le client (uniquement si clientId existe)
       if (consultation.clientId) {
@@ -640,5 +641,43 @@ export class ConsultationsService {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       throw new Error(`Erreur lors de la génération: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Marquer une analyse comme notifiée
+   * Utilisé lorsqu'une notification est envoyée à l'utilisateur
+   */
+  async markAnalysisAsNotified(consultationId: string): Promise<Consultation> {
+    const consultation = await this.consultationModel.findById(consultationId).exec();
+
+    if (!consultation) {
+      throw new NotFoundException('Consultation not found');
+    }
+
+    if (!consultation.result && !consultation.resultData) {
+      throw new ForbiddenException('Cannot mark as notified: analysis not yet generated');
+    }
+
+    consultation.analysisNotified = true;
+    await consultation.save();
+
+    console.log(`✅ Analyse ${consultationId} marquée comme notifiée`);
+    return consultation;
+  }
+
+  /**
+   * Vérifier si une analyse a été notifiée
+   */
+  async isAnalysisNotified(consultationId: string): Promise<boolean> {
+    const consultation = await this.consultationModel
+      .findById(consultationId)
+      .select('analysisNotified')
+      .exec();
+
+    if (!consultation) {
+      throw new NotFoundException('Consultation not found');
+    }
+
+    return consultation.analysisNotified === true;
   }
 }

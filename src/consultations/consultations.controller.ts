@@ -648,4 +648,30 @@ export class ConsultationsController {
   async remove(@Param('id') id: string, @CurrentUser() user: UserDocument) {
     await this.consultationsService.remove(id, user._id.toString(), user.role);
   }
+
+  /**
+   * PATCH /consultations/:id/mark-notified
+   * Marquer une analyse comme notifiée
+   */
+  @Patch(':id/mark-notified')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.UPDATE_ANY_CONSULTATION)
+  @ApiOperation({ summary: 'Marquer une analyse comme notifiée' })
+  @ApiResponse({ status: 200, description: 'Analyse marquée comme notifiée' })
+  async markAsNotified(@Param('id') id: string) {
+    return this.consultationsService.markAnalysisAsNotified(id);
+  }
+
+  /**
+   * GET /consultations/:id/is-notified
+   * Vérifier si une analyse a été notifiée
+   */
+  @Get(':id/is-notified')
+  @Public()
+  @ApiOperation({ summary: 'Vérifier si une analyse a été notifiée' })
+  @ApiResponse({ status: 200, description: 'Statut de notification' })
+  async isNotified(@Param('id') id: string) {
+    const isNotified = await this.consultationsService.isAnalysisNotified(id);
+    return { consultationId: id, analysisNotified: isNotified };
+  }
 }
