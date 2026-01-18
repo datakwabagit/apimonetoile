@@ -1,4 +1,6 @@
-import { IsString, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsObject, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { PromptStructureDto } from './create-prompt.dto';
 
 export class UpdatePromptDto {
   @IsOptional()
@@ -7,11 +9,34 @@ export class UpdatePromptDto {
 
   @IsOptional()
   @IsString()
-  content?: string;
+  description?: string;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  role?: string;
+
+  @IsOptional()
+  @IsString()
+  objective?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  styleAndTone?: string[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PromptStructureDto)
+  structure?: PromptStructureDto;
+
+  @IsOptional()
+  @IsObject()
+  variables?: { [key: string]: string };
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 
   @IsOptional()
   @IsBoolean()
