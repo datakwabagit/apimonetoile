@@ -94,5 +94,4 @@ export class AstrologicalAnalysis {
 
 export const AstrologicalAnalysisSchema = SchemaFactory.createForClass(AstrologicalAnalysis);
 
-// Index pour recherche rapide par utilisateur
 AstrologicalAnalysisSchema.index({ userId: 1, createdAt: -1 });
