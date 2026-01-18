@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
 
 export type ConsultationChoiceDocument = ConsultationChoice & Document;
 
@@ -19,6 +19,9 @@ export class ConsultationChoice {
 
   @Prop({ type: Object, required: true })
   offering: any;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Prompt', required: false })
+  promptId?: MongooseSchema.Types.ObjectId;
 }
 
 export const ConsultationChoiceSchema = SchemaFactory.createForClass(ConsultationChoice);

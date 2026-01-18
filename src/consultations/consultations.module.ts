@@ -19,10 +19,15 @@ import {
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
 import { ConsultationChoice, ConsultationChoiceSchema } from './schemas/consultation-choice.schema';
 import { UserConsultationChoice, UserConsultationChoiceSchema } from './schemas/user-consultation-choice.schema';
+import { Prompt, PromptSchema } from './schemas/prompt.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { UserConsultationChoiceController } from './user-consultation-choice.controller';
 import { ConsultationChoiceStatusService } from './consultation-choice-status.service';
 import { ConsultationChoiceStatusController } from './consultation-choice-status.controller';
+import { ConsultationChoiceService } from './consultation-choice.service';
+import { ConsultationChoiceController } from './consultation-choice.controller';
+import { PromptService } from './prompt.service';
+import { PromptController } from './prompt.controller';
 
 @Module({
   imports: [
@@ -35,12 +40,13 @@ import { ConsultationChoiceStatusController } from './consultation-choice-status
       { name: AstrologicalAnalysis.name, schema: AstrologicalAnalysisSchema },
       { name: UserConsultationChoice.name, schema: UserConsultationChoiceSchema },
       { name: 'ConsultationChoice', schema: ConsultationChoiceSchema },
+      { name: Prompt.name, schema: PromptSchema },
       { name: User.name, schema: UserSchema },
     ]),
     NotificationsModule,
   ],
-  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController, ConsultationChoiceStatusController],
-  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService],
-  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService],
+  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController, ConsultationChoiceStatusController, ConsultationChoiceController, PromptController],
+  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService],
+  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService],
 })
 export class ConsultationsModule { }
