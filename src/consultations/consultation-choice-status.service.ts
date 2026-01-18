@@ -29,6 +29,7 @@ export class ConsultationChoiceStatusService {
         choiceTitle: 'Choix inconnu',
         buttonStatus: 'CONSULTER',
         hasActiveConsultation: false,
+        consultationId: null,
       };
     }
 
@@ -48,7 +49,7 @@ export class ConsultationChoiceStatusService {
         choiceTitle: choice.title,
         buttonStatus: 'CONSULTER',
         hasActiveConsultation: false,
-        consultationId: consultation?._id?.toString(),
+        consultationId: consultation?._id?.toString() || null,
       };
     }
 
@@ -56,7 +57,7 @@ export class ConsultationChoiceStatusService {
     if (consultation.isPaid && !consultation.analysisNotified) {
       return {
         choiceId,
-        choiceTitle: choice.title,
+        choiceTitle: consultation.choice?.title || choice.title,
         buttonStatus: 'RÉPONSE EN ATTENTE',
         hasActiveConsultation: true,
         consultationId: consultation._id.toString(),
@@ -66,7 +67,7 @@ export class ConsultationChoiceStatusService {
     // Cas 3: Consultation payée ET analyse notifiée
     return {
       choiceId,
-      choiceTitle: choice.title,
+      choiceTitle: consultation.choice?.title || choice.title,
       buttonStatus: 'VOIR L\'ANALYSE',
       hasActiveConsultation: true,
       consultationId: consultation._id.toString(),

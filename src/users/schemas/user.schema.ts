@@ -1,8 +1,10 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { Role } from '../../common/enums/role.enum';
 import { Permission } from '../../common/enums/permission.enum';
+import { UserGrade } from '../../common/enums/user-grade.enum';
+import { UserType } from '../../common/enums/user-type.enum';
 
 export type UserDocument = User & Document;
 
@@ -137,6 +139,35 @@ export class User {
 
   @Prop({ default: 0, min: 0 })
   credits?: number;
+
+  // Système de grades initiatiques
+  @Prop({ type: String, enum: UserGrade, default: null })
+  grade?: UserGrade;
+
+  @Prop({ default: 0 })
+  consultationsCompleted?: number; // Nombre de consultations effectuées (pas seulement achetées)
+
+  @Prop({ default: 0 })
+  rituelsCompleted?: number; // Nombre de rituels/invocations réalisés
+
+  @Prop({ default: 0 })
+  booksRead?: number; // Nombre de livres lus/contenus complétés
+
+  @Prop({ type: Date })
+  lastGradeUpdate?: Date;
+
+  // Système de profils utilisateurs
+  @Prop({ type: String, enum: UserType, default: UserType.BASIQUE })
+  userType?: UserType;
+
+  @Prop({ type: Types.ObjectId, ref: 'Rubrique' })
+  premiumRubriqueId?: Types.ObjectId; // Rubrique autorisée pour Premium
+
+  @Prop({ type: Date })
+  subscriptionStartDate?: Date; // Date de début d'abonnement Premium/Intégral
+
+  @Prop({ type: Date })
+  subscriptionEndDate?: Date; // Date de fin d'abonnement Premium/Intégral
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -148,3 +179,6 @@ UserSchema.index({ createdAt: -1 });
 UserSchema.index({ emailVerified: 1 });
 UserSchema.index({ specialties: 1 });
 UserSchema.index({ rating: -1 });
+UserSchema.index({ grade: 1 });
+UserSchema.index({ userType: 1 });
+UserSchema.index({ subscriptionEndDate: 1 });

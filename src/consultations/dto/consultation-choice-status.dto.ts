@@ -5,8 +5,8 @@ export interface ConsultationChoiceStatusDto {
   choiceId: string;
   choiceTitle: string;
   buttonStatus: 'CONSULTER' | 'RÉPONSE EN ATTENTE' | 'VOIR L\'ANALYSE';
-  consultationId?: string; // ID de la consultation si elle existe
   hasActiveConsultation: boolean; // Indique si une consultation active existe
+  consultationId: string | null; // ID de la consultation si elle existe, null sinon
 }
 
 /**
