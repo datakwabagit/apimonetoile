@@ -1,6 +1,9 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategorieDto, UpdateCategorieDto } from './categorie.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserDocument } from '../users/schemas/user.schema';
 
 @Controller('categories')
 export class CategoriesController {
@@ -12,7 +15,9 @@ export class CategoriesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Query('userId') userId?: string) {
+  @UseGuards(JwtAuthGuard)
+  findOne(@Param('id') id: string, @CurrentUser() user?: UserDocument) {
+    const userId = user?._id?.toString();
     return this.categoriesService.findOne(id, userId);
   }
 
