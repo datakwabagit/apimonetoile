@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, UseGuards, Param, NotFoundException } from '@nestjs/common';
 import { OfferingsService } from './offerings.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -16,6 +16,15 @@ export class OfferingsController {
     return { offerings };
   }
 
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const offering = await this.offeringsService.findById(id);
+    if (!offering) {
+      throw new NotFoundException('Offrande non trouvée');
+    }
+    return offering;
+  }
+
   @Post('bulk-update')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
   async bulkUpdate(@Body('offerings') offerings: any[]) {
@@ -24,5 +33,18 @@ export class OfferingsController {
       success: true, 
       message: `${offerings.length} offrandes sauvegardées avec succès` 
     };
+  }
+
+  @Put(':id')
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  async update(
+    @Param('id') id: string,
+    @Body() updateData: any
+  ) {
+    const updated = await this.offeringsService.updateById(id, updateData);
+    if (!updated) {
+      throw new NotFoundException('Offrande non trouvée');
+    }
+    return { success: true, offering: updated };
   }
 }

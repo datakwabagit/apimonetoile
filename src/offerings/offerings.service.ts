@@ -23,6 +23,16 @@ export class OfferingsService {
     return this.offeringModel.find({ _id: { $in: stringIds } }).exec();
   }
 
+  async findById(id: string): Promise<Offering | null> {
+    if (!id) return null;
+    return this.offeringModel.findById(id).exec();
+  }
+
+  async updateById(id: string, updateData: Partial<Offering>): Promise<Offering | null> {
+    if (!id) return null;
+    return this.offeringModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
+  }
+
   async bulkUpdate(offerings: any[]): Promise<void> {
     // Supprimer toutes les offrandes existantes
     await this.offeringModel.deleteMany({});
