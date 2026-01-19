@@ -9,6 +9,10 @@ export class OfferingsService {
     @InjectModel(Offering.name) private offeringModel: Model<Offering>,
   ) {}
 
+  async create(data: Partial<Offering>): Promise<Offering> {
+    const offering = new this.offeringModel(data);
+    return offering.save();
+  }
   async findAll(): Promise<Offering[]> {
     return this.offeringModel.find().exec();
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, UseGuards, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, UseGuards, Param, NotFoundException, BadRequestException } from '@nestjs/common';
 import { OfferingsService } from './offerings.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -23,6 +23,17 @@ export class OfferingsController {
       throw new NotFoundException('Offrande non trouvée');
     }
     return offering;
+  }
+
+  @Post()
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  async create(@Body() data: any) {
+    // Validation simple côté backend
+    if (!data.name || !data.price || !data.priceUSD || !data.category || !data.icon || !data.description) {
+      throw new BadRequestException('Tous les champs sont obligatoires');
+    }
+    const created = await this.offeringsService.create(data);
+    return { success: true, offering: created };
   }
 
   @Post('bulk-update')
