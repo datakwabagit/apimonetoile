@@ -1,29 +1,3 @@
-  async findOneWithPrompt(id: string): Promise<any> {
-    // Cherche le choix de consultation par ID
-    const choice = await this.consultationChoiceModel.findById(id).exec();
-    if (!choice) {
-      throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
-    }
-    // Cherche le prompt associé si promptId existe
-    let prompt = null;
-    if (choice.promptId) {
-      const populated = await this.consultationChoiceModel.findById(id).populate('promptId').exec();
-      prompt = populated?.promptId || null;
-    }
-    return {
-      _id: choice._id,
-      title: choice.title,
-      description: choice.description,
-      frequence: choice.frequence,
-      participants: choice.participants,
-      offering: choice.offering,
-      order: choice.order,
-      rubriqueId: choice.rubriqueId,
-      rubriqueTitle: choice.rubriqueTitle,
-      promptId: choice.promptId || null,
-      prompt: prompt,
-    };
-  }
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -38,6 +12,33 @@ export class ConsultationChoiceService {
     @InjectModel(Rubrique.name)
     private rubriqueModel: Model<RubriqueDocument>,
   ) {}
+
+  async findOneWithPrompt(id: string): Promise<any> {
+    // Cherche le choix de consultation par ID
+    const choice = await this.consultationChoiceModel.findById(id).exec();
+    if (!choice) {
+      throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
+    }
+    // Cherche le prompt associé si promptId existe
+    let prompt = null;
+    if ((choice as any).promptId) {
+      const populated = await this.consultationChoiceModel.findById(id).populate('promptId').exec();
+      prompt = populated?.promptId || null;
+    }
+    return {
+      _id: choice._id,
+      title: choice.title,
+      description: choice.description,
+      frequence: choice.frequence,
+      participants: choice.participants,
+      offering: (choice as any)?.offering ?? null,
+      order: (choice as any)?.order ?? null,
+      rubriqueId: (choice as any)?.rubriqueId ?? null,
+      rubriqueTitle: (choice as any)?.rubriqueTitle ?? null,
+      promptId: (choice as any)?.promptId || null,
+      prompt: prompt,
+    };
+  }
 
   async findByIdRaw(id: string): Promise<ConsultationChoice> {
     const choice = await this.consultationChoiceModel.findById(id).exec();

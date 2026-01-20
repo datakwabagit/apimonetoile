@@ -1,7 +1,4 @@
-  @Get(':id/with-prompt')
-  async getChoiceWithPrompt(@Param('id') id: string) {
-    return this.consultationChoiceService.findOneWithPrompt(id);
-  }
+
 import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -12,6 +9,11 @@ import { ConsultationChoiceService } from './consultation-choice.service';
 @Controller('consultation-choices')
 export class ConsultationChoiceController {
   constructor(private readonly consultationChoiceService: ConsultationChoiceService) {}
+
+  @Get(':id/with-prompt')
+  async getChoiceWithPrompt(@Param('id') id: string) {
+    return this.consultationChoiceService.findOneWithPrompt(id);
+  }
 
   @Get(':id/raw')
   async getChoiceByIdRaw(@Param('id') id: string) {
