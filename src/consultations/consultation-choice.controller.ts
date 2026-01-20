@@ -1,3 +1,7 @@
+  @Get(':id/with-prompt')
+  async getChoiceWithPrompt(@Param('id') id: string) {
+    return this.consultationChoiceService.findOneWithPrompt(id);
+  }
 import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
