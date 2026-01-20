@@ -59,9 +59,7 @@ export class PromptController {
     return this.promptService.findByChoiceId(choiceId);
   }
 
-  @Patch(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.UPDATE_ANY_CONSULTATION)
+  @Patch(':id') 
   @ApiOperation({ summary: 'Mettre à jour un prompt' })
   @ApiResponse({ status: 200, description: 'Prompt mis à jour avec succès.' })
   async update(
@@ -71,9 +69,7 @@ export class PromptController {
     return this.promptService.update(id, updatePromptDto);
   }
 
-  @Patch(':id/toggle-active')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.UPDATE_ANY_CONSULTATION)
+  @Patch(':id/toggle-active') 
   @ApiOperation({ summary: 'Activer/Désactiver un prompt' })
   @ApiResponse({ status: 200, description: 'Statut du prompt modifié.' })
   async toggleActive(@Param('id') id: string) {
