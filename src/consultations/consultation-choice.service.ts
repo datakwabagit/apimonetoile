@@ -13,6 +13,14 @@ export class ConsultationChoiceService {
     private rubriqueModel: Model<RubriqueDocument>,
   ) {}
 
+  async findByIdRaw(id: string): Promise<ConsultationChoice> {
+    const choice = await this.consultationChoiceModel.findById(id).exec();
+    if (!choice) {
+      throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
+    }
+    return choice;
+  }
+
   async findAll(): Promise<ConsultationChoice[]> {
     return this.consultationChoiceModel.find().populate('promptId').exec();
   }

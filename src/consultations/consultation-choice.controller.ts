@@ -9,6 +9,12 @@ import { ConsultationChoiceService } from './consultation-choice.service';
 export class ConsultationChoiceController {
   constructor(private readonly consultationChoiceService: ConsultationChoiceService) {}
 
+  @Get(':id/raw')
+  async getChoiceByIdRaw(@Param('id') id: string) {
+    // Retourne le choix sans populate du promptId
+    return this.consultationChoiceService.findByIdRaw(id);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @ApiOperation({ summary: 'Récupérer tous les choix de consultation' })
@@ -29,7 +35,11 @@ export class ConsultationChoiceController {
   @ApiOperation({ summary: 'Récupérer un choix de consultation par ID (public)' })
   @ApiResponse({ status: 200, description: 'Choix de consultation retourné.' })
   async getChoiceById(@Param('id') id: string) {
-    return this.consultationChoiceService.findById(id);
+    console.log('ID reçu pour consultation-choice:', id);
+     
+    const result = await this.consultationChoiceService.findById(id);
+    console.log('Résultat de la recherche:', result);
+    return result;
   }
 
   @Patch(':id/prompt')
