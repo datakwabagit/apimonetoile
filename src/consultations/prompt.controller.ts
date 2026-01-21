@@ -16,10 +16,12 @@ export class PromptController {
 
   @Post()
   @UseGuards(PermissionsGuard)
-  @Permissions(Permission.UPDATE_ANY_CONSULTATION)
   @ApiOperation({ summary: 'Créer un nouveau prompt' })
   @ApiResponse({ status: 201, description: 'Prompt créé avec succès.' })
   async create(@Body() createPromptDto: CreatePromptDto) {
+     if (!createPromptDto.structure || !Array.isArray(createPromptDto.structure.sections) || createPromptDto.structure.sections.length === 0) {
+      throw new Error('Le champ structure.sections doit contenir au moins une section.');
+    }
     return this.promptService.create(createPromptDto);
   }
 

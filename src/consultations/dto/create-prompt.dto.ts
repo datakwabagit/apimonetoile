@@ -24,6 +24,11 @@ export class PromptStructureDto {
   @Type(() => PromptSectionDto)
   sections: PromptSectionDto[];
 
+  // Validation personnalisée : au moins une section
+  get hasAtLeastOneSection(): boolean {
+    return Array.isArray(this.sections) && this.sections.length > 0;
+  }
+
   @IsOptional()
   @IsString()
   synthesis?: string;

@@ -11,7 +11,7 @@ export class ConsultationChoiceService {
     private consultationChoiceModel: Model<ConsultationChoiceDocument>,
     @InjectModel(Rubrique.name)
     private rubriqueModel: Model<RubriqueDocument>,
-  ) {}
+  ) { }
 
   async findOneWithPrompt(id: string): Promise<any> {
     // Cherche le choix de consultation par ID
@@ -48,6 +48,24 @@ export class ConsultationChoiceService {
     return choice;
   }
 
+  async findChoiceInRubriquesById(id: string): Promise<any> {
+    // Récupérer toutes les rubriques
+    const rubriques = await this.rubriqueModel.find().exec();
+    for (const rubrique of rubriques) {
+      if (rubrique.consultationChoices && rubrique.consultationChoices.length > 0) {
+        const found = rubrique.consultationChoices.find((choice: any) => choice._id?.toString() === id);
+        if (found) {
+          return {
+            ...found as any, // conserve _id, title, description, frequence, participants, found,
+            rubriqueId: rubrique._id,
+            rubriqueTitle: rubrique.titre,
+          };
+        }
+      }
+    }
+    throw new NotFoundException(`Aucun choix de consultation avec l'ID ${id} trouvé dans les rubriques.`);
+  }
+
   async findAll(): Promise<ConsultationChoice[]> {
     return this.consultationChoiceModel.find().populate('promptId').exec();
   }
@@ -66,21 +84,21 @@ export class ConsultationChoiceService {
       { promptId: promptId || null },
       { new: true, runValidators: true }
     ).populate('promptId').exec();
-    
+
     if (!choice) {
       throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
     }
-    
+
     return choice;
   }
 
   async findAllWithPrompts(): Promise<any[]> {
     // Récupérer toutes les rubriques avec leurs choix
     const rubriques = await this.rubriqueModel.find().populate('categorieId').exec();
-    
+
     // Extraire tous les choix de toutes les rubriques
     const allChoices: any[] = [];
-    
+
     for (const rubrique of rubriques) {
       if (rubrique.consultationChoices && rubrique.consultationChoices.length > 0) {
         for (const choice of rubrique.consultationChoices) {
@@ -95,8 +113,8 @@ export class ConsultationChoiceService {
             order: choice.order,
             rubriqueId: rubrique._id,
             rubriqueTitle: rubrique.titre,
-            promptId: null,
-            prompt: null,
+            promptId: choice.promptId,
+            prompt: choice.promptId,
           };
 
           // Chercher si ce choix a un prompt dans la collection ConsultationChoice
@@ -114,7 +132,7 @@ export class ConsultationChoiceService {
         }
       }
     }
-    
+
     return allChoices;
   }
 }
