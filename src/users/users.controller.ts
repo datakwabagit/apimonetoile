@@ -1,3 +1,12 @@
+// ...existing code...
+
+  @Patch(':id/auto-grade')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.UPDATE_ANY_USER)
+  @ApiOperation({ summary: 'Met à jour automatiquement le grade et le profil utilisateur' })
+  async autoGrade(@Param('id') id: string) {
+    return this.usersService.updateUserGradeAndProfile(id);
+  }
 import {
   Controller,
   Get,

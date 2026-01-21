@@ -1,3 +1,6 @@
+import { GRADE_REQUIREMENTS, GRADE_LABELS } from './grade.constants';
+import { UserGrade } from '../common/enums/user-grade.enum';
+import { UserType } from '../common/enums/user-type.enum';
 import {
   Injectable,
   NotFoundException,
@@ -16,6 +19,50 @@ import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class UsersService {
+
+    /**
+     * Met à jour automatiquement le grade et le profil utilisateur selon les règles métier
+     */
+    async updateUserGradeAndProfile(userId: string): Promise<User> {
+      const user = await this.userModel.findById(userId);
+      if (!user) throw new NotFoundException('User not found');
+
+      // 1. Gestion des abonnements (profil utilisateur)
+      if (user.userType !== UserType.BASIQUE && user.subscriptionEndDate && user.subscriptionEndDate < new Date()) {
+        user.userType = UserType.BASIQUE;
+        user.premiumRubriqueId = undefined;
+        user.subscriptionStartDate = undefined;
+        user.subscriptionEndDate = undefined;
+      }
+
+      // 2. Progression de grade
+      // On part du grade actuel (ou 0 si null)
+      let currentGrade = 0;
+      if (user.grade) {
+        currentGrade = GRADE_LABELS.findIndex(label => label.toUpperCase() === user.grade);
+      }
+      let nextGrade = currentGrade;
+      for (let i = currentGrade + 1; i < GRADE_REQUIREMENTS.length; i++) {
+        const req = GRADE_REQUIREMENTS[i];
+        if (
+          user.consultationsCompleted >= req.consultations &&
+          user.rituelsCompleted >= req.rituals &&
+          user.booksRead >= req.books
+        ) {
+          nextGrade = i;
+        } else {
+          break;
+        }
+      }
+      if (nextGrade !== currentGrade && nextGrade > 0) {
+        user.grade = GRADE_LABELS[nextGrade].toUpperCase() as UserGrade;
+        user.lastGradeUpdate = new Date();
+        // TODO: envoyer notification et message de félicitations ici
+      }
+
+      await user.save();
+      return user;
+    }
   /**
    * Retourne le nombre total d'utilisateurs inscrits
    */
