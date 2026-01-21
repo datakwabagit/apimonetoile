@@ -16,7 +16,7 @@ export class PromptService {
     private consultationChoiceModel: Model<ConsultationChoiceDocument>,
     @InjectModel('Rubrique')
     private rubriqueModel: Model<RubriqueDocument>,
-  ) {}
+  ) { }
 
   async create(createPromptDto: CreatePromptDto): Promise<Prompt> {
     try {
@@ -56,7 +56,7 @@ export class PromptService {
       if (!rubriqueTrouvee) {
         console.warn('[DEBUG] Aucun choix de consultation trouvé dans les rubriques pour l\'ID', createPromptDto.choiceId);
       }
-     
+
 
       return savedPrompt;
     } catch (error: any) {
@@ -98,11 +98,11 @@ export class PromptService {
         updatePromptDto,
         { new: true, runValidators: true }
       ).exec();
-      
+
       if (!prompt) {
         throw new NotFoundException(`Prompt avec l'ID ${id} introuvable`);
       }
-      
+
       return prompt;
     } catch (error: any) {
       if (error.code === 11000) {
@@ -113,7 +113,8 @@ export class PromptService {
   }
 
   async delete(id: string): Promise<void> {
-    const prompt = await this.promptModel.findByIdAndDelete(id).exec();
+    // Retrouver le prompt pour récupérer son choiceId
+    const prompt = await this.promptModel.findById(id).exec();
     if (!prompt) {
       throw new NotFoundException(`Prompt avec l'ID ${id} introuvable`);
     }
@@ -124,6 +125,34 @@ export class PromptService {
       { $unset: { promptId: '' } },
       { new: true }
     ).exec();
+
+    // Retirer le promptId du choix correspondant dans rubrique.consultationChoices
+    const rubriques = await this.rubriqueModel.find().exec();
+    let rubriqueTrouvee = false;
+    for (const rubrique of rubriques) {
+      if (Array.isArray(rubrique.consultationChoices) && rubrique.consultationChoices.length > 0) {
+        let updated = false;
+        rubrique.consultationChoices = rubrique.consultationChoices.map((choice: any) => {
+          if (choice._id?.toString() === prompt.choiceId) {
+            updated = true;
+            return { ...choice, promptId: undefined };
+          }
+          return choice;
+        });
+        if (updated) {
+          rubriqueTrouvee = true;
+          await rubrique.save();
+          break;
+        }
+      }
+    }
+    if (!rubriqueTrouvee) {
+      console.warn('[DEBUG] Aucun choix de consultation trouvé dans les rubriques pour l\'ID', prompt.choiceId);
+    }
+
+    // Supprimer le prompt
+    await this.promptModel.findByIdAndDelete(id).exec();
+
   }
 
   async toggleActive(id: string): Promise<Prompt> {
@@ -132,11 +161,11 @@ export class PromptService {
       [{ $set: { isActive: { $not: '$isActive' } } }],
       { new: true, runValidators: true }
     ).exec();
-    
+
     if (!prompt) {
       throw new NotFoundException(`Prompt avec l'ID ${id} introuvable`);
     }
-    
+
     return prompt;
   }
 }

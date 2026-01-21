@@ -44,8 +44,6 @@ export class PromptController {
   }
 
   @Get(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.READ_ANY_CONSULTATION)
   @ApiOperation({ summary: 'Récupérer un prompt par ID' })
   @ApiResponse({ status: 200, description: 'Prompt retourné.' })
   async findById(@Param('id') id: string) {
