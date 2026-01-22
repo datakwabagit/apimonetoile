@@ -6,12 +6,14 @@ import { RubriqueDto } from './dto/rubrique.dto';
 import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 import { RubriqueWithChoiceCountDto, ConsultationChoiceWithCountDto } from './dto/rubrique-with-count.dto';
 import { UserConsultationChoice, UserConsultationChoiceDocument } from '../consultations/schemas/user-consultation-choice.schema';
+import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
 
 @Injectable()
 export class RubriqueService {
   constructor(
     @InjectModel(Rubrique.name) private rubriqueModel: Model<RubriqueDocument>,
     @InjectModel(UserConsultationChoice.name) private userConsultationChoiceModel: Model<UserConsultationChoiceDocument>,
+    @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
   ) {}
 
   async findAll() {
@@ -114,6 +116,31 @@ export class RubriqueService {
           choiceId: choice._id,
         });
 
+        // Récupère la dernière consultation pour ce choix et cet utilisateur
+        const lastConsultation = await this.userConsultationChoiceModel.findOne({
+          userId,
+          choiceId: choice._id,
+        }).sort({ createdAt: -1 }).populate({ path: 'consultationId', model: 'Consultation' }).exec();
+
+        let buttonStatus: 'CONSULTER' | 'RÉPONSE EN ATTENTE' | 'VOIR L\'ANALYSE' = 'CONSULTER';
+        if (
+          lastConsultation &&
+          lastConsultation.consultationId &&
+          typeof lastConsultation.consultationId === 'object' &&
+          'isPaid' in lastConsultation.consultationId
+        ) {
+          const c = lastConsultation.consultationId as any;
+          if (c.isPaid) {
+            if (c.analysisNotified) {
+              buttonStatus = 'VOIR L\'ANALYSE';
+            } else {
+              buttonStatus = 'RÉPONSE EN ATTENTE';
+            }
+          } else {
+            buttonStatus = 'CONSULTER';
+          }
+        }
+
         return {
           _id: choice._id,
           title: choice.title,
@@ -124,6 +151,7 @@ export class RubriqueService {
           offering: choice.offering,
           consultationCount,
           showButtons: choice.frequence !== 'UNE_FOIS_VIE',
+          buttonStatus,
         };
       })
     );
