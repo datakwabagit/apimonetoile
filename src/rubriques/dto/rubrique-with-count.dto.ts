@@ -1,4 +1,3 @@
-  buttonStatus?: 'CONSULTER' | 'RÉPONSE EN ATTENTE' | 'VOIR L\'ANALYSE';
 export class ConsultationChoiceWithCountDto {
   _id: string;
   title: string;
@@ -9,6 +8,7 @@ export class ConsultationChoiceWithCountDto {
   offering: any;
   consultationCount: number;
   showButtons: boolean;
+  buttonStatus?: string;
 }
 
 export class RubriqueWithChoiceCountDto {
