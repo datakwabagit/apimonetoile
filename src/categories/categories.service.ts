@@ -110,16 +110,16 @@ export class CategoriesService {
   async getCategorieWithRubriques(id: string) {
     const cat = await this.categorieModel.findById(id).populate({ path: 'rubriques', model: 'Rubrique' }).exec();
     if (!cat) throw new NotFoundException('Catégorie non trouvée');
-    // On ne garde que les champs demandés
+
+ 
     const rubriques = (cat.rubriques || []).map((r: any) => ({
-      id: r._id?.toString(),
-      nom: r.nom || r.titre, // fallback to titre if nom absent
+      _id: r._id?.toString(),
       titre: r.titre,
       description: r.description,
       categorieId: r.categorieId?.toString() || null,
     }));
     return {
-      id: cat._id.toString(),
+      _id: cat._id.toString(),
       titre: cat.nom,
       description: cat.description,
       rubriques,

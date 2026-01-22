@@ -56,10 +56,9 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
   async notifyUser(@Param('id') id: string) {
     try {
-      console.log(`[API] Envoi notification pour consultation ${id}`);
-      // Récupérer la consultation pour obtenir le client
+
       const consultation: any = await this.consultationsService.findOne(id);
-      console.log('Consultation récupérée:', consultation);
+
       if (!consultation || !consultation.clientId) {
         console.error('Consultation ou utilisateur non trouvé', { consultation });
         throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
@@ -538,14 +537,14 @@ export class ConsultationsController {
         const userRole = user.role || (typeof user.toObject === 'function' ? user.toObject().role : undefined);
         const userId = user._id?.toString() || (typeof user.toObject === 'function' ? user.toObject()._id?.toString() : undefined);
         const consultationClientId = consultation.clientId?.toString();
-        
+
         if (userRole && userRole !== Role.ADMIN && userRole !== Role.SUPER_ADMIN) {
           if (consultationClientId && userId && consultationClientId !== userId) {
             throw new ForbiddenException('You can only view your own consultations');
           }
         }
       }
-      
+
       return await this.analysisService.generateAnalysis(id, user);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -623,7 +622,7 @@ export class ConsultationsController {
    */
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto, @CurrentUser() user: UserDocument) {
-     return this.consultationsService.update(id, updateConsultationDto);
+    return this.consultationsService.update(id, updateConsultationDto);
   }
 
   /**
