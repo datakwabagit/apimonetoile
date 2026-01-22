@@ -47,4 +47,5 @@ export class CreateUserDto {
     notifications?: boolean;
     newsletter?: boolean;
   };
+  
 }
