@@ -83,9 +83,7 @@ export class AdminController {
     @Query('limit') limit = '18',
   ) {
     const result = await this.adminService.getConsultations({
-      search,
-      status,
-      type,
+      search, status, type,
       page: parseInt(page as string, 10) || 1,
       limit: parseInt(limit as string, 10) || 18,
     });
