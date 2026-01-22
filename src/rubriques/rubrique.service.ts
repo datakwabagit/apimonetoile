@@ -14,7 +14,7 @@ export class RubriqueService {
     @InjectModel(Rubrique.name) private rubriqueModel: Model<RubriqueDocument>,
     @InjectModel(UserConsultationChoice.name) private userConsultationChoiceModel: Model<UserConsultationChoiceDocument>,
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
-  ) {}
+  ) { }
 
   async findAll() {
     return this.rubriqueModel.find().populate('categorieId').exec();
@@ -123,22 +123,25 @@ export class RubriqueService {
         }).sort({ createdAt: -1 }).populate({ path: 'consultationId', model: 'Consultation' }).exec();
 
         let buttonStatus: 'CONSULTER' | 'RÉPONSE EN ATTENTE' | 'VOIR L\'ANALYSE' = 'CONSULTER';
-        if (
-          lastConsultation &&
-          lastConsultation.consultationId &&
-          typeof lastConsultation.consultationId === 'object' &&
-          'isPaid' in lastConsultation.consultationId
-        ) {
+
+        // Correction: handle null and missing consultationId
+        if (lastConsultation && lastConsultation.consultationId && typeof lastConsultation.consultationId === 'object') {
           const c = lastConsultation.consultationId as any;
-          if (c.isPaid) {
-            if (c.analysisNotified) {
-              buttonStatus = 'VOIR L\'ANALYSE';
+           buttonStatus = 'CONSULTER';
+          if (c.status === 'COMPLETED') {
+             buttonStatus = 'VOIR L\'ANALYSE';
+          } else {
+           if (!c.analysisNotified) {
+             buttonStatus = 'RÉPONSE EN ATTENTE';
             } else {
               buttonStatus = 'RÉPONSE EN ATTENTE';
             }
-          } else {
-            buttonStatus = 'CONSULTER';
           }
+
+ 
+        } else {
+          // No consultation or consultationId is null
+          buttonStatus = 'CONSULTER';
         }
 
         return {
@@ -152,6 +155,7 @@ export class RubriqueService {
           consultationCount,
           showButtons: choice.frequence !== 'UNE_FOIS_VIE',
           buttonStatus,
+          consultationId: lastConsultation ? lastConsultation._id : null,
         };
       })
     );

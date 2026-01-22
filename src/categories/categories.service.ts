@@ -103,4 +103,26 @@ export class CategoriesService {
     if (!deleted) throw new NotFoundException('Catégorie non trouvée');
     return deleted;
   }
+
+  /**
+   * Retourne une catégorie avec id, nom, description et ses rubriques (id, nom, titre, description, categorieId)
+   */
+  async getCategorieWithRubriques(id: string) {
+    const cat = await this.categorieModel.findById(id).populate({ path: 'rubriques', model: 'Rubrique' }).exec();
+    if (!cat) throw new NotFoundException('Catégorie non trouvée');
+    // On ne garde que les champs demandés
+    const rubriques = (cat.rubriques || []).map((r: any) => ({
+      id: r._id?.toString(),
+      nom: r.nom || r.titre, // fallback to titre if nom absent
+      titre: r.titre,
+      description: r.description,
+      categorieId: r.categorieId?.toString() || null,
+    }));
+    return {
+      id: cat._id.toString(),
+      titre: cat.nom,
+      description: cat.description,
+      rubriques,
+    };
+  }
 }
