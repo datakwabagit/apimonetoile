@@ -109,7 +109,7 @@ export class RubriqueService {
     if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
 
     // Récupérer les comptages de consultations pour chaque choix
-    const choicesWithCount: ConsultationChoiceWithCountDto[] = await Promise.all(
+    let choicesWithCount: ConsultationChoiceWithCountDto[] = await Promise.all(
       rubrique.consultationChoices.map(async (choice) => {
         const consultationCount = await this.userConsultationChoiceModel.countDocuments({
           userId,
@@ -155,6 +155,9 @@ export class RubriqueService {
         };
       })
     );
+
+    // Trier les choix par ordre croissant
+    choicesWithCount = choicesWithCount.sort((a, b) => (a.order || 0) - (b.order || 0));
 
     return {
       _id: rubrique._id.toString(),
