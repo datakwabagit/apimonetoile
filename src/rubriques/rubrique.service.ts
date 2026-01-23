@@ -87,7 +87,13 @@ export class RubriqueService {
       }
       // Nettoyage des alternatives : on retire _id et on ne garde que les objets valides
       const alternatives = offering.alternatives
-        .filter(a => a && typeof a === 'object' && a.category && a.offeringId && a.quantity !== undefined)
+        .filter(a =>
+          a &&
+          typeof a === 'object' &&
+          typeof a.category === 'string' && a.category.length > 0 &&
+          typeof a.offeringId === 'string' && a.offeringId.length > 0 &&
+          typeof a.quantity === 'number' && !isNaN(a.quantity)
+        )
         .map(({ category, offeringId, quantity }) => ({ category, offeringId, quantity }));
       // Validation alternatives
       const cats = alternatives.map(a => a.category);
