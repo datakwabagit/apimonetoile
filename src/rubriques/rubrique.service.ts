@@ -85,8 +85,10 @@ export class RubriqueService {
       if (!offering || !Array.isArray(offering.alternatives)) {
         throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
       }
-      // Nettoyage des alternatives : on retire _id de chaque alternative
-      const alternatives = offering.alternatives.map(({ category, offeringId, quantity }) => ({ category, offeringId, quantity }));
+      // Nettoyage des alternatives : on retire _id et on ne garde que les objets valides
+      const alternatives = offering.alternatives
+        .filter(a => a && typeof a === 'object' && a.category && a.offeringId && a.quantity !== undefined)
+        .map(({ category, offeringId, quantity }) => ({ category, offeringId, quantity }));
       // Validation alternatives
       const cats = alternatives.map(a => a.category);
       if (
@@ -108,7 +110,7 @@ export class RubriqueService {
       }
       // Nettoyage strict des propriétés non attendues (pas de _id, choiceId, etc.)
       return {
-        promptId: choice.promptId,
+        promptId: choice.promptId || '',
         title: choice.title,
         description: choice.description,
         frequence,
