@@ -20,6 +20,8 @@ class ConsultationOfferingWrapperDto {
 }
 
 class ConsultationChoiceDto {
+    @IsOptional()
+    order?: number;
   @IsOptional()
   @IsString()
   promptId?: string;
