@@ -29,8 +29,16 @@ export class RubriqueService {
   async create(dto: RubriqueDto) {
     // Validation et nettoyage des choix de consultation
     dto.consultationChoices = dto.consultationChoices.map(choice => {
+      // Nettoyage et validation de l'objet offering
+      let offering = choice.offering;
+      if (Array.isArray(offering)) {
+        offering = { alternatives: offering };
+      }
+      if (!offering || !Array.isArray(offering.alternatives)) {
+        throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
+      }
       // Validation alternatives
-      const cats = choice.offering.alternatives.map(a => a.category);
+      const cats = offering.alternatives.map(a => a.category);
       if (
         cats.length !== 3 ||
         !cats.includes('animal') ||
@@ -58,7 +66,7 @@ export class RubriqueService {
         frequence,
         participants: choice.participants,
         order: choice.order,
-        offering: choice.offering
+        offering
       };
     });
     return this.rubriqueModel.create(dto);
@@ -67,7 +75,16 @@ export class RubriqueService {
   async update(id: string, dto: RubriqueDto) {
     // Même validation et nettoyage que pour create
     dto.consultationChoices = dto.consultationChoices.map(choice => {
-      const cats = choice.offering.alternatives.map(a => a.category);
+      // Nettoyage et validation de l'objet offering
+      let offering = choice.offering;
+      if (Array.isArray(offering)) {
+        offering = { alternatives: offering };
+      }
+      if (!offering || !Array.isArray(offering.alternatives)) {
+        throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
+      }
+      // Validation alternatives
+      const cats = offering.alternatives.map(a => a.category);
       if (
         cats.length !== 3 ||
         !cats.includes('animal') ||
@@ -93,7 +110,7 @@ export class RubriqueService {
         frequence,
         participants: choice.participants,
         order: choice.order,
-        offering: choice.offering
+        offering
       };
     });
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
