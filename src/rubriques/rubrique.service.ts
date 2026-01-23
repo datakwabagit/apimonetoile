@@ -1,3 +1,4 @@
+import { plainToInstance } from 'class-transformer';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -85,8 +86,11 @@ export class RubriqueService {
       if (!offering || !Array.isArray(offering.alternatives)) {
         throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
       }
-      // Nettoyage des alternatives : on retire _id et on ne garde que les objets valides
-      const alternatives = offering.alternatives
+      // Transformation et nettoyage des alternatives
+      const alternatives = plainToInstance(
+        require('./dto/rubrique.dto').ConsultationOfferingDto,
+        offering.alternatives
+      )
         .filter(a =>
           a &&
           typeof a === 'object' &&

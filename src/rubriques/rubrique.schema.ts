@@ -87,7 +87,6 @@ export class Rubrique {
   typeconsultation: ConsultationType;
 
   @Prop({ type: [ConsultationChoiceSchema], default: [] })
-  @Type(() => ConsultationChoice)
   consultationChoices: ConsultationChoice[];
 }
 
