@@ -3,7 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Rubrique, RubriqueDocument } from './rubrique.schema';
-import { RubriqueDto } from './dto/rubrique.dto';
+import { RubriqueDto, ConsultationOfferingDto } from './dto/rubrique.dto';
 import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 import { RubriqueWithChoiceCountDto, ConsultationChoiceWithCountDto } from './dto/rubrique-with-count.dto';
 import { UserConsultationChoice, UserConsultationChoiceDocument } from '../consultations/schemas/user-consultation-choice.schema';
@@ -87,9 +87,8 @@ export class RubriqueService {
         throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
       }
       // Transformation et nettoyage des alternatives
-      const { ConsultationOfferingDto } = require('./dto/rubrique.dto');
       const alternatives = plainToInstance(
-        typeof ConsultationOfferingDto,
+        ConsultationOfferingDto,
         offering.alternatives
       );
       const cleanedAlternatives = alternatives
