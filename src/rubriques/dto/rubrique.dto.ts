@@ -1,7 +1,7 @@
 import { IsString, IsArray, ValidateNested, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class ConsultationOfferingDto {
+export class ConsultationOfferingDto {
   @IsString()
   category: 'animal' | 'vegetal' | 'beverage';
 
