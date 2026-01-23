@@ -28,8 +28,10 @@ import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UserDocument } from '../users/schemas/user.schema';
 import { AnalysisService } from './analysis.service';
 import { ConsultationsService } from './consultations.service';
+import { ConsultationChoiceService } from './consultation-choice.service';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
+import { PromptService } from './prompt.service';
 
 @ApiTags('Consultations')
 @Controller('consultations')
@@ -40,6 +42,8 @@ export class ConsultationsController {
     private readonly consultationsService: ConsultationsService,
     private readonly notificationsService: NotificationsService,
     private readonly analysisService: AnalysisService,
+    private readonly consultationChoiceService: ConsultationChoiceService,
+    private readonly promptService: PromptService,
   ) { }
 
   /**
@@ -533,7 +537,7 @@ export class ConsultationsController {
     try {
       // Vérifier que l'utilisateur est propriétaire de la consultation (sauf admin)
       const consultation = await this.consultationsService.findOne(id);
-      if (consultation && user) {
+       if (consultation && user) {
         const userRole = user.role || (typeof user.toObject === 'function' ? user.toObject().role : undefined);
         const userId = user._id?.toString() || (typeof user.toObject === 'function' ? user.toObject()._id?.toString() : undefined);
         const consultationClientId = consultation.clientId?.toString();

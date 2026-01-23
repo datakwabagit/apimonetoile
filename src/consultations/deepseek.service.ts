@@ -351,6 +351,7 @@ Ton : Professionnel, empathique, encourageant.`,
   async genererAnalyseComplete(
     birthData: BirthData,
     consultationId?: string,
+    systemPrompt?: string,
   ): Promise<AnalysisResult> {
     const sessionId = uuidv4();
     const cacheKey = this.generateCacheKey(birthData);
@@ -397,7 +398,7 @@ Ton : Professionnel, empathique, encourageant.`,
       );
       const carteDuCielResponse = await this.callDeepSeekApi(
         [
-          { role: 'system', content: this.SYSTEM_PROMPTS.carteDuCiel },
+          { role: 'system', content: systemPrompt || this.SYSTEM_PROMPTS.carteDuCiel },
           { role: 'user', content: carteDuCielPrompt },
         ],
         0.3,
@@ -425,7 +426,7 @@ Ton : Professionnel, empathique, encourageant.`,
 
       const missionDeVieResponse = await this.callDeepSeekApi(
         [
-          { role: 'system', content: this.SYSTEM_PROMPTS.astrologer },
+          { role: 'system', content: systemPrompt || this.SYSTEM_PROMPTS.astrologer },
           { role: 'user', content: missionDeViePrompt },
         ],
         0.8,

@@ -1,23 +1,28 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from './schemas/astrological-analysis.schema';
-import { ConsultationsService } from './consultations.service';
-import { UserConsultationChoiceService } from './user-consultation-choice.service';
-import { DeepseekService, BirthData } from './deepseek.service';
-import { getZodiacSign, getZodiacElement, getZodiacSymbol } from '../common/utils/zodiac.utils';
-import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import fetch from 'node-fetch';
+import { ConsultationStatus } from '../common/enums/consultation-status.enum';
+import { getZodiacElement, getZodiacSign, getZodiacSymbol } from '../common/utils/zodiac.utils';
+import { ConsultationsService } from './consultations.service';
+import { BirthData, DeepseekService } from './deepseek.service';
+import { PromptService } from './prompt.service';
+import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from './schemas/astrological-analysis.schema';
+import { UserConsultationChoiceService } from './user-consultation-choice.service';
 
 @Injectable()
 export class AnalysisService {
+  private readonly DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
   constructor(
     @InjectModel(AstrologicalAnalysis.name)
     private analysisModel: Model<AstrologicalAnalysisDocument>,
     private consultationsService: ConsultationsService,
     private deepseekService: DeepseekService,
     private userConsultationChoiceService: UserConsultationChoiceService,
-  ) {}
+    @Inject(forwardRef(() => PromptService))
+    private promptService: PromptService,
+  ) { }
 
   async getAstrologicalAnalysis(consultationId: string) {
     const analysis = await this.analysisModel.findOne({ consultationId }).exec();
@@ -27,52 +32,259 @@ export class AnalysisService {
     return analysis;
   }
 
-  async generateAnalysis(id: string, user: any) {
-     try {
-      // Récupérer la consultation et utiliser formData uniquement
-      const consultation: any = await this.consultationsService.findOne(id);
-       const form = consultation?.formData || {};
+  private async loadPromptFromDatabase(choiceId: string): Promise<string> {
+    try {
+      const prompt = await this.promptService.findByChoiceId(choiceId);
 
-      const mergedBirthData: BirthData = {
-        nom: form.nom ?? form.lastName ?? '',
-        prenoms: form.prenoms ?? form.firstName ?? '',
-        dateNaissance: form.dateNaissance ?? form.dateOfBirth ?? '',
-        heureNaissance: form.heureNaissance ?? form.timeOfBirth ?? '',
-        villeNaissance: form.villeNaissance ?? form.cityOfBirth ?? '',
-        paysNaissance:
-          form.paysNaissance && form.paysNaissance.trim() !== ''
-            ? form.paysNaissance
-            : form.countryOfBirth && form.countryOfBirth.trim() !== ''
-              ? form.countryOfBirth
-              : form.country && form.country.trim() !== ''
-                ? form.country
-                : '',
-        email: form.email ?? '',
-      } as BirthData;
-
-  
-      if (
-        !mergedBirthData.nom ||
-        !mergedBirthData.prenoms ||
-        !mergedBirthData.dateNaissance ||
-        !mergedBirthData.heureNaissance ||
-        !mergedBirthData.villeNaissance ||
-        !mergedBirthData.paysNaissance
-      ) {
-        throw new HttpException('Données de naissance incomplètes', HttpStatus.BAD_REQUEST);
+      if (!prompt) {
+        console.log('[ANALYSE] Aucun prompt personnalisé trouvé, utilisation du prompt par défaut');
+        return null;
       }
 
+      let customPrompt = '';
+
+      // Titre et description
+      if (prompt.title) customPrompt += `${prompt.title}\n\n`;
+      if (prompt.description) customPrompt += `${prompt.description}\n\n`;
+
+      // Rôle et objectif
+      if (prompt.role) customPrompt += `Rôle : ${prompt.role}\n`;
+      if (prompt.objective) customPrompt += `Objectif : ${prompt.objective}\n`;
+
+      // Style et ton
+      if (prompt.styleAndTone?.length > 0) {
+        customPrompt += `Style et Ton :\n`;
+        prompt.styleAndTone.forEach(style => {
+          customPrompt += `- ${style}\n`;
+        });
+      }
+
+      // Structure
+      if (prompt.structure) {
+        customPrompt += `\nSTRUCTURE DE L'ANALYSE À RESPECTER\n`;
+
+        if (prompt.structure.introduction) {
+          customPrompt += `Introduction : ${prompt.structure.introduction}\n`;
+        }
+
+        if (prompt.structure.sections?.length > 0) {
+          prompt.structure.sections.forEach((section: any, idx: number) => {
+            if (section.title) customPrompt += `${idx + 1}. ${section.title}\n`;
+            if (section.content) customPrompt += `  • ${section.content}\n`;
+
+            if (section.guidelines?.length > 0) {
+              section.guidelines.forEach((guide: string) => {
+                customPrompt += `    - ${guide}\n`;
+              });
+            }
+          });
+        }
+
+        if (prompt.structure.synthesis) {
+          customPrompt += `\nSynthèse : ${prompt.structure.synthesis}\n`;
+        }
+
+        if (prompt.structure.conclusion) {
+          customPrompt += `\nConclusion : ${prompt.structure.conclusion}\n`;
+        }
+      }
+
+      return customPrompt.trim();
+
+    } catch (error) {
+      console.error('[ANALYSE] Erreur lors du chargement du prompt:', error?.message || error);
+      return null;
+    }
+  }
+
+  private getDefaultPrompt(): string {
+    return `RÉVÉLATION DES TALENTS INNÉS\n\nRôle : Agis comme un astrologue professionnel spécialisé dans l'astrologie du potentiel et du développement personnel. Ton expertise consiste à décoder les "cadeaux de naissance" inscrits dans le thème natal, souvent invisibles pour la personne elle-même.\n\nObjectif : À partir de la carte du ciel de [PRÉNOM], réalise une analyse inspirante, claire et bienveillante de ses capacités naturelles. L'objectif est de réveiller ses potentiels enfouis, de mettre en lumière ses forces instinctives et d'éclairer son chemin vers un épanouissement total (personnel et professionnel).\n\nStyle et Ton :\n- Utilise impérativement le tutoiement.\n- Adopte un ton chaleureux, encourageant et révélateur.\n- Interpelle la personne par son prénom pour renforcer l'aspect personnalisé de la consultation.\n- Utilise une approche pédagogique : explique comment une position planétaire se traduit concrètement en un talent exploitable au quotidien.\n\nSTRUCTURE DE L'ANALYSE À RESPECTER\n1. Le Soleil – Ton "Génie" Central\n  • Signe et Maison : Explique ton talent pour briller. Quelle est cette force vitale unique qui te permet de prendre ta place naturellement ?\n  • Aspects au Soleil : Quelles planètes viennent colorer ou amplifier ta capacité à diriger, créer ou rayonner ?\n2. La Maison 2 – Ton Coffre-Fort Personnel\n  • Signe sur la Cuspide et Planètes présentes : Analyse ton rapport à tes propres ressources. Quels sont les outils que tu possèdes déjà pour générer de la valeur (matérielle ou morale) ?\n  • Identifie si tes talents sont plutôt d'ordre pratique, intellectuel, artistique ou relationnel.\n3. Mercure – Ton Intelligence et ta Dextérité\n  • Signe et Maison : Quel est ton talent de communication et de réflexion ? Es-tu un stratège, un médiateur, un artisan du verbe ou un analyste hors pair ?\n  • Explique comment ta manière d'apprendre et de transmettre est un atout majeur pour ton entourage.\n4. La Maison 6 – Tes Compétences Opérationnelles\n  • Analyse de la Maison 6 : Quels sont les talents que tu exprimes dans l'action quotidienne et le service ? Comment ton organisation ou ton sens du détail te rend indispensable ?\n5. Uranus – Ton Originalité et ton Innovation\n  • Position d'Uranus (Maison et Aspects) : Quel est ton "talent rebelle" ou visionnaire ? Ce domaine où tu es capable d'apporter des solutions nouvelles et de faire preuve d'un génie hors du commun.\n6. Les Astéroïdes de Sagesse (si activés)\n  • Pallas (Stratégie), Vesta (Focus), Cérès (Soin) : Si l'un de ces astéroïdes est dominant, explique quelle capacité spécifique (intelligence créative, dévouement extrême ou talent nourricier) en découle.\n\nEXPLOITER TES FORCES AU QUOTIDIEN\n- Le Talent "Sommeil" : Identifie un potentiel que [PRÉNOM] possède mais qu'il/elle n'ose peut-être pas utiliser pleinement par manque de confiance.\n- Synergie Professionnelle : Comment combiner ces talents pour une carrière ou une mission de vie fluide ?\n- Conseils d'Activation : Propose 3 exercices ou réflexes simples pour "muscler" ces talents dès maintenant.\n\nCONCLUSION ATTENDUE\n- Dresse le "Portrait d'Excellence" de [PRÉNOM] en trois mots-clés puissants (ex : Le Diplomate Intuitif, L'Architecte de l'Invisible, Le Communicateur Inspiré...).\n- Explique comment l'acceptation de ces forces permet de cesser de lutter contre sa nature et d'ouvrir les portes d'une réussite authentique.`;
+  }
+
+  private extractBirthData(form: any): BirthData {
+    return {
+      nom: form.nom ?? form.lastName ?? '',
+      prenoms: form.prenoms ?? form.firstName ?? '',
+      dateNaissance: form.dateNaissance ?? form.dateOfBirth ?? '',
+      heureNaissance: form.heureNaissance ?? form.timeOfBirth ?? '',
+      villeNaissance: form.villeNaissance ?? form.cityOfBirth ?? '',
+      paysNaissance: form.paysNaissance?.trim() ||
+        form.countryOfBirth?.trim() ||
+        form.country?.trim() || '',
+      email: form.email ?? '',
+    } as BirthData;
+  }
+
+  private validateBirthData(birthData: BirthData): void {
+    const requiredFields = ['nom', 'prenoms', 'dateNaissance', 'heureNaissance', 'villeNaissance', 'paysNaissance'];
+    const missingFields = requiredFields.filter(field => !birthData[field]?.trim());
+
+    if (missingFields.length > 0) {
+      throw new HttpException(
+        `Données de naissance incomplètes. Champs manquants: ${missingFields.join(', ')}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  private generateHoroscopePrompt(horoscopePayload: any): string {
+    const date = new Date(horoscopePayload.birthDate);
+    let periodContext = '';
+
+    switch (horoscopePayload.horoscopeType) {
+      case 'Quotidien':
+        periodContext = `pour aujourd'hui ${date.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+        break;
+      case 'Mensuel':
+        periodContext = `pour le mois de ${date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+        break;
+      case 'Annuel':
+        periodContext = `pour l'année ${date.getFullYear()}`;
+        break;
+      case 'Amoureux':
+        periodContext = horoscopePayload.partnerSign
+          ? `concernant la compatibilité amoureuse avec le signe ${horoscopePayload.partnerSign}`
+          : `concernant les prévisions sentimentales`;
+        break;
+    }
+
+    return `Génère un horoscope ${horoscopePayload.horoscopeType?.toLowerCase?.()} ${periodContext} pour le signe ${horoscopePayload.zodiacSign} (élément ${horoscopePayload.element}).\n\n${horoscopePayload.partnerSign ? `Analyse la compatibilité avec ${horoscopePayload.partnerSign}.` : ''}\n\nSTRUCTURE ATTENDUE (réponds UNIQUEMENT en JSON valide) :\n\n{\n  "generalForecast": "Prévision générale détaillée intégrant l'énergie cosmique actuelle et la sagesse africaine (3-4 phrases)",\n  "love": "Prévisions amoureuses ${horoscopePayload.partnerSign ? `en analysant la synergie avec ${horoscopePayload.partnerSign}` : ''} (2-3 phrases)",\n  "work": "Prévisions professionnelles et conseils carrière (2-3 phrases)",\n  "health": "Conseils santé et bien-être énergétique (2-3 phrases)",\n  "spiritualAdvice": "Un proverbe ou sagesse africaine authentique pertinent avec sa source (ex: Proverbe Bambara, Yoruba, Swahili, Akan, etc.)",\n  "luckyColor": "Couleur porte-bonheur spécifique (ex: Rouge rubis et or)",\n  "dominantPlanet": "Planète dominante avec son influence (ex: Mars (énergie et action))"\n}\n\nEXIGENCES :\n- Intègre des références authentiques à la sagesse africaine (proverbes Bambara, Yoruba, Swahili, Akan, Peul, Wolof, Zoulou, etc.)\n- Sois précis sur les énergies planétaires actuelles\n- Adopte un ton empathique et inspirant\n- Fournis des conseils pratiques et actionnables\n- ${horoscopePayload.partnerSign ? 'Analyse en profondeur la dynamique relationnelle entre les deux signes' : ''}`;
+  }
+
+  private generateNumerologyPrompt(consultationType: string, birthData: BirthData): string {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentDay = currentDate.getDate();
+
+    let analysisType = 'Numérologie complète';
+    switch (consultationType) {
+      case 'NOMBRES_PERSONNELS':
+        analysisType = 'Nombres personnels détaillés';
+        break;
+      case 'CYCLES_PERSONNELS':
+        analysisType = 'Cycles personnels et timing';
+        break;
+    }
+
+    return `ANALYSE NUMÉROLOGIQUE COMPLÈTE
+DONNÉES DE NAISSANCE:
+NOM COMPLET: ${birthData.nom} ${birthData.prenoms}
+DATE DE NAISSANCE: ${birthData.dateNaissance}
+DATE ACTUELLE: ${currentDay}/${currentMonth}/${currentYear}
+Type d'analyse: ${analysisType}`;
+  }
+
+  private async callDeepSeekAPI(systemPrompt: string, userPrompt: string): Promise<any> {
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+
+    if (!DEEPSEEK_API_KEY) {
+      throw new HttpException('Clé API DeepSeek non configurée', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    try {
+      const response = await fetch(this.DEEPSEEK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 4500,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API DeepSeek: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0].message.content;
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+
+      return aiResponse;
+
+    } catch (error) {
+      console.error('Erreur appel DeepSeek API:', error);
+      throw error;
+    }
+  }
+
+  private async saveAnalysisResults(
+    consultationId: string,
+    analysisData: any,
+    analysisType: string
+  ): Promise<void> {
+    const resultDataKey = analysisType === 'HOROSCOPE' ? 'horoscope' : 'analyse';
+    await this.consultationsService.update(consultationId, {
+      resultData: { [resultDataKey]: analysisData }
+    });
+  }
+
+  private async recordUserChoices(consultation: any, userId: string): Promise<void> {
+    if (!consultation.choice?._id) return;
+
+    const choice = consultation.choice;
+    await this.userConsultationChoiceService.recordChoicesForConsultation(
+      userId,
+      consultation._id?.toString() || '',
+      [{
+        title: choice.title,
+        choiceId: choice._id,
+        frequence: choice.frequence || 'LIBRE',
+        participants: choice.participants || 'SOLO',
+      }]
+    );
+  }
+
+  private getSuccessMessage(consultationType: string): string {
+    if (consultationType === 'HOROSCOPE') {
+      return 'Horoscope généré avec succès';
+    }
+
+    if (['NUMEROLOGIE', 'CYCLES_PERSONNELS', 'NOMBRES_PERSONNELS'].includes(consultationType)) {
+      return `Analyse numérologique (${consultationType}) générée avec succès`;
+    }
+
+    return 'Analyse générée avec succès';
+  }
+
+  async generateAnalysis(id: string, user: any) {
+    try {
+      const consultation = await this.consultationsService.findOne(id);
+      let systemPrompt = this.getDefaultPrompt();
+      if (consultation.choice && consultation.choice._id) {
+        const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
+        if (customPrompt) {
+          systemPrompt = customPrompt;
+        }
+      }
+
+      console.log('SYSTEM_PROMPT utilisé pour la génération:', systemPrompt);
+
+      const form = consultation?.formData || {};
+      const birthData = this.extractBirthData(form);
+      this.validateBirthData(birthData);
       let analyseComplete: any;
-      let horoscopeResult: any = null;
       const isNumerology = ['NUMEROLOGIE', 'CYCLES_PERSONNELS', 'NOMBRES_PERSONNELS'].includes(consultation.type);
 
       if (consultation.type === 'HOROSCOPE') {
-        // Détermination automatique du signe, élément et symbole
-        const birthDateStr = form.dateNaissance || form.dateOfBirth || '';
+        const birthDateStr = birthData.dateNaissance;
         const birthDateObj = birthDateStr ? new Date(birthDateStr) : null;
         const zodiacSign = birthDateObj ? getZodiacSign(birthDateObj) : (form.zodiacSign || '');
         const element = getZodiacElement(zodiacSign);
         const symbol = getZodiacSymbol(zodiacSign);
+
         const horoscopePayload = {
           zodiacSign,
           horoscopeType: form.horoscopeType || '',
@@ -81,324 +293,32 @@ export class AnalysisService {
           element,
           symbol,
         };
-        // Appel HTTP local ou refactoriser la logique dans un service injectable
-        const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
-        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-        const SYSTEM_PROMPT = `Tu es un astrologue professionnel expert spécialisé dans l'astrologie africaine et moderne. Tu génères des horoscopes précis, profonds et inspirants qui intègrent la sagesse ancestrale africaine. Tes prédictions sont empathiques, pratiques et riches en insights spirituels.`;
-        const generateHoroscopePrompt = (req: any): string => {
-          const date = new Date(req.birthDate);
-          let periodContext = '';
-          switch (req.horoscopeType) {
-            case 'Quotidien':
-              periodContext = `pour aujourd'hui ${date.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-              break;
-            case 'Mensuel':
-              periodContext = `pour le mois de ${date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
-              break;
-            case 'Annuel':
-              periodContext = `pour l'année ${date.getFullYear()}`;
-              break;
-            case 'Amoureux':
-              periodContext = req.partnerSign
-                ? `concernant la compatibilité amoureuse avec le signe ${req.partnerSign}`
-                : `concernant les prévisions sentimentales`;
-              break;
-          }
-          return `Génère un horoscope ${req.horoscopeType?.toLowerCase?.()} ${periodContext} pour le signe ${req.zodiacSign} (élément ${req.element}).\n\n${req.partnerSign ? `Analyse la compatibilité avec ${req.partnerSign}.` : ''}\n\nSTRUCTURE ATTENDUE (réponds UNIQUEMENT en JSON valide) :\n\n{\n  "generalForecast": "Prévision générale détaillée intégrant l'énergie cosmique actuelle et la sagesse africaine (3-4 phrases)",\n  "love": "Prévisions amoureuses ${req.partnerSign ? `en analysant la synergie avec ${req.partnerSign}` : ''} (2-3 phrases)",\n  "work": "Prévisions professionnelles et conseils carrière (2-3 phrases)",\n  "health": "Conseils santé et bien-être énergétique (2-3 phrases)",\n  "spiritualAdvice": "Un proverbe ou sagesse africaine authentique pertinent avec sa source (ex: Proverbe Bambara, Yoruba, Swahili, Akan, etc.)",\n  "luckyColor": "Couleur porte-bonheur spécifique (ex: Rouge rubis et or)",\n  "dominantPlanet": "Planète dominante avec son influence (ex: Mars (énergie et action))"\n}\n\nEXIGENCES :\n- Intègre des références authentiques à la sagesse africaine (proverbes Bambara, Yoruba, Swahili, Akan, Peul, Wolof, Zoulou, etc.)\n- Sois précis sur les énergies planétaires actuelles\n- Adopte un ton empathique et inspirant\n- Fournis des conseils pratiques et actionnables\n- ${req.partnerSign ? 'Analyse en profondeur la dynamique relationnelle entre les deux signes' : ''}`;
-        };
-        if (DEEPSEEK_API_KEY) {
-          const messages = [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: generateHoroscopePrompt(horoscopePayload) }
-          ];
-          try {
-            const response = await fetch(DEEPSEEK_API_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-              },
-              body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages,
-                temperature: 0.8,
-                max_tokens: 2000,
-              }),
-            });
-            if (response.ok) {
-              const data = await response.json();
-              const aiResponse = data.choices[0].message.content;
-              const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                horoscopeResult = JSON.parse(jsonMatch[0]);
-              }
-            }
-          } catch (e) {
-            console.error('Erreur génération horoscope:', e);
-          }
-        }
-        // Enregistrer dans resultData.horoscope
-        await this.consultationsService.update(id, { resultData: { horoscope: horoscopeResult } });
-        analyseComplete = horoscopeResult;
+
+        const userPrompt = this.generateHoroscopePrompt(horoscopePayload);
+        analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt);
+        await this.saveAnalysisResults(id, analyseComplete, 'HOROSCOPE');
+
       } else if (isNumerology) {
-        // Numérologie (NUMEROLOGIE, CYCLES_PERSONNELS, NOMBRES_PERSONNELS)
-        const birthDateStr = form.dateNaissance || form.dateOfBirth || '';
-        const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
-        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        const userPrompt = this.generateNumerologyPrompt(consultation.type, birthData);
+        analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt);
+        await this.saveAnalysisResults(id, analyseComplete, 'NUMEROLOGIE');
 
-        const SYSTEM_PROMPT = `Tu es un expert en numérologie avec plus de 25 ans d'expérience. Tu fournis des analyses numériques précises, détaillées et bienveillantes intégrant la sagesse africaine ancestrale. Tes interprétations sont basées sur la numérologie pythagoricienne et kabbalistique. Tu maîtrises parfaitement les cycles personnels et le timing numérique.`;
-
-        const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth() + 1;
-        const currentDay = new Date().getDate();
-
-        const generateNumerologyPrompt = (): string => {
-          return `ANALYSE NUMÉROLOGIQUE COMPLÈTE
-
-DONNÉES DE NAISSANCE:
-NOM COMPLET: ${mergedBirthData.nom} ${mergedBirthData.prenoms}
-DATE DE NAISSANCE: ${birthDateStr}
-DATE ACTUELLE: ${currentDay}/${currentMonth}/${currentYear}
-
-Type d'analyse: ${consultation.type === 'NOMBRES_PERSONNELS' ? 'Nombres personnels détaillés' : consultation.type === 'CYCLES_PERSONNELS' ? 'Cycles personnels et timing' : 'Numérologie complète'}
-
-═══════════════════════════════════════════════════════════════════════
-📐 MÉTHODES DE CALCUL OBLIGATOIRES
-═══════════════════════════════════════════════════════════════════════
-
-1️⃣ CHEMIN DE VIE (Mission de vie)
-Méthode : Jour de naissance + Mois de naissance + Année de naissance (réduits séparément)
-Exemple : 7 janvier 1974
-  • Jour: 7 → 7
-  • Mois: 1 → 1  
-  • Année: 1+9+7+4 = 21 → 2+1 = 3
-  • Total: 7+1+3 = 11 (maître-nombre, on ne réduit pas)
-⚠️ Respecte les maîtres-nombres 11, 22, 33 dans le résultat FINAL uniquement
-
-2️⃣ NOMBRE D'EXPRESSION (Talents et mode d'expression)
-Méthode : Valeur de TOUTES les lettres du nom complet
-Correspondance alphabétique :
-  A J S = 1  |  B K T = 2  |  C L U = 3
-  D M V = 4  |  E N W = 5  |  F O X = 6
-  G P Y = 7  |  H Q Z = 8  |  I R = 9
-
-Exemple : KOUASSI JEAN
-  • KOUASSI: K(2)+O(6)+U(3)+A(1)+S(1)+S(1)+I(9) = 23 → 5
-  • JEAN: J(1)+E(5)+A(1)+N(5) = 12 → 3
-  • Total: 5+3 = 8
-⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
-
-3️⃣ NOMBRE DE L'ÂME (Désirs profonds et motivations intérieures)
-Méthode : Valeur des VOYELLES uniquement (A E I O U Y)
-Exemple : KOUASSI JEAN → voyelles : O U A I E A
-  • O(6)+U(3)+A(1)+I(9)+E(5)+A(1) = 25 → 2+5 = 7
-⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
-
-4️⃣ NOMBRE DE PERSONNALITÉ (Image projetée)
-Méthode : Valeur des CONSONNES uniquement
-⚠️ Si résultat final est 11, 22 ou 33, ne pas réduire
-
-5️⃣ ANNÉE PERSONNELLE (Tendance de l'année)
-Méthode : Jour naissance + Mois naissance + Année courante
-Exemple : Né le 7 janvier, année 2025
-  • 7 + 1 + (2+0+2+5=9) = 17 → 1+7 = 8
-⚠️ Toujours réduire entre 1 et 9 (PAS de maîtres-nombres pour les cycles)
-
-6️⃣ MOIS PERSONNEL (Ambiance du mois)
-Méthode : Année Personnelle + Numéro du mois courant
-Exemple : Année Perso 8 + Mars (3) = 11 → 2
-⚠️ Toujours réduire entre 1 et 9
-
-7️⃣ JOUR PERSONNEL (Énergie de la journée)
-Méthode : Mois Personnel + Jour du mois
-Exemple : Mois Perso 2 + jour 15 = 2+1+5 = 8
-⚠️ Toujours réduire entre 1 et 9
-
-8️⃣ ANNÉE UNIVERSELLE (Énergie collective mondiale)
-Méthode : Réduction de l'année civile
-Exemple : 2025 = 2+0+2+5 = 9
-
-═══════════════════════════════════════════════════════════════════════
-
-STRUCTURE JSON ATTENDUE:
-
-{
-  "themeDeNaissance": {
-    "description": "Ta carte numérologique fixe - ta partition de vie",
-    "cheminDeVie": {
-      "valeur": <nombre ou maître-nombre 11/22/33>,
-      "calcul": "<détail du calcul effectué>",
-      "signification": "Mission de vie, défis et talents fondamentaux (le plus important)",
-      "interpretation": "<analyse détaillée 3-4 phrases>"
-    },
-    "nombreExpression": {
-      "valeur": <nombre ou maître-nombre>,
-      "calcul": "<détail du calcul avec toutes les lettres>",
-      "signification": "Talents naturels et manière de s'exprimer dans le monde",
-      "interpretation": "<analyse détaillée>"
-    },
-    "nombreAme": {
-      "valeur": <nombre ou maître-nombre>,
-      "calcul": "<détail du calcul avec les voyelles uniquement>",
-      "signification": "Désirs profonds et motivations intérieures secrètes",
-      "interpretation": "<analyse détaillée>"
-    },
-    "nombrePersonnalite": {
-      "valeur": <nombre ou maître-nombre>,
-      "calcul": "<détail du calcul avec les consonnes uniquement>",
-      "signification": "Image projetée et première impression donnée aux autres",
-      "interpretation": "<analyse détaillée>"
-    }
-  },
-  
-  "cyclesEnMouvement": {
-    "description": "Les énergies du moment - la mélodie jouée maintenant",
-    "anneeUniverselle": {
-      "valeur": <nombre entre 1-9 pour ${currentYear}>,
-      "calcul": "<détail du calcul>",
-      "signification": "Énergie collective mondiale pour ${currentYear}",
-      "interpretation": "<contexte global>"
-    },
-    "anneePersonnelle": {
-      "valeur": <nombre entre 1-9>,
-      "calcul": "<détail du calcul: jour + mois + année courante>",
-      "signification": "Thème principal de l'année (janvier à décembre)",
-      "interpretation": "<analyse détaillée des opportunités et défis 3-4 phrases>",
-      "conseil": "<actions à privilégier ou éviter cette année>"
-    },
-    "moisPersonnel": {
-      "valeur": <nombre entre 1-9>,
-      "mois": "${new Date().toLocaleDateString('fr-FR', { month: 'long' })}",
-      "calcul": "<Année Perso + mois courant>",
-      "signification": "Ambiance et couleur du mois actuel",
-      "interpretation": "<analyse du mois en cours 2-3 phrases>"
-    },
-    "jourPersonnel": {
-      "valeur": <nombre entre 1-9>,
-      "date": "${currentDay}/${currentMonth}/${currentYear}",
-      "calcul": "<Mois Perso + jour du mois>",
-      "signification": "Tonalité énergétique d'aujourd'hui",
-      "interpretation": "<conseil pour la journée>"
-    }
-  },
-  
-  "syntheseEtTiming": {
-    "accord": "<Comment ton Chemin de Vie s'accorde avec ton Année Personnelle actuelle (complémentarité ou friction)>",
-    "opportunites": "<Quelles portes sont ouvertes maintenant grâce aux cycles en cours>",
-    "defisActuels": "<Quels défis ou frictions peuvent survenir avec les énergies du moment>",
-    "conseilsPratiques": [
-      "<Action 1 alignée avec le timing actuel>",
-      "<Action 2 à privilégier>",
-      "<Action 3 à éviter ou reporter>"
-    ],
-    "prochainsJoursFavorables": [
-      {
-        "date": "<date dans les 7 prochains jours>",
-        "jourPersonnel": <nombre>,
-        "pourquoi": "<idéal pour quoi (signature, rendez-vous, lancement, déclaration, etc.)>"
-      }
-    ]
-  },
-  
-  "cyclesDeVieGrands": [
-    {
-      "periode": "<Cycle de vie actuel ou prochain>",
-      "ages": "<tranche d'âge>",
-      "nombre": <nombre>,
-      "theme": "<thème principal de ce grand cycle de vie>"
-    }
-  ],
-  
-  "sagessAfricaine": {
-    "proverbe": "<Proverbe africain pertinent pour la situation numérologique actuelle>",
-    "source": "<Origine: Bambara, Yoruba, Swahili, Akan, Peul, Wolof, etc.>",
-    "lien": "<Pourquoi ce proverbe résonne avec les nombres actuels>"
-  }
-}
-
-PRINCIPES ESSENTIELS À RESPECTER:
-
-✅ RÈGLES DES MAÎTRES-NOMBRES:
-• Pour le THÈME DE NAISSANCE (Chemin de Vie, Expression, Âme, Personnalité):
-  Respecter les maîtres-nombres 11, 22, 33 dans le résultat FINAL uniquement
-• Pour les CYCLES (Année/Mois/Jour Personnel):
-  TOUJOURS réduire entre 1 et 9 (PAS de maîtres-nombres pour les cycles)
-
-✅ SIGNIFICATIONS DES ANNÉES PERSONNELLES:
-• Année 1 = nouveaux départs, initiative, indépendance, lancement de projets
-• Année 2 = coopération, patience, relations, diplomatie
-• Année 3 = créativité, expression, communication, socialisation
-• Année 4 = structure, travail laborieux, discipline, fondations solides
-• Année 5 = liberté, changement, aventure, adaptabilité
-• Année 6 = responsabilité, famille, service, harmonie relationnelle
-• Année 7 = introspection, étude, spiritualité, période d'isolement bénéfique
-• Année 8 = pouvoir, réussite matérielle, autorité, récolte
-• Année 9 = fin de cycle, lâcher-prise, conclusions, préparation au renouveau
-
-✅ PHILOSOPHIE:
-• Le libre arbitre est roi: tu décris le "temps qu'il fait", pas le destin
-• La numérologie est un outil de conscience, pas de prédiction d'événements
-• Sois pragmatique, empathique et encourageant
-• Intègre la sagesse africaine authentiquement (pas de clichés)
-
-✅ COMPARAISONS UTILES:
-• Chemin de Vie = ce que vous êtes venu vivre
-• Nombre d'Expression = comment vous agissez et vous montrez
-• Nombre de l'Âme = ce que vous désirez profondément
-• Nombre de Personnalité = l'image que vous projetez`;
-        };
-
-        if (DEEPSEEK_API_KEY) {
-          try {
-            const messages = [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: generateNumerologyPrompt() }
-            ];
-            const response = await fetch(DEEPSEEK_API_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-              },
-              body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages,
-                temperature: 0.8,
-                max_tokens: 4500,
-              }),
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              const aiResponse = data.choices[0].message.content;
-              const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                analyseComplete = JSON.parse(jsonMatch[0]);
-              }
-            }
-          } catch (e) {
-            console.error('Erreur génération numérologie:', e);
-          }
-        }
-        // Enregistrer dans resultData.analyse pour cohérence
-        await this.consultationsService.update(id, { resultData: { analyse: analyseComplete } });
       } else {
-        // Analyse astrologique classique
-        const analyse = await this.deepseekService.genererAnalyseComplete(mergedBirthData, id);
-        analyseComplete = {
+        analyseComplete = await this.deepseekService.genererAnalyseComplete(birthData, id, systemPrompt);
+        const analysisDocument = {
           consultationId: id,
-          ...analyse,
+          ...analyseComplete,
           dateGeneration: new Date().toISOString(),
         };
-        // Enregistrer dans resultData.analyse pour cohérence
-        await this.consultationsService.update(id, { resultData: { analyse: analyseComplete } });
-        // Sauvegarder l'analyse dans la collection AstrologicalAnalysis
+
+        await this.saveAnalysisResults(id, analysisDocument, 'ASTROLOGIE');
+
         try {
           const userId = user._id.toString();
           await this.consultationsService.saveAstrologicalAnalysis(
             userId,
             id,
-            analyseComplete,
+            analysisDocument,
           );
         } catch (saveError) {
           console.error('[API] ❌ Erreur sauvegarde analyse:', {
@@ -408,46 +328,26 @@ PRINCIPES ESSENTIELS À RESPECTER:
         }
       }
 
-      // Mettre à jour le statut de la consultation à COMPLETED
-      await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
+      await this.consultationsService.update(id, {
+        status: ConsultationStatus.COMPLETED
+      });
 
-      let messageSuccess = 'Analyse générée avec succès';
-      if (consultation.type === 'HOROSCOPE') {
-        messageSuccess = 'Horoscope généré avec succès';
-      } else if (isNumerology) {
-        messageSuccess = `Analyse numérologique (${consultation.type}) générée avec succès`;
+      if (consultation.clientId) {
+        const userId = consultation.clientId.toString();
+        await this.recordUserChoices(consultation, userId);
       }
- 
-      // Appeler recordChoicesForConsultation après la génération de l'analyse
-      if (consultation.choice?._id) {
-        const choice = consultation.choice;
-        // Extract userId as string from clientId object
-        const userId = typeof consultation.clientId === 'object' && consultation.clientId._id
-          ? consultation.clientId._id.toString()
-          : consultation.clientId?.toString?.() || '';
-        await this.userConsultationChoiceService.recordChoicesForConsultation(
-          userId,
-          consultation._id?.toString?.() || '',
-          [{
-            title: choice.title,
-            choiceId: choice._id,
-            frequence: choice.frequence || 'LIBRE',
-            participants: choice.participants || 'SOLO',
-          }]
-        );
-      }
+
       return {
         success: true,
         consultationId: id,
         statut: ConsultationStatus.COMPLETED,
-        message: messageSuccess,
+        statuts: ConsultationStatus.COMPLETED,
+        message: this.getSuccessMessage(consultation.type),
         analyse: analyseComplete,
       };
     } catch (error) {
       console.error('[API] Erreur génération analyse:', error);
-
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-
       throw new HttpException(
         {
           success: false,
@@ -456,6 +356,6 @@ PRINCIPES ESSENTIELS À RESPECTER:
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
-    } 
+    }
   }
 }
