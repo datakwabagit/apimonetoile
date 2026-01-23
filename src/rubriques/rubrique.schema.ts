@@ -66,6 +66,7 @@ export class ConsultationChoice {
 
   @Prop({ type: OfferingSchema, required: true })
   offering: Offering;
+  
 }
 
 export const ConsultationChoiceSchema = SchemaFactory.createForClass(ConsultationChoice);
