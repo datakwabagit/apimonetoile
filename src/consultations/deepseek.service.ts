@@ -354,13 +354,21 @@ Ton : Professionnel, empathique, encourageant.`,
     systemPrompt?: string,
   ): Promise<AnalysisResult> {
     const sessionId = uuidv4();
-    const cacheKey = this.generateCacheKey(birthData);
+    const cacheKey = this.generateCacheKey(birthData, systemPrompt); // Inclure systemPrompt dans la clé de cache
     const startTime = Date.now();
 
     this.logger.log(`[${sessionId}] Début analyse pour ${birthData.prenoms} ${birthData.nom}`);
+    
+    // Ajouter un log pour le systemPrompt utilisé
+    if (systemPrompt) {
+      this.logger.log(`[${sessionId}] Utilisation d'un systemPrompt personnalisé (longueur: ${systemPrompt.length} caractères)`);
+    } else {
+      this.logger.log(`[${sessionId}] Utilisation du systemPrompt par défaut`);
+    }
+    
     this.publishStage(consultationId, 'start', 0, this.DEFAULT_PROGRESS.start, 'Analyse démarrée');
 
-    // Vérifier le cache
+    // Vérifier le cache (avec systemPrompt inclus dans la clé)
     const cached = this.analysisCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
       this.logger.log(`[${sessionId}] Analyse récupérée depuis le cache`);
@@ -396,9 +404,13 @@ Ton : Professionnel, empathique, encourageant.`,
         10,
         'Génération de la carte du ciel...',
       );
+      
+      // Déterminer le system prompt à utiliser pour la carte du ciel
+      const carteSystemPrompt = systemPrompt || this.SYSTEM_PROMPTS.carteDuCiel;
+      
       const carteDuCielResponse = await this.callDeepSeekApi(
         [
-          { role: 'system', content: systemPrompt || this.SYSTEM_PROMPTS.carteDuCiel },
+          { role: 'system', content: carteSystemPrompt },
           { role: 'user', content: carteDuCielPrompt },
         ],
         0.3,
@@ -424,9 +436,14 @@ Ton : Professionnel, empathique, encourageant.`,
         'Génération de la mission de vie...',
       );
 
+      // Déterminer le system prompt à utiliser pour la mission de vie
+      // Si un systemPrompt personnalisé est fourni, l'utiliser
+      // Sinon utiliser celui par défaut pour l'astrologue
+      const missionSystemPrompt = systemPrompt || this.SYSTEM_PROMPTS.astrologer;
+
       const missionDeVieResponse = await this.callDeepSeekApi(
         [
-          { role: 'system', content: systemPrompt || this.SYSTEM_PROMPTS.astrologer },
+          { role: 'system', content: missionSystemPrompt },
           { role: 'user', content: missionDeViePrompt },
         ],
         0.8,
@@ -506,6 +523,10 @@ Ton : Professionnel, empathique, encourageant.`,
       this.logger.log(
         `[${sessionId}] ⏱️ Répartition: Étape1=${step1Duration}ms, Étape2=${step2Duration}ms, Étape3=${step3Duration}ms`,
       );
+      
+      if (systemPrompt) {
+        this.logger.log(`[${sessionId}] ℹ️ Analyse générée avec un systemPrompt personnalisé`);
+      }
 
       // Nettoyer le cache si nécessaire
       if (this.analysisCache.size > 100) {
@@ -516,6 +537,7 @@ Ton : Professionnel, empathique, encourageant.`,
         duration: result.metadata.processingTime,
         tokens: result.metadata.tokensUsed,
         positions: positions.length,
+        customPrompt: !!systemPrompt,
       });
 
       return result;
@@ -692,10 +714,28 @@ Ton : Professionnel, empathique, encourageant.`,
   }
 
   /**
-   * Génère une clé de cache unique
+   * Génère une clé de cache unique (inclut maintenant le systemPrompt)
    */
-  private generateCacheKey(birthData: BirthData): string {
-    return `${birthData.dateNaissance}-${birthData.heureNaissance}-${birthData.villeNaissance}`.toLowerCase();
+  private generateCacheKey(birthData: BirthData, systemPrompt?: string): string {
+    // Créer une empreinte du systemPrompt si fourni
+    const promptHash = systemPrompt 
+      ? this.hashString(systemPrompt).substring(0, 8) 
+      : 'default';
+    
+    return `${birthData.dateNaissance}-${birthData.heureNaissance}-${birthData.villeNaissance}-${promptHash}`.toLowerCase();
+  }
+
+  /**
+   * Fonction simple de hachage pour les strings
+   */
+  private hashString(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(16);
   }
 
   /**
@@ -740,7 +780,7 @@ Ton : Professionnel, empathique, encourageant.`,
     this.logger.log('Cache purgé');
   }
 
-    getCachedAnalysis(cacheKey: string) {
+  getCachedAnalysis(cacheKey: string) {
     const cached = this.analysisCache.get(cacheKey);
     if (!cached) {
       throw new HttpException('Aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
@@ -751,11 +791,16 @@ Ton : Professionnel, empathique, encourageant.`,
   /**
    * Génère du contenu à partir d'un prompt simple (pour les templates d'analyses)
    */
-  async generateContentFromPrompt(prompt: string, temperature = 0.7, maxTokens = 4000): Promise<string> {
+  async generateContentFromPrompt(
+    prompt: string, 
+    temperature = 0.7, 
+    maxTokens = 4000,
+    systemPrompt?: string
+  ): Promise<string> {
     const messages: DeepSeekMessage[] = [
       {
         role: 'system',
-        content: 'Tu es un expert en astrologie, analyses psychologiques et développement personnel. Fournir des réponses détaillées, bienveillantes et éducatives.',
+        content: systemPrompt || 'Tu es un expert en astrologie, analyses psychologiques et développement personnel. Fournir des réponses détaillées, bienveillantes et éducatives.',
       },
       {
         role: 'user',
@@ -771,6 +816,50 @@ Ton : Professionnel, empathique, encourageant.`,
         `Failed to generate content: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  /**
+   * Méthode alternative qui utilise le prompt personnalisé pour une analyse simplifiée
+   */
+  async genererAnalyseAvecPromptPersonnalise(
+    birthData: BirthData,
+    promptPersonnalise: string,
+    consultationId?: string
+  ): Promise<any> {
+    this.logger.log(`Génération d'analyse avec prompt personnalisé pour ${birthData.prenoms}`);
+    
+    try {
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system',
+          content: promptPersonnalise,
+        },
+        {
+          role: 'user',
+          content: `Analyse astrologique pour:
+          Nom: ${birthData.nom}
+          Prénom: ${birthData.prenoms}
+          Date de naissance: ${birthData.dateNaissance}
+          Heure: ${birthData.heureNaissance}
+          Lieu: ${birthData.villeNaissance}, ${birthData.paysNaissance}
+          Genre: ${birthData.genre}`,
+        },
+      ];
+
+      const response = await this.callDeepSeekApi(messages, 0.7, 4000);
+      
+      return {
+        success: true,
+        analysis: response.choices[0]?.message?.content || '',
+        tokensUsed: response.usage?.total_tokens || 0,
+        consultationId,
+        timestamp: new Date(),
+      };
+      
+    } catch (error) {
+      this.logger.error(`Erreur génération avec prompt personnalisé: ${error.message}`);
+      throw error;
     }
   }
 }
