@@ -12,6 +12,13 @@ class ConsultationOfferingDto {
   quantity?: number = 1;
 }
 
+class ConsultationOfferingWrapperDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConsultationOfferingDto)
+  alternatives: ConsultationOfferingDto[];
+}
+
 class ConsultationChoiceDto {
   @IsString()
   title: string;
@@ -27,12 +34,9 @@ class ConsultationChoiceDto {
   @IsOptional()
   participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE' | 'POUR_TIERS';
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ConsultationOfferingDto)
-  offering: {
-    alternatives: ConsultationOfferingDto[];
-  };
+  @ValidateNested()
+  @Type(() => ConsultationOfferingWrapperDto)
+  offering: ConsultationOfferingWrapperDto;
 }
 
 export class RubriqueDto {
