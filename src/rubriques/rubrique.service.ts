@@ -27,8 +27,8 @@ export class RubriqueService {
   }
 
   async create(dto: RubriqueDto) {
-    // Validation des choix de consultation
-    dto.consultationChoices.forEach(choice => {
+    // Validation et nettoyage des choix de consultation
+    dto.consultationChoices = dto.consultationChoices.map(choice => {
       // Validation alternatives
       const cats = choice.offering.alternatives.map(a => a.category);
       if (
@@ -49,13 +49,18 @@ export class RubriqueService {
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
+      // Nettoyage des propriétés non attendues
+      const {
+        promptId, title, description, frequence, participants, order, offering
+      } = choice;
+      return { promptId, title, description, frequence, participants, order, offering };
     });
     return this.rubriqueModel.create(dto);
   }
 
   async update(id: string, dto: RubriqueDto) {
-    // Même validation que pour create
-    dto.consultationChoices.forEach(choice => {
+    // Même validation et nettoyage que pour create
+    dto.consultationChoices = dto.consultationChoices.map(choice => {
       const cats = choice.offering.alternatives.map(a => a.category);
       if (
         cats.length !== 3 ||
@@ -73,6 +78,11 @@ export class RubriqueService {
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
+      // Nettoyage des propriétés non attendues
+      const {
+        promptId, title, description, frequence, participants, order, offering
+      } = choice;
+      return { promptId, title, description, frequence, participants, order, offering };
     });
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
   }
