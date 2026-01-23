@@ -333,8 +333,32 @@ Type d'analyse: ${analysisType}`;
       });
 
       if (consultation.clientId) {
-        const userId = consultation.clientId.toString();
-        await this.recordUserChoices(consultation, userId);
+        let userId: string | undefined;
+        if (
+          typeof consultation.clientId === 'object' &&
+          consultation.clientId !== null &&
+          'toHexString' in consultation.clientId &&
+          typeof consultation.clientId.toHexString === 'function'
+        ) {
+          // Mongoose ObjectId natif
+          userId = consultation.clientId.toHexString();
+        } else if (
+          typeof consultation.clientId === 'object' &&
+          consultation.clientId !== null &&
+          '_id' in consultation.clientId &&
+          consultation.clientId._id
+        ) {
+          userId = consultation.clientId._id.toString();
+        } else if (typeof consultation.clientId === 'string') {
+          userId = consultation.clientId;
+        } else if (typeof consultation.clientId?.toString === 'function') {
+          userId = consultation.clientId.toString();
+        }
+        if (userId) {
+          await this.recordUserChoices(consultation, userId);
+        } else {
+          console.error('[ANALYSE] Impossible de déterminer un userId valide pour recordUserChoices', { clientId: consultation.clientId });
+        }
       }
 
       return {

@@ -11,12 +11,18 @@ export class UserConsultationChoiceService {
   ) {}
 
   async recordChoicesForConsultation(userId: string, consultationId: string, choices: Array<{ title: string; choiceId?: string; frequence: string; participants: string }>) {
+    if (!userId || !Types.ObjectId.isValid(userId)) {
+      throw new Error(`userId invalide pour UserConsultationChoice: ${userId}`);
+    }
+    if (!consultationId || !Types.ObjectId.isValid(consultationId)) {
+      throw new Error(`consultationId invalide pour UserConsultationChoice: ${consultationId}`);
+    }
     const now = new Date();
     const docs = choices.map(choice => ({
       userId: new Types.ObjectId(userId),
       consultationId: new Types.ObjectId(consultationId),
       choiceTitle: choice.title,
-      choiceId: choice.choiceId ? new Types.ObjectId(choice.choiceId) : undefined,
+      choiceId: choice.choiceId && Types.ObjectId.isValid(choice.choiceId) ? new Types.ObjectId(choice.choiceId) : undefined,
       frequence: choice.frequence,
       participants: choice.participants,
       createdAt: now,
