@@ -87,13 +87,14 @@ export class RubriqueService {
         throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
       }
       // Transformation et nettoyage des alternatives
-      const alternatives = plainToInstance(
-        require('./dto/rubrique.dto').ConsultationOfferingDto,
+      const { ConsultationOfferingDto } = require('./dto/rubrique.dto');
+      const alternatives: ConsultationOfferingDto[] = plainToInstance(
+        ConsultationOfferingDto,
         offering.alternatives
-      )
+      );
+      const cleanedAlternatives = alternatives
         .filter(a =>
           a &&
-          typeof a === 'object' &&
           typeof a.category === 'string' && a.category.length > 0 &&
           typeof a.offeringId === 'string' && a.offeringId.length > 0 &&
           typeof a.quantity === 'number' && !isNaN(a.quantity)
