@@ -37,8 +37,10 @@ export class RubriqueService {
       if (!offering || !Array.isArray(offering.alternatives)) {
         throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
       }
+      // Nettoyage des alternatives : on retire _id de chaque alternative
+      const alternatives = offering.alternatives.map(({ category, offeringId, quantity }) => ({ category, offeringId, quantity }));
       // Validation alternatives
-      const cats = offering.alternatives.map(a => a.category);
+      const cats = alternatives.map(a => a.category);
       if (
         cats.length !== 3 ||
         !cats.includes('animal') ||
@@ -58,7 +60,7 @@ export class RubriqueService {
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
-      // Nettoyage strict des propriétés non attendues
+      // Nettoyage strict des propriétés non attendues (pas de _id, choiceId, etc.)
       return {
         promptId: choice.promptId,
         title: choice.title,
@@ -66,7 +68,7 @@ export class RubriqueService {
         frequence,
         participants: choice.participants,
         order: choice.order,
-        offering
+        offering: { alternatives }
       };
     });
     return this.rubriqueModel.create(dto);
@@ -83,8 +85,10 @@ export class RubriqueService {
       if (!offering || !Array.isArray(offering.alternatives)) {
         throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
       }
+      // Nettoyage des alternatives : on retire _id de chaque alternative
+      const alternatives = offering.alternatives.map(({ category, offeringId, quantity }) => ({ category, offeringId, quantity }));
       // Validation alternatives
-      const cats = offering.alternatives.map(a => a.category);
+      const cats = alternatives.map(a => a.category);
       if (
         cats.length !== 3 ||
         !cats.includes('animal') ||
@@ -102,7 +106,7 @@ export class RubriqueService {
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
-      // Nettoyage strict des propriétés non attendues
+      // Nettoyage strict des propriétés non attendues (pas de _id, choiceId, etc.)
       return {
         promptId: choice.promptId,
         title: choice.title,
@@ -110,7 +114,7 @@ export class RubriqueService {
         frequence,
         participants: choice.participants,
         order: choice.order,
-        offering
+        offering: { alternatives }
       };
     });
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
