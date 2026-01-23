@@ -20,8 +20,8 @@ class ConsultationOfferingWrapperDto {
 }
 
 class ConsultationChoiceDto {
-    @IsOptional()
-    order?: number;
+  @IsOptional()
+  order?: number;
   @IsOptional()
   @IsString()
   promptId?: string;
@@ -87,7 +87,5 @@ export class RubriqueDto {
   categorie?: string = 'GENERAL';
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ConsultationChoiceDto)
   consultationChoices: ConsultationChoiceDto[];
 }

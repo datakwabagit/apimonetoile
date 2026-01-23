@@ -5,7 +5,6 @@ import { Document } from 'mongoose';
 
 export type RubriqueDocument = Rubrique & Document;
 
-
 @Schema({ _id: false })
 export class OfferingAlternative {
   @Prop({ type: 'ObjectId', auto: true })
@@ -66,7 +65,6 @@ export class ConsultationChoice {
 
   @Prop({ type: OfferingSchema, required: true })
   offering: Offering;
-  
 }
 
 export const ConsultationChoiceSchema = SchemaFactory.createForClass(ConsultationChoice);
