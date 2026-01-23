@@ -153,6 +153,12 @@
 			"type": "shell",
 			"command": "npm run build",
 			"group": "build"
+		},
+		{
+			"label": "Build and Git Push (PowerShell)",
+			"type": "shell",
+			"command": "npm run build; git add .; git commit -m \"auto: build and push\"; git push",
+			"group": "build"
 		}
 	]
 }

@@ -62,29 +62,30 @@ class ConsultationChoiceDto {
   @IsOptional()
   participants?: 'SOLO' | 'AVEC_TIERS' | 'GROUPE' | 'POUR_TIERS';
 
-  @ValidateNested()
-  @Type(() => ConsultationOfferingWrapperDto)
-  offering: ConsultationOfferingWrapperDto;
+  offering: {
+    alternatives: ConsultationOfferingDto[];
+  };
 }
 
 export class RubriqueDto {
+
+  @IsOptional()
+  @IsString()
+  categorie: string = 'GENERAL';
+
+  @IsOptional()
+  @IsString()
+  categorieId?: string;
+
   @IsString()
   titre: string;
 
   @IsString()
   description: string;
 
-  @IsString()
   @IsOptional()
-  type?: string;
-
   @IsString()
-  @IsOptional()
   typeconsultation?: string;
-
-  @IsOptional()
-  @IsString()
-  categorie?: string = 'GENERAL';
 
   @IsArray()
   consultationChoices: ConsultationChoiceDto[];

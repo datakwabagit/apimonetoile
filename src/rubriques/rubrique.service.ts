@@ -2,7 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Rubrique, RubriqueDocument } from './rubrique.schema';
+import { ConsultationChoice, Rubrique, RubriqueDocument } from './rubrique.schema';
 import { RubriqueDto, ConsultationOfferingDto } from './dto/rubrique.dto';
 import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 import { RubriqueWithChoiceCountDto, ConsultationChoiceWithCountDto } from './dto/rubrique-with-count.dto';
@@ -75,60 +75,30 @@ export class RubriqueService {
     return this.rubriqueModel.create(dto);
   }
 
+  cleanConsultationChoices(choices: any[]): ConsultationChoice[] {
+    return choices.map(choice => ({
+      _id: choice._id,
+      promptId: choice.promptId,
+      title: choice.title,
+      description: choice.description,
+      order: choice.order,
+      frequence: choice.frequence,
+      participants: choice.participants,
+      offering: {
+        alternatives: (choice.offering?.alternatives || []).map((alt: any) => ({
+          _id: alt._id,
+          category: alt.category,
+          offeringId: alt.offeringId,
+          quantity: alt.quantity,
+        })),
+      },
+    }));
+  }
+
   async update(id: string, dto: RubriqueDto) {
-    // Même validation et nettoyage que pour create
-    dto.consultationChoices = dto.consultationChoices.map(choice => {
-      // Nettoyage et validation de l'objet offering
-      let offering = choice.offering;
-      if (Array.isArray(offering)) {
-        offering = { alternatives: offering };
-      }
-      if (!offering || !Array.isArray(offering.alternatives)) {
-        throw new Error(`L'objet 'offering' du choix '${choice.title}' est mal formé.`);
-      }
-      // Transformation et nettoyage des alternatives
-      const alternatives = plainToInstance(
-        ConsultationOfferingDto,
-        offering.alternatives
-      );
-      const cleanedAlternatives = alternatives
-        .filter(a =>
-          a &&
-          typeof a.category === 'string' && a.category.length > 0 &&
-          typeof a.offeringId === 'string' && a.offeringId.length > 0 &&
-          typeof a.quantity === 'number' && !isNaN(a.quantity)
-        )
-        .map(({ category, offeringId, quantity }) => ({ category, offeringId, quantity }));
-      // Validation alternatives
-      const cats = alternatives.map(a => a.category);
-      if (
-        cats.length !== 3 ||
-        !cats.includes('animal') ||
-        !cats.includes('vegetal') ||
-        !cats.includes('beverage')
-      ) {
-        throw new Error('Chaque choix doit avoir 3 alternatives différentes : animal, vegetal, beverage');
-      }
-      const freqEnum = ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'];
-      let frequence = choice.frequence;
-      if (!frequence || !freqEnum.includes(frequence)) {
-        frequence = 'LIBRE';
-      }
-      const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE', 'POUR_TIERS'];
-      if (choice.participants && !partEnum.includes(choice.participants)) {
-        throw new Error(`Participants invalide pour le choix ${choice.title}`);
-      }
-      // Nettoyage strict des propriétés non attendues (pas de _id, choiceId, etc.)
-      return {
-        promptId: choice.promptId || '',
-        title: choice.title,
-        description: choice.description,
-        frequence,
-        participants: choice.participants,
-        order: choice.order,
-        offering: { alternatives }
-      };
-    });
+    console.log('Service update called with ID:', id, 'and DTO:', JSON.stringify(dto, null, 2));
+      
+
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
   }
 
@@ -137,6 +107,8 @@ export class RubriqueService {
     if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
     return { deleted: true };
   }
+
+
 
   async reorderChoices(id: string, dto: ReorderChoicesDto) {
     const rubrique = await this.rubriqueModel.findById(id).exec();
@@ -182,18 +154,18 @@ export class RubriqueService {
         // Correction: handle null and missing consultationId
         if (lastConsultation && lastConsultation.consultationId && typeof lastConsultation.consultationId === 'object') {
           const c = lastConsultation.consultationId as any;
-           buttonStatus = 'CONSULTER';
+          buttonStatus = 'CONSULTER';
           if (c.status === 'COMPLETED') {
-             buttonStatus = 'VOIR L\'ANALYSE';
+            buttonStatus = 'VOIR L\'ANALYSE';
           } else {
-           if (!c.analysisNotified) {
-             buttonStatus = 'RÉPONSE EN ATTENTE';
+            if (!c.analysisNotified) {
+              buttonStatus = 'RÉPONSE EN ATTENTE';
             } else {
               buttonStatus = 'RÉPONSE EN ATTENTE';
             }
           }
 
- 
+
         } else {
           // No consultation or consultationId is null
           buttonStatus = 'CONSULTER';

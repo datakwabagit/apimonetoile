@@ -16,11 +16,4 @@ export interface ConsultationChoice {
     alternatives: ConsultationOffering[];
   };
 }
-
-export interface Rubrique {
-  id?: string;
-  titre: string;
-  description: string;
-  categorie: RubriqueCategory;
-  consultationChoices: ConsultationChoice[];
-}
+ 

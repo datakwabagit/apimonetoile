@@ -3,6 +3,7 @@ import { RubriqueService } from './rubrique.service';
 import { RubriqueDto } from './dto/rubrique.dto';
 import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 import { RubriqueWithChoiceCountDto } from './dto/rubrique-with-count.dto';
+ 
 
 @Controller('rubriques')
 export class RubriqueController {
@@ -30,8 +31,7 @@ export class RubriqueController {
 
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: RubriqueDto) {
-    console.log('Updating rubrique with ID:', id, 'and DTO:', JSON.stringify(dto, null, 2));
-    return this.rubriqueService.update(id, dto);
+     return this.rubriqueService.update(id, dto);
   }
 
   @Put(':id/reorder-choices')
