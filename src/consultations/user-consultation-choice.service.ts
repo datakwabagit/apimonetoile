@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UserConsultationChoice, UserConsultationChoiceDocument } from './schemas/user-consultation-choice.schema';
 
 @Injectable()
@@ -13,10 +13,10 @@ export class UserConsultationChoiceService {
   async recordChoicesForConsultation(userId: string, consultationId: string, choices: Array<{ title: string; choiceId?: string; frequence: string; participants: string }>) {
     const now = new Date();
     const docs = choices.map(choice => ({
-      userId,
-      consultationId,
+      userId: new Types.ObjectId(userId),
+      consultationId: new Types.ObjectId(consultationId),
       choiceTitle: choice.title,
-      choiceId: choice.choiceId,
+      choiceId: choice.choiceId ? new Types.ObjectId(choice.choiceId) : undefined,
       frequence: choice.frequence,
       participants: choice.participants,
       createdAt: now,

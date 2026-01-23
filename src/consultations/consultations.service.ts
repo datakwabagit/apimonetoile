@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -506,8 +506,8 @@ export class ConsultationsService {
     }
 
     const analysis = new this.analysisModel({
-      userId,
-      consultationId,
+      userId: new Types.ObjectId(userId),
+      consultationId: new Types.ObjectId(consultationId),
       carteDuCiel: analysisData.carteDuCiel,
       missionDeVie: analysisData.missionDeVie,
       talentsNaturels: analysisData.talentsNaturels,
