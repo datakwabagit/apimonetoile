@@ -88,8 +88,8 @@ export class RubriqueService {
       }
       // Transformation et nettoyage des alternatives
       const { ConsultationOfferingDto } = require('./dto/rubrique.dto');
-      const alternatives: ConsultationOfferingDto[] = plainToInstance(
-        ConsultationOfferingDto,
+      const alternatives = plainToInstance(
+        typeof ConsultationOfferingDto,
         offering.alternatives
       );
       const cleanedAlternatives = alternatives
