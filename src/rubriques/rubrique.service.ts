@@ -50,11 +50,16 @@ export class RubriqueService {
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
-      // Nettoyage des propriétés non attendues
-      const {
-        promptId, title, description, participants, order, offering
-      } = choice;
-      return { promptId, title, description, frequence, participants, order, offering };
+      // Nettoyage strict des propriétés non attendues
+      return {
+        promptId: choice.promptId,
+        title: choice.title,
+        description: choice.description,
+        frequence,
+        participants: choice.participants,
+        order: choice.order,
+        offering: choice.offering
+      };
     });
     return this.rubriqueModel.create(dto);
   }
@@ -80,11 +85,16 @@ export class RubriqueService {
       if (choice.participants && !partEnum.includes(choice.participants)) {
         throw new Error(`Participants invalide pour le choix ${choice.title}`);
       }
-      // Nettoyage des propriétés non attendues
-      const {
-        promptId, title, description, participants, order, offering
-      } = choice;
-      return { promptId, title, description, frequence, participants, order, offering };
+      // Nettoyage strict des propriétés non attendues
+      return {
+        promptId: choice.promptId,
+        title: choice.title,
+        description: choice.description,
+        frequence,
+        participants: choice.participants,
+        order: choice.order,
+        offering: choice.offering
+      };
     });
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
   }
