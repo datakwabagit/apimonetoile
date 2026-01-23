@@ -41,8 +41,9 @@ export class RubriqueService {
       }
       // Validation frequence
       const freqEnum = ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'];
-      if (choice.frequence && !freqEnum.includes(choice.frequence)) {
-        throw new Error(`Fréquence invalide pour le choix ${choice.title}`);
+      let frequence = choice.frequence;
+      if (!frequence || !freqEnum.includes(frequence)) {
+        frequence = 'LIBRE';
       }
       // Validation participants
       const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE', 'POUR_TIERS'];
@@ -51,7 +52,7 @@ export class RubriqueService {
       }
       // Nettoyage des propriétés non attendues
       const {
-        promptId, title, description, frequence, participants, order, offering
+        promptId, title, description, participants, order, offering
       } = choice;
       return { promptId, title, description, frequence, participants, order, offering };
     });
@@ -71,8 +72,9 @@ export class RubriqueService {
         throw new Error('Chaque choix doit avoir 3 alternatives différentes : animal, vegetal, beverage');
       }
       const freqEnum = ['UNE_FOIS_VIE', 'ANNUELLE', 'MENSUELLE', 'QUOTIDIENNE', 'LIBRE'];
-      if (choice.frequence && !freqEnum.includes(choice.frequence)) {
-        throw new Error(`Fréquence invalide pour le choix ${choice.title}`);
+      let frequence = choice.frequence;
+      if (!frequence || !freqEnum.includes(frequence)) {
+        frequence = 'LIBRE';
       }
       const partEnum = ['SOLO', 'AVEC_TIERS', 'GROUPE', 'POUR_TIERS'];
       if (choice.participants && !partEnum.includes(choice.participants)) {
@@ -80,7 +82,7 @@ export class RubriqueService {
       }
       // Nettoyage des propriétés non attendues
       const {
-        promptId, title, description, frequence, participants, order, offering
+        promptId, title, description, participants, order, offering
       } = choice;
       return { promptId, title, description, frequence, participants, order, offering };
     });

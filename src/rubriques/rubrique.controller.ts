@@ -30,6 +30,7 @@ export class RubriqueController {
 
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: RubriqueDto) {
+    console.log('Updating rubrique with ID:', id, 'and DTO:', dto);
     return this.rubriqueService.update(id, dto);
   }
 
