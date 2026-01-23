@@ -24,6 +24,28 @@ class ConsultationChoiceDto {
   @IsString()
   promptId?: string;
 
+  @IsOptional()
+  @IsString()
+  choiceId?: string;
+
+  @IsOptional()
+  @IsString()
+  choiceTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  buttonStatus?: string;
+
+  @IsOptional()
+  hasActiveConsultation?: boolean;
+
+  @IsOptional()
+  @IsString()
+  consultationId?: string | null;
+
+  @IsOptional()
+  consultationCount?: number;
+
   @IsString()
   title: string;
 
