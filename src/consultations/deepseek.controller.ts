@@ -14,6 +14,6 @@ export class DeepseekController {
   // Exemple d'endpoint pour récupérer une analyse par cacheKey (optionnel)
   @Get('carte-du-ciel/:cacheKey')
   async getCarteDuCiel(@Param('cacheKey') cacheKey: string) {
-    return this.deepseekService.getCachedAnalysis(cacheKey);
+    return null;
   }
 }

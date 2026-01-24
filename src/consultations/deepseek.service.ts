@@ -88,58 +88,18 @@ export interface PlanetPosition {
   degre?: number;
 }
 
+// Configuration minimale sans cache
 const DEFAULT_CONFIG = {
   API_URL: 'https://api.deepseek.com/v1/chat/completions',
   MODEL: 'deepseek-chat',
   REQUEST_TIMEOUT: 300000, // 5 minutes
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000,
-  CACHE_TTL: 3600000, // 1 heure
   DEFAULT_TEMPERATURE: 0.7,
   DEFAULT_MAX_TOKENS: 4000,
 } as const;
 
-const PLANET_MAPPINGS: Readonly<Record<string, string>> = {
-  soleil: 'Soleil',
-  lune: 'Lune',
-  mercure: 'Mercure',
-  venus: 'Vénus',
-  mars: 'Mars',
-  jupiter: 'Jupiter',
-  saturne: 'Saturne',
-  uranus: 'Uranus',
-  neptune: 'Neptune',
-  pluton: 'Pluton',
-  ascendant: 'Ascendant',
-  mc: 'Milieu du Ciel',
-  'milieu du ciel': 'Milieu du Ciel',
-  'nœud nord': 'Nœud Nord',
-  'nœud sud': 'Nœud Sud',
-  chiron: 'Chiron',
-  vertex: 'Vertex',
-  lilith: 'Lilith',
-  pallas: 'Pallas',
-  vesta: 'Vesta',
-  ceres: 'Cérès',
-  'part de fortune': 'Part de Fortune',
-  junon: 'Junon',
-} as const;
-
-const SIGN_MAPPINGS: Readonly<Record<string, string>> = {
-  bélier: 'Bélier',
-  taureau: 'Taureau',
-  gemeaux: 'Gémeaux',
-  cancer: 'Cancer',
-  lion: 'Lion',
-  vierge: 'Vierge',
-  balance: 'Balance',
-  scorpion: 'Scorpion',
-  sagittaire: 'Sagittaire',
-  capricorne: 'Capricorne',
-  verseau: 'Verseau',
-  poissons: 'Poissons',
-} as const;
-
+// Regex précompilées pour la performance
 const REGEX_PATTERNS = {
   principal: /^([A-Za-zÀ-ÿ\s]+?)\s+(?:\([^)]+\)\s+)?(?:\[RÉTROGRADE\]\s+)?en\s+([A-Za-zÀ-ÿ]+)(?:\s+[–\-]\s+Maison\s+(\d+))?/i,
   avecDegre: /([A-Za-zÀ-ÿ\s]+)\s+(\d+°\d+['']\d+[""])\s+([A-Za-zÀ-ÿ]+)/i,
@@ -152,8 +112,7 @@ const REGEX_PATTERNS = {
 export class DeepseekService {
   private readonly logger = new Logger(DeepseekService.name);
   private readonly DEEPSEEK_API_KEY: string;
-  // Suppression du cache mémoire pour limiter la consommation sur Render
-  private cacheHits = 0;
+  // Pas de cache pour éviter la surcharge mémoire
   private apiCalls = 0;
 
   private readonly SYSTEM_PROMPTS = {
@@ -177,10 +136,13 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     if (!this.DEEPSEEK_API_KEY) {
       this.logger.warn('DEEPSEEK_API_KEY non configurée dans les variables d\'environnement');
     } else {
-      this.logger.log('Service DeepSeek initialisé avec succès');
+      this.logger.log('Service DeepSeek initialisé avec succès (sans cache)');
     }
   }
 
+  /**
+   * Appelle l'API DeepSeek avec retry logic
+   */
   private async callDeepSeekApi(
     messages: DeepSeekMessage[],
     temperature: number = DEFAULT_CONFIG.DEFAULT_TEMPERATURE,
@@ -194,7 +156,7 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     const requestId = uuidv4().substring(0, 8);
     const startTime = Date.now();
 
-    this.logger.log(`[${requestId}] Appel API DeepSeek - Model: ${model}, Tokens: ${maxTokens}, Temp: ${temperature}`);
+    this.logger.debug(`[${requestId}] Appel API DeepSeek - Model: ${model}, Tokens: ${maxTokens}, Temp: ${temperature}`);
 
     const requestBody: DeepSeekRequest = {
       model,
@@ -224,7 +186,7 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
         this.apiCalls++;
 
         if (response.status === 200) {
-          this.logger.log(`[${requestId}] Réponse reçue en ${duration}ms - Tokens: ${response.data.usage?.total_tokens || 0}`);
+          this.logger.debug(`[${requestId}] Réponse reçue en ${duration}ms - Tokens: ${response.data.usage?.total_tokens || 0}`);
           return response.data;
         }
 
@@ -258,6 +220,9 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     );
   }
 
+  /**
+   * Gère les erreurs d'API
+   */
   private async handleApiError(error: AxiosError, attempt: number, requestId: string): Promise<boolean> {
     if (error.code === 'ECONNABORTED') {
       this.logger.warn(`[${requestId}] Timeout API, tentative ${attempt}/${DEFAULT_CONFIG.MAX_RETRIES}`);
@@ -281,6 +246,9 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     return false;
   }
 
+  /**
+   * Crée une exception HTTP appropriée
+   */
   private createHttpException(response: any): HttpException {
     const status = response.status;
     const data = response.data;
@@ -296,6 +264,9 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     );
   }
 
+  /**
+   * Génère une analyse complète SANS CACHE
+   */
   async genererAnalyseComplete(
     userPrompt: string,
     systemPrompt?: string
@@ -303,7 +274,6 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     const startTime = Date.now();
 
     try {
-      const messages: DeepSeekMessage[] = [
       const messages: DeepSeekMessage[] = [
         {
           role: 'system' as const,
@@ -354,79 +324,27 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     }
   }
 
-  private generateCacheKey(userPrompt: string, systemPrompt?: string): string {
-    // Hash simple mais efficace pour les clés de cache
-    let hash = 0;
-    const str = userPrompt + (systemPrompt || '');
-
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash = hash & hash;
-    }
-
-    return Math.abs(hash).toString(16).substring(0, 12);
-  }
-
-  private getFromCache(key: string): AnalysisResult | null {
-    const cached = this.analysisCache.get(key);
-    if (!cached) return null;
-
-    if (Date.now() - cached.timestamp > DEFAULT_CONFIG.CACHE_TTL) {
-      this.analysisCache.delete(key);
-      return null;
-    }
-
-    return cached.result;
-  }
-
-  private setCache(key: string, result: AnalysisResult): void {
-    this.analysisCache.set(key, {
-      result,
-      timestamp: Date.now(),
-    });
-
-    // Si la taille du cache dépasse la limite, supprime les plus anciens
-    if (this.analysisCache.size > this.MAX_CACHE_SIZE) {
-      const keys = Array.from(this.analysisCache.keys());
-      const toDelete = keys.slice(0, this.analysisCache.size - this.MAX_CACHE_SIZE);
-      for (const k of toDelete) {
-        this.analysisCache.delete(k);
-      }
-    }
-  }
-
-  private cleanupCache(): void {
-    const now = Date.now();
-    const ttl = DEFAULT_CONFIG.CACHE_TTL;
-
-    for (const [key, value] of this.analysisCache.entries()) {
-      if (now - value.timestamp > ttl) {
-        this.analysisCache.delete(key);
-      }
-    }
-  }
-
+  /**
+   * Délai avec promesse
+   */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  /**
+   * Retourne les statistiques minimales du service
+   */
   getServiceStats() {
     return {
-      cacheHits: this.cacheHits,
       apiCalls: this.apiCalls,
-      hitRate: this.apiCalls > 0 ? (this.cacheHits / this.apiCalls * 100).toFixed(2) + '%' : '0%',
+      cacheSize: 0, // Indique explicitement qu'il n'y a pas de cache
+      cacheEnabled: false,
     };
   }
 
-  purgeCache(): void {
-    this.cacheHits = 0;
-    this.logger.log('Cache purgé (désactivé)');
-  }
-
-  getCachedAnalysis(cacheKey: string): AnalysisResult {
-    throw new HttpException('Cache désactivé : aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
-  }
-
+  /**
+   * Génère du contenu à partir d'un prompt simple
+   */
   async generateContentFromPrompt(
     prompt: string,
     temperature: number = DEFAULT_CONFIG.DEFAULT_TEMPERATURE,
@@ -455,48 +373,9 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     }
   }
 
-  async genererAnalyseAvecPromptPersonnalise(
-    birthData: BirthData,
-    promptPersonnalise: string,
-  ): Promise<{ analysis: string; tokensUsed: number; timestamp: Date }> {
-    this.logger.log(`Génération d'analyse avec prompt personnalisé pour ${birthData.prenoms}`);
-
-    try {
-      const messages: DeepSeekMessage[] = [
-        {
-          role: 'system',
-          content: promptPersonnalise,
-        },
-        {
-          role: 'user',
-          content: this.formatBirthDataPrompt(birthData),
-        },
-      ];
-
-      const response = await this.callDeepSeekApi(messages, 0.7, 4000);
-
-      return {
-        analysis: response.choices[0]?.message?.content || '',
-        tokensUsed: response.usage?.total_tokens || 0,
-        timestamp: new Date(),
-      };
-
-    } catch (error) {
-      this.logger.error(`Erreur génération avec prompt personnalisé: ${error.message}`);
-      throw error;
-    }
-  }
-
-  private formatBirthDataPrompt(birthData: BirthData): string {
-    return `Analyse astrologique pour:
-Nom: ${birthData.nom}
-Prénom: ${birthData.prenoms}
-Date de naissance: ${birthData.dateNaissance}
-Heure: ${birthData.heureNaissance}
-Lieu: ${birthData.villeNaissance}, ${birthData.paysNaissance}
-Genre: ${birthData.genre}`;
-  }
-
+  /**
+   * Extrait le JSON d'une réponse
+   */
   extractJsonFromResponse(content: string): any {
     try {
       const match = REGEX_PATTERNS.jsonExtractor.exec(content);
@@ -506,6 +385,9 @@ Genre: ${birthData.genre}`;
     }
   }
 
+  /**
+   * Construit un prompt pour la carte du ciel
+   */
   buildCarteDuCielPrompt(data: BirthData): string {
     return `CALCUL CARTE DU CIEL - Format strict
 
@@ -549,5 +431,67 @@ Part de Fortune en [Signe] - Maison [X]
 Junon en [Signe] - Maison [X]
 
 Réponds UNIQUEMENT avec la liste ci-dessus, sans texte supplémentaire.`;
+  }
+
+  /**
+   * Alternative simplifiée pour les analyses rapides (moins de tokens)
+   */
+  async genererAnalyseRapide(
+    userPrompt: string,
+    systemPrompt?: string,
+    maxTokens: number = 2000
+  ): Promise<string> {
+    const messages: DeepSeekMessage[] = [
+      {
+        role: 'system',
+        content: systemPrompt || this.SYSTEM_PROMPTS.astrologer,
+      },
+      {
+        role: 'user',
+        content: userPrompt,
+      },
+    ];
+
+    try {
+      const response = await this.callDeepSeekApi(messages, 0.7, maxTokens);
+      return response.choices[0]?.message?.content || '';
+    } catch (error) {
+      throw new HttpException(
+        "Erreur lors de la génération de l'analyse rapide",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Vérifie la santé de l'API avec une requête légère
+   */
+  async checkApiHealth(): Promise<{ healthy: boolean; latency?: number }> {
+    const startTime = Date.now();
+    
+    try {
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system',
+          content: 'Réponds simplement "OK"',
+        },
+        {
+          role: 'user',
+          content: 'Test de santé',
+        },
+      ];
+
+      await this.callDeepSeekApi(messages, 0.1, 10);
+      const latency = Date.now() - startTime;
+      
+      return {
+        healthy: true,
+        latency,
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+      };
+    }
   }
 }
