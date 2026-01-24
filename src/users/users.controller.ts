@@ -48,7 +48,7 @@ export class UsersController {
       villeNaissance: user.villeNaissance || '',
       email: user.email,
     };
-    return this.deepseekService.genererAnalyseComplete(birthData);
+    return this.deepseekService.genererAnalyseComplete('birthData', '');
   }
 
   @Get('count')

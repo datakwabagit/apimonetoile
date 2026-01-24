@@ -8,7 +8,7 @@ export class DeepseekController {
   // Génère la carte du ciel et l'analyse complète pour un utilisateur
   @Post('carte-du-ciel')
   async generateCarteDuCiel(@Body() birthData: BirthData) {
-    return this.deepseekService.genererAnalyseComplete(birthData);
+    return this.deepseekService.genererAnalyseComplete('birthData', '');
   }
 
   // Exemple d'endpoint pour récupérer une analyse par cacheKey (optionnel)

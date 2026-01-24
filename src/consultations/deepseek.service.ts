@@ -1,21 +1,17 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AxiosError, AxiosRequestConfig } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  AnalysisProgressService,
-  AnalysisProgressUpdate,
-} from '../analysis/analysis-progress.service';
 
 export interface BirthData {
-  zodiacSign?: any;
-  horoscopeType?: any;
-  dateOfBirth?: any;
-  partnerSign?: any;
-  element?: any;
-  symbol?: any;
+  zodiacSign?: string;
+  horoscopeType?: string;
+  dateOfBirth?: string;
+  partnerSign?: string;
+  element?: string;
+  symbol?: string;
   nom: string;
   prenoms: string;
   genre: string;
@@ -60,7 +56,6 @@ export interface DeepSeekResponse {
 }
 
 export interface AnalysisResult {
-  sessionId: string;
   timestamp: Date;
   carteDuCiel: {
     sujet: {
@@ -93,42 +88,441 @@ export interface PlanetPosition {
   degre?: number;
 }
 
+const DEFAULT_CONFIG = {
+  API_URL: 'https://api.deepseek.com/v1/chat/completions',
+  MODEL: 'deepseek-chat',
+  REQUEST_TIMEOUT: 300000, // 5 minutes
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 1000,
+  CACHE_TTL: 3600000, // 1 heure
+  DEFAULT_TEMPERATURE: 0.7,
+  DEFAULT_MAX_TOKENS: 4000,
+} as const;
+
+const PLANET_MAPPINGS: Readonly<Record<string, string>> = {
+  soleil: 'Soleil',
+  lune: 'Lune',
+  mercure: 'Mercure',
+  venus: 'Vénus',
+  mars: 'Mars',
+  jupiter: 'Jupiter',
+  saturne: 'Saturne',
+  uranus: 'Uranus',
+  neptune: 'Neptune',
+  pluton: 'Pluton',
+  ascendant: 'Ascendant',
+  mc: 'Milieu du Ciel',
+  'milieu du ciel': 'Milieu du Ciel',
+  'nœud nord': 'Nœud Nord',
+  'nœud sud': 'Nœud Sud',
+  chiron: 'Chiron',
+  vertex: 'Vertex',
+  lilith: 'Lilith',
+  pallas: 'Pallas',
+  vesta: 'Vesta',
+  ceres: 'Cérès',
+  'part de fortune': 'Part de Fortune',
+  junon: 'Junon',
+} as const;
+
+const SIGN_MAPPINGS: Readonly<Record<string, string>> = {
+  bélier: 'Bélier',
+  taureau: 'Taureau',
+  gemeaux: 'Gémeaux',
+  cancer: 'Cancer',
+  lion: 'Lion',
+  vierge: 'Vierge',
+  balance: 'Balance',
+  scorpion: 'Scorpion',
+  sagittaire: 'Sagittaire',
+  capricorne: 'Capricorne',
+  verseau: 'Verseau',
+  poissons: 'Poissons',
+} as const;
+
+const REGEX_PATTERNS = {
+  principal: /^([A-Za-zÀ-ÿ\s]+?)\s+(?:\([^)]+\)\s+)?(?:\[RÉTROGRADE\]\s+)?en\s+([A-Za-zÀ-ÿ]+)(?:\s+[–\-]\s+Maison\s+(\d+))?/i,
+  avecDegre: /([A-Za-zÀ-ÿ\s]+)\s+(\d+°\d+['']\d+[""])\s+([A-Za-zÀ-ÿ]+)/i,
+  degreeParser: /(\d+)°(\d+)[''](\d+)[""]/,
+  retrogradeCheck: /RÉTROGRADE|rétrograde/i,
+  jsonExtractor: /\{[\s\S]*\}/,
+} as const;
+
 @Injectable()
 export class DeepseekService {
   private readonly logger = new Logger(DeepseekService.name);
   private readonly DEEPSEEK_API_KEY: string;
-  private readonly DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-  private readonly DEEPSEEK_MODEL = 'deepseek-chat';
-  private readonly REQUEST_TIMEOUT = 300000; // 5 minutes
-  private readonly MAX_RETRIES = 3;
-  private readonly RETRY_DELAY = 1000;
-
-  // Cache pour les analyses fréquentes (optionnel)
   private readonly analysisCache = new Map<string, { result: AnalysisResult; timestamp: number }>();
-  private readonly CACHE_TTL = 3600000; // 1 heure
-  private readonly DEFAULT_PROGRESS = {
-    start: 0,
-    afterCarte: 30,
-    afterMission: 60,
-    afterPositions: 80,
-    done: 100,
-  };
+  private cacheHits = 0;
+  private apiCalls = 0;
 
-  // Configuration des prompts
   private readonly SYSTEM_PROMPTS = {
     astrologer: `Tu es un astrologue professionnel expert avec plus de 20 ans d'expérience.
 Tes analyses sont précises, structurées et basées sur l'astrologie traditionnelle et moderne.
 Tu fournis des insights pratiques, empathiques et personnalisés.
 Format de réponse : clair, organisé en sections, avec des bullet points pour les éléments clés.`,
+
     carteDuCiel: `Tu es un calculateur de carte du ciel extrêmement précis.
 IMPORTANT: Tu DOIS obligatoirement te baser sur les Éphémérides de la NASA (Swiss Ephemeris / JPL Horizons) pour tous les calculs astrologiques.
 Tu réponds UNIQUEMENT avec les données astronomiques calculées à partir des éphémérides NASA, sans commentaire ni approximation.
 Format strict requis. Les positions planétaires doivent être calculées avec les données officielles de la NASA pour la date, l'heure et le lieu de naissance spécifiés.`,
-  };
+  } as const;
 
-  // Templates de prompts
-  private readonly PROMPT_TEMPLATES = {
-    carteDuCiel: (data: BirthData) => `CALCUL CARTE DU CIEL - Format strict
+  constructor(
+    private configService: ConfigService,
+    private readonly httpService: HttpService,
+  ) {
+    this.DEEPSEEK_API_KEY = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
+
+    if (!this.DEEPSEEK_API_KEY) {
+      this.logger.warn('DEEPSEEK_API_KEY non configurée dans les variables d\'environnement');
+    } else {
+      this.logger.log('Service DeepSeek initialisé avec succès');
+    }
+  }
+
+  private async callDeepSeekApi(
+    messages: DeepSeekMessage[],
+    temperature: number = DEFAULT_CONFIG.DEFAULT_TEMPERATURE,
+    maxTokens: number = DEFAULT_CONFIG.DEFAULT_MAX_TOKENS,
+    model: string = DEFAULT_CONFIG.MODEL,
+  ): Promise<DeepSeekResponse> {
+    if (!this.DEEPSEEK_API_KEY) {
+      throw new HttpException('Service DeepSeek non configuré', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    const requestId = uuidv4().substring(0, 8);
+    const startTime = Date.now();
+
+    this.logger.log(`[${requestId}] Appel API DeepSeek - Model: ${model}, Tokens: ${maxTokens}, Temp: ${temperature}`);
+
+    const requestBody: DeepSeekRequest = {
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream: false,
+    };
+
+    const config: AxiosRequestConfig = {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.DEEPSEEK_API_KEY}`,
+        'Accept': 'application/json',
+      },
+      timeout: DEFAULT_CONFIG.REQUEST_TIMEOUT,
+      validateStatus: (status) => status < 500,
+    };
+
+    for (let attempt = 1; attempt <= DEFAULT_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        const response = await firstValueFrom(
+          this.httpService.post<DeepSeekResponse>(DEFAULT_CONFIG.API_URL, requestBody, config),
+        );
+
+        const duration = Date.now() - startTime;
+        this.apiCalls++;
+
+        if (response.status === 200) {
+          this.logger.log(`[${requestId}] Réponse reçue en ${duration}ms - Tokens: ${response.data.usage?.total_tokens || 0}`);
+          return response.data;
+        }
+
+        // Gestion des erreurs HTTP
+        if (response.status === 429) {
+          this.logger.warn(`[${requestId}] Rate limit atteint, tentative ${attempt}/${DEFAULT_CONFIG.MAX_RETRIES}`);
+          await this.delay(DEFAULT_CONFIG.RETRY_DELAY * attempt * 2);
+          continue;
+        }
+
+        throw this.createHttpException(response);
+      } catch (error) {
+        if (error instanceof HttpException) throw error;
+
+        const axiosError = error as AxiosError;
+        const shouldRetry = await this.handleApiError(axiosError, attempt, requestId);
+
+        if (!shouldRetry) {
+          this.logger.error(`[${requestId}] Toutes les tentatives ont échoué`);
+          throw new HttpException(
+            'Échec de la communication avec DeepSeek API',
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
+      }
+    }
+
+    throw new HttpException(
+      'Échec de la communication avec DeepSeek API après plusieurs tentatives',
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
+
+  private async handleApiError(error: AxiosError, attempt: number, requestId: string): Promise<boolean> {
+    if (error.code === 'ECONNABORTED') {
+      this.logger.warn(`[${requestId}] Timeout API, tentative ${attempt}/${DEFAULT_CONFIG.MAX_RETRIES}`);
+    } else if (error.response?.status === 429) {
+      this.logger.warn(`[${requestId}] Rate limit, tentative ${attempt}/${DEFAULT_CONFIG.MAX_RETRIES}`);
+      await this.delay(DEFAULT_CONFIG.RETRY_DELAY * attempt * 3);
+      return attempt < DEFAULT_CONFIG.MAX_RETRIES;
+    } else {
+      this.logger.error(`[${requestId}] Erreur API`, {
+        attempt,
+        error: error.message,
+        status: error.response?.status,
+      });
+    }
+
+    if (attempt < DEFAULT_CONFIG.MAX_RETRIES) {
+      await this.delay(DEFAULT_CONFIG.RETRY_DELAY * attempt);
+      return true;
+    }
+
+    return false;
+  }
+
+  private createHttpException(response: any): HttpException {
+    const status = response.status;
+    const data = response.data;
+
+    const statusMap: Record<number, HttpStatus> = {
+      401: HttpStatus.UNAUTHORIZED,
+      429: HttpStatus.TOO_MANY_REQUESTS,
+    };
+
+    return new HttpException(
+      `Erreur DeepSeek API: ${status} - ${JSON.stringify(data)}`,
+      statusMap[status] || HttpStatus.BAD_GATEWAY,
+    );
+  }
+
+  async genererAnalyseComplete(
+    userPrompt: string,
+    systemPrompt?: string
+  ): Promise<AnalysisResult> {
+    const startTime = Date.now();
+
+    try {
+      // Vérifier le cache si pertinent (avec hash du prompt)
+      const cacheKey = this.generateCacheKey(userPrompt, systemPrompt);
+      const cachedResult = this.getFromCache(cacheKey);
+
+      if (cachedResult) {
+        this.cacheHits++;
+        return cachedResult;
+      }
+
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system' as const,
+          content: systemPrompt || this.SYSTEM_PROMPTS.astrologer
+        },
+        {
+          role: 'user' as const,
+          content: userPrompt
+        },
+      ];
+
+      const response = await this.callDeepSeekApi(messages, 0.8, 4000);
+      const aiContent = response.choices[0]?.message?.content || '';
+
+      const result: AnalysisResult = {
+        timestamp: new Date(),
+        carteDuCiel: {
+          sujet: {
+            nom: '',
+            prenoms: '',
+            dateNaissance: '',
+            lieuNaissance: '',
+            heureNaissance: '',
+          },
+          positions: [],
+          aspectsTexte: '',
+        },
+        missionDeVie: {
+          titre: 'Analyse générée',
+          contenu: aiContent,
+        },
+        metadata: {
+          processingTime: Date.now() - startTime,
+          tokensUsed: response.usage?.total_tokens || 0,
+          model: DEFAULT_CONFIG.MODEL,
+        },
+      };
+
+      // Mettre en cache si le résultat est valide
+      if (aiContent.trim().length > 0) {
+        this.setCache(cacheKey, result);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Erreur lors de la génération de l'analyse",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private generateCacheKey(userPrompt: string, systemPrompt?: string): string {
+    // Hash simple mais efficace pour les clés de cache
+    let hash = 0;
+    const str = userPrompt + (systemPrompt || '');
+
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+
+    return Math.abs(hash).toString(16).substring(0, 12);
+  }
+
+  private getFromCache(key: string): AnalysisResult | null {
+    const cached = this.analysisCache.get(key);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > DEFAULT_CONFIG.CACHE_TTL) {
+      this.analysisCache.delete(key);
+      return null;
+    }
+
+    return cached.result;
+  }
+
+  private setCache(key: string, result: AnalysisResult): void {
+    this.analysisCache.set(key, {
+      result,
+      timestamp: Date.now(),
+    });
+
+    // Nettoyage périodique du cache
+    if (this.analysisCache.size > 1000) {
+      this.cleanupCache();
+    }
+  }
+
+  private cleanupCache(): void {
+    const now = Date.now();
+    const ttl = DEFAULT_CONFIG.CACHE_TTL;
+
+    for (const [key, value] of this.analysisCache.entries()) {
+      if (now - value.timestamp > ttl) {
+        this.analysisCache.delete(key);
+      }
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  getServiceStats() {
+    return {
+      cacheSize: this.analysisCache.size,
+      cacheHits: this.cacheHits,
+      apiCalls: this.apiCalls,
+      hitRate: this.apiCalls > 0 ? (this.cacheHits / this.apiCalls * 100).toFixed(2) + '%' : '0%',
+    };
+  }
+
+  purgeCache(): void {
+    this.analysisCache.clear();
+    this.cacheHits = 0;
+    this.logger.log('Cache purgé');
+  }
+
+  getCachedAnalysis(cacheKey: string): AnalysisResult {
+    const cached = this.analysisCache.get(cacheKey);
+    if (!cached) {
+      throw new HttpException('Aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
+    }
+    return cached.result;
+  }
+
+  async generateContentFromPrompt(
+    prompt: string,
+    temperature: number = DEFAULT_CONFIG.DEFAULT_TEMPERATURE,
+    maxTokens: number = DEFAULT_CONFIG.DEFAULT_MAX_TOKENS,
+    systemPrompt?: string
+  ): Promise<string> {
+    const messages: DeepSeekMessage[] = [
+      {
+        role: 'system',
+        content: systemPrompt || 'Tu es un expert en astrologie, analyses psychologiques et développement personnel. Fournir des réponses détaillées, bienveillantes et éducatives.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ];
+
+    try {
+      const response = await this.callDeepSeekApi(messages, temperature, maxTokens);
+      return response.choices[0]?.message?.content || '';
+    } catch (error) {
+      throw new HttpException(
+        `Échec de la génération de contenu: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async genererAnalyseAvecPromptPersonnalise(
+    birthData: BirthData,
+    promptPersonnalise: string,
+  ): Promise<{ analysis: string; tokensUsed: number; timestamp: Date }> {
+    this.logger.log(`Génération d'analyse avec prompt personnalisé pour ${birthData.prenoms}`);
+
+    try {
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system',
+          content: promptPersonnalise,
+        },
+        {
+          role: 'user',
+          content: this.formatBirthDataPrompt(birthData),
+        },
+      ];
+
+      const response = await this.callDeepSeekApi(messages, 0.7, 4000);
+
+      return {
+        analysis: response.choices[0]?.message?.content || '',
+        tokensUsed: response.usage?.total_tokens || 0,
+        timestamp: new Date(),
+      };
+
+    } catch (error) {
+      this.logger.error(`Erreur génération avec prompt personnalisé: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private formatBirthDataPrompt(birthData: BirthData): string {
+    return `Analyse astrologique pour:
+Nom: ${birthData.nom}
+Prénom: ${birthData.prenoms}
+Date de naissance: ${birthData.dateNaissance}
+Heure: ${birthData.heureNaissance}
+Lieu: ${birthData.villeNaissance}, ${birthData.paysNaissance}
+Genre: ${birthData.genre}`;
+  }
+
+  extractJsonFromResponse(content: string): any {
+    try {
+      const match = REGEX_PATTERNS.jsonExtractor.exec(content);
+      return match ? JSON.parse(match[0]) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  buildCarteDuCielPrompt(data: BirthData): string {
+    return `CALCUL CARTE DU CIEL - Format strict
 
 DONNÉES DE NAISSANCE:
 NOM: ${data.nom}
@@ -169,697 +563,6 @@ Cérès en [Signe] - Maison [X]
 Part de Fortune en [Signe] - Maison [X]
 Junon en [Signe] - Maison [X]
 
-Réponds UNIQUEMENT avec la liste ci-dessus, sans texte supplémentaire.`,
-
-    missionDeVie: (
-      data: BirthData,
-      carteDuCiel: string,
-    ) => `ANALYSE MISSION DE VIE - ${data.prenoms} ${data.nom}
-
-CARTE DU CIEL:
-${carteDuCiel}
-
-INSTRUCTIONS:
-Analyse la mission de vie en te basant sur:
-1. POSITION DES NŒUDS LUNAIRES (Nord/Sud) - Chemin karmique principal
-2. MILIEU DU CIEL (MC) - Vocation publique et destinée professionnelle
-3. SOLEIL - Expression de l'âme et volonté
-4. JUPITER - Expansion et croissance spirituelle
-5. SATURNE - Leçons et structure karmique
-6. CHIRON - Blessure à guérir et service
-
-STRUCTURE DE RÉPONSE:
-## 🎯 MISSION DE VIE PRINCIPALE
-[2-3 paragraphes sur la mission centrale]
-
-## 🔑 CLÉS KARMIQUES (Nœuds Lunaires)
-• Nœud Nord en [Signe/Maison] : [Développement]
-• Nœud Sud en [Signe/Maison] : [Dépassement]
-
-## 💼 VOCATION & IMPACT (MC, Maison 10)
-[Analyse vocationnelle]
-
-## 🌟 EXPRESSION DE L'ÂME (Soleil)
-[Analyse solaire]
-
-## 📈 CROISSANCE & DÉFIS (Jupiter/Saturne)
-[Analyse développement]
-
-## 🩹 BLESSURE SACRÉE (Chiron)
-[Analyse chironienne]
-
-## 🛠️ STRATÉGIES PRATIQUES
-[3-5 conseils concrets]
-
-Ton : Professionnel, empathique, encourageant.`,
-  };
-
-  constructor(
-    private configService: ConfigService,
-    private readonly httpService: HttpService,
-    private readonly progressService: AnalysisProgressService,
-  ) {
-    this.DEEPSEEK_API_KEY = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
-
-    if (!this.DEEPSEEK_API_KEY) {
-      this.logger.warn("DEEPSEEK_API_KEY non configurée dans les variables d'environnement");
-    } else {
-      this.logger.log('Service DeepSeek initialisé avec succès');
-    }
-  }
-
-  /**
-   * Appelle l'API DeepSeek avec retry logic et timeout
-   */
-  private async callDeepSeekApi(
-    messages: DeepSeekMessage[],
-    temperature = 0.7,
-    maxTokens = 4000,
-    model = this.DEEPSEEK_MODEL,
-  ): Promise<DeepSeekResponse> {
-    if (!this.DEEPSEEK_API_KEY) {
-      throw new HttpException('Service DeepSeek non configuré', HttpStatus.SERVICE_UNAVAILABLE);
-    }
-
-    const requestId = uuidv4().substring(0, 8);
-    const startTime = Date.now();
-
-    this.logger.log(
-      `[${requestId}] 🚀 Appel API DeepSeek - Model: ${model}, MaxTokens: ${maxTokens}, Temp: ${temperature}`,
-    );
-
-    this.logger.log(
-      `[${requestId}] 🚀 Appel API DeepSeek démarré - Model: ${model}, Tokens max: ${maxTokens}, Temp: ${temperature}`,
-    );
-    this.logger.debug(`[${requestId}] Messages: ${messages.length} messages`);
-
-    const requestBody: DeepSeekRequest = {
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      stream: false,
-    };
-
-    const config: AxiosRequestConfig = {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.DEEPSEEK_API_KEY}`,
-        Accept: 'application/json',
-      },
-      timeout: this.REQUEST_TIMEOUT,
-      validateStatus: (status) => status < 500,
-    };
-
-    let lastError: Error;
-
-    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
-      try {
-        const response = await firstValueFrom(
-          this.httpService.post<DeepSeekResponse>(this.DEEPSEEK_API_URL, requestBody, config),
-        );
-
-        const duration = Date.now() - startTime;
-
-        if (response.status === 200) {
-          this.logger.log(
-            `[${requestId}] ✅ Réponse reçue en ${duration}ms (${(duration / 1000).toFixed(1)}s) - Tokens: ${response.data.usage?.total_tokens || 0}`,
-          );
-
-          return response.data;
-        }
-
-        // Gestion des erreurs HTTP
-        if (response.status === 429) {
-          this.logger.warn(
-            `[${requestId}] Rate limit atteint, tentative ${attempt}/${this.MAX_RETRIES}`,
-          );
-          await this.delay(this.RETRY_DELAY * attempt * 2);
-          continue;
-        }
-
-        throw new HttpException(
-          `Erreur DeepSeek API: ${response.status} - ${JSON.stringify(response.data)}`,
-          response.status === 401
-            ? HttpStatus.UNAUTHORIZED
-            : response.status === 429
-              ? HttpStatus.TOO_MANY_REQUESTS
-              : HttpStatus.BAD_GATEWAY,
-        );
-      } catch (error) {
-        lastError = error;
-
-        if (error instanceof HttpException) {
-          throw error;
-        }
-
-        const axiosError = error as AxiosError;
-
-        if (axiosError.code === 'ECONNABORTED') {
-          this.logger.warn(`[${requestId}] Timeout API, tentative ${attempt}/${this.MAX_RETRIES}`);
-        } else if (axiosError.response?.status === 429) {
-          this.logger.warn(`[${requestId}] Rate limit, tentative ${attempt}/${this.MAX_RETRIES}`);
-          await this.delay(this.RETRY_DELAY * attempt * 3);
-          continue;
-        } else {
-          this.logger.error(`[${requestId}] Erreur API`, {
-            attempt,
-            error: axiosError.message,
-            status: axiosError.response?.status,
-          });
-        }
-
-        if (attempt < this.MAX_RETRIES) {
-          await this.delay(this.RETRY_DELAY * attempt);
-        }
-      }
-    }
-
-    this.logger.error(`[${requestId}] Toutes les tentatives ont échoué`);
-    throw (
-      lastError ||
-      new HttpException(
-        'Échec de la communication avec DeepSeek API',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      )
-    );
-  }
-
-  /**
-   * Génère une analyse complète avec cache et optimisation
-   */
-  async genererAnalyseComplete(
-    birthData: BirthData,
-    consultationId?: string,
-    systemPrompt?: string,
-  ): Promise<AnalysisResult> {
-    const sessionId = uuidv4();
-    const cacheKey = this.generateCacheKey(birthData, systemPrompt); // Inclure systemPrompt dans la clé de cache
-    const startTime = Date.now();
-
-    this.logger.log(`[${sessionId}] Début analyse pour ${birthData.prenoms} ${birthData.nom}`);
-    
-    // Ajouter un log pour le systemPrompt utilisé
-    if (systemPrompt) {
-      this.logger.log(`[${sessionId}] Utilisation d'un systemPrompt personnalisé (longueur: ${systemPrompt.length} caractères)`);
-    } else {
-      this.logger.log(`[${sessionId}] Utilisation du systemPrompt par défaut`);
-    }
-    
-    this.publishStage(consultationId, 'start', 0, this.DEFAULT_PROGRESS.start, 'Analyse démarrée');
-
-    // Vérifier le cache (avec systemPrompt inclus dans la clé)
-    const cached = this.analysisCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      this.logger.log(`[${sessionId}] Analyse récupérée depuis le cache`);
-      this.publishStage(
-        consultationId,
-        'cached',
-        0,
-        this.DEFAULT_PROGRESS.done,
-        'Analyse récupérée depuis le cache',
-      );
-      return {
-        ...cached.result,
-        sessionId,
-        timestamp: new Date(),
-        metadata: {
-          ...cached.result.metadata,
-          processingTime: Date.now() - startTime,
-          cached: true,
-        },
-      };
-    }
-
-    try {
-      // 1. Générer la carte du ciel
-      this.logger.log(`[${sessionId}] 📊 ÉTAPE 1/4: Génération carte du ciel...`);
-      const step1Start = Date.now();
-
-      const carteDuCielPrompt = this.PROMPT_TEMPLATES.carteDuCiel(birthData);
-      this.publishStage(
-        consultationId,
-        'carte_du_ciel',
-        1,
-        10,
-        'Génération de la carte du ciel...',
-      );
-      
-      // Déterminer le system prompt à utiliser pour la carte du ciel
-      const carteSystemPrompt = systemPrompt || this.SYSTEM_PROMPTS.carteDuCiel;
-      
-      const carteDuCielResponse = await this.callDeepSeekApi(
-        [
-          { role: 'system', content: carteSystemPrompt },
-          { role: 'user', content: carteDuCielPrompt },
-        ],
-        0.3,
-        1000,
-      ); // Température plus basse pour la précision
-
-      const carteDuCielTexte = carteDuCielResponse.choices[0].message.content;
-      const step1Duration = Date.now() - step1Start;
-      this.logger.log(
-        `[${sessionId}] ✅ ÉTAPE 1 terminée en ${step1Duration}ms - Tokens: ${carteDuCielResponse.usage?.total_tokens || 0}`,
-      );
-
-      // 2. Générer la mission de vie
-      this.logger.log(`[${sessionId}] 🎯 ÉTAPE 2/4: Génération mission de vie...`);
-      const step2Start = Date.now();
-
-      const missionDeViePrompt = this.PROMPT_TEMPLATES.missionDeVie(birthData, carteDuCielTexte);
-      this.publishStage(
-        consultationId,
-        'mission_de_vie',
-        2,
-        this.DEFAULT_PROGRESS.afterCarte,
-        'Génération de la mission de vie...',
-      );
-
-      // Déterminer le system prompt à utiliser pour la mission de vie
-      // Si un systemPrompt personnalisé est fourni, l'utiliser
-      // Sinon utiliser celui par défaut pour l'astrologue
-      const missionSystemPrompt = systemPrompt || this.SYSTEM_PROMPTS.astrologer;
-
-      const missionDeVieResponse = await this.callDeepSeekApi(
-        [
-          { role: 'system', content: missionSystemPrompt },
-          { role: 'user', content: missionDeViePrompt },
-        ],
-        0.8,
-        3000,
-      ); // Température plus élevée pour la créativité
-
-      const missionDeVieTexte = missionDeVieResponse.choices[0].message.content;
-      const step2Duration = Date.now() - step2Start;
-      this.logger.log(
-        `[${sessionId}] ✅ ÉTAPE 2 terminée en ${step2Duration}ms - Tokens: ${missionDeVieResponse.usage?.total_tokens || 0}`,
-      );
-
-      // 3. Parser les positions
-      this.logger.log(`[${sessionId}] 🔍 ÉTAPE 3/4: Parsing des positions...`);
-      const step3Start = Date.now();
-      const positions = this.parsePositionsAmeliore(carteDuCielTexte);
-      this.publishStage(
-        consultationId,
-        'positions',
-        3,
-        this.DEFAULT_PROGRESS.afterMission,
-        'Positions planétaires interprétées',
-      );
-      const step3Duration = Date.now() - step3Start;
-      this.logger.log(
-        `[${sessionId}] ✅ ÉTAPE 3 terminée en ${step3Duration}ms - ${positions.length} positions`,
-      );
-
-      // 4. Construire le résultat
-      this.logger.log(`[${sessionId}] 🏗️ ÉTAPE 4/4: Construction du résultat final...`);
-      const result: AnalysisResult = {
-        sessionId,
-        timestamp: new Date(),
-        carteDuCiel: {
-          sujet: {
-            nom: birthData.nom,
-            prenoms: birthData.prenoms,
-            dateNaissance: birthData.dateNaissance,
-            lieuNaissance: `${birthData.villeNaissance}, ${birthData.paysNaissance}`,
-            heureNaissance: birthData.heureNaissance,
-          },
-          positions,
-          aspectsTexte: carteDuCielTexte,
-        },
-        missionDeVie: {
-          titre: 'Mission de Vie',
-          contenu: missionDeVieTexte,
-        },
-        metadata: {
-          processingTime: Date.now() - startTime,
-          tokensUsed:
-            (carteDuCielResponse.usage?.total_tokens || 0) +
-            (missionDeVieResponse.usage?.total_tokens || 0),
-          model: this.DEEPSEEK_MODEL,
-        },
-      };
-
-      this.publishStage(
-        consultationId,
-        'completed',
-        4,
-        this.DEFAULT_PROGRESS.done,
-        'Analyse terminée',
-      );
-
-      // Mettre en cache
-      this.analysisCache.set(cacheKey, {
-        result,
-        timestamp: Date.now(),
-      });
-
-      const totalDuration = Date.now() - startTime;
-      this.logger.log(
-        `[${sessionId}] 🎉 ANALYSE COMPLÈTE TERMINÉE en ${totalDuration}ms (${(totalDuration / 1000).toFixed(1)}s)`,
-      );
-      this.logger.log(`[${sessionId}] 📊 Tokens totaux: ${result.metadata.tokensUsed}`);
-      this.logger.log(
-        `[${sessionId}] ⏱️ Répartition: Étape1=${step1Duration}ms, Étape2=${step2Duration}ms, Étape3=${step3Duration}ms`,
-      );
-      
-      if (systemPrompt) {
-        this.logger.log(`[${sessionId}] ℹ️ Analyse générée avec un systemPrompt personnalisé`);
-      }
-
-      // Nettoyer le cache si nécessaire
-      if (this.analysisCache.size > 100) {
-        this.cleanupCache();
-      }
-
-      this.logger.log(`[${sessionId}] Analyse complète générée avec succès`, {
-        duration: result.metadata.processingTime,
-        tokens: result.metadata.tokensUsed,
-        positions: positions.length,
-        customPrompt: !!systemPrompt,
-      });
-
-      return result;
-    } catch (error) {
-      this.logger.error(`[${sessionId}] Erreur génération analyse`, {
-        error: error.message,
-        duration: Date.now() - startTime,
-      });
-
-      if (consultationId) {
-        this.progressService.publishProgress({
-          consultationId,
-          stage: 'error',
-          stageIndex: -1,
-          progress: 0,
-          message: `Erreur: ${error.message}`,
-          timestamp: new Date().toISOString(),
-          completed: false,
-        });
-      }
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        "Erreur lors de la génération de l'analyse",
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  private publishStage(
-    consultationId: string | undefined,
-    stage: string,
-    stageIndex: number,
-    progress: number,
-    message: string,
-  ): void {
-    if (!consultationId) {
-      return;
-    }
-
-    const update: AnalysisProgressUpdate = {
-      consultationId,
-      stage,
-      stageIndex,
-      progress,
-      message,
-      timestamp: new Date().toISOString(),
-      completed: progress >= 100,
-    };
-
-    this.progressService.publishProgress(update);
-  }
-
-  /**
-   * Parser amélioré pour les positions planétaires
-   */
-  private parsePositionsAmeliore(texte: string): PlanetPosition[] {
-    const positions: PlanetPosition[] = [];
-    const lignes = texte.split('\n').filter((l) => l.trim());
-
-    // Expressions régulières optimisées
-    const patterns = {
-      principal:
-        /^([A-Za-zÀ-ÿ\s]+?)\s+(?:\([^)]+\)\s+)?(?:\[RÉTROGRADE\]\s+)?en\s+([A-Za-zÀ-ÿ]+)(?:\s+[–\-]\s+Maison\s+(\d+))?/i,
-      avecDegre: /([A-Za-zÀ-ÿ\s]+)\s+(\d+°\d+['’]\d+["”])\s+([A-Za-zÀ-ÿ]+)/i,
-    };
-
-    for (const ligne of lignes) {
-      // Essayer le pattern principal
-      const matchPrincipal = ligne.match(patterns.principal);
-      if (matchPrincipal) {
-        const planete = matchPrincipal[1].trim();
-        const signe = matchPrincipal[2].trim();
-        const maison = matchPrincipal[3] ? parseInt(matchPrincipal[3]) : 1;
-        const retrograde = /RÉTROGRADE/i.test(ligne) || /rétrograde/i.test(ligne);
-
-        positions.push({
-          planete: this.normalizePlanetName(planete),
-          signe: this.normalizeSignName(signe),
-          maison,
-          retrograde,
-        });
-        continue;
-      }
-
-      // Essayer le pattern avec degré
-      const matchDegre = ligne.match(patterns.avecDegre);
-      if (matchDegre) {
-        positions.push({
-          planete: this.normalizePlanetName(matchDegre[1]),
-          signe: this.normalizeSignName(matchDegre[3]),
-          maison: 1, // Par défaut
-          retrograde: false,
-          degre: this.parseDegree(matchDegre[2]),
-        });
-      }
-    }
-
-    return positions;
-  }
-
-  /**
-   * Normalise les noms des planètes
-   */
-  private normalizePlanetName(name: string): string {
-    const mapping: Record<string, string> = {
-      soleil: 'Soleil',
-      lune: 'Lune',
-      mercure: 'Mercure',
-      venus: 'Vénus',
-      mars: 'Mars',
-      jupiter: 'Jupiter',
-      saturne: 'Saturne',
-      uranus: 'Uranus',
-      neptune: 'Neptune',
-      pluton: 'Pluton',
-      ascendant: 'Ascendant',
-      mc: 'Milieu du Ciel',
-      'milieu du ciel': 'Milieu du Ciel',
-      'nœud nord': 'Nœud Nord',
-      'nœud sud': 'Nœud Sud',
-      chiron: 'Chiron',
-      vertex: 'Vertex',
-      lilith: 'Lilith',
-      pallas: 'Pallas',
-      vesta: 'Vesta',
-      ceres: 'Cérès',
-      'part de fortune': 'Part de Fortune',
-      junon: 'Junon',
-    };
-
-    const normalized = name.toLowerCase().trim();
-    return mapping[normalized] || name;
-  }
-
-  /**
-   * Normalise les noms des signes
-   */
-  private normalizeSignName(signe: string): string {
-    const signes: Record<string, string> = {
-      bélier: 'Bélier',
-      taureau: 'Taureau',
-      gemeaux: 'Gémeaux',
-      cancer: 'Cancer',
-      lion: 'Lion',
-      vierge: 'Vierge',
-      balance: 'Balance',
-      scorpion: 'Scorpion',
-      sagittaire: 'Sagittaire',
-      capricorne: 'Capricorne',
-      verseau: 'Verseau',
-      poissons: 'Poissons',
-    };
-
-    const normalized = signe.toLowerCase().trim();
-    return signes[normalized] || signe;
-  }
-
-  /**
-   * Parse les degrés
-   */
-  private parseDegree(degreeStr: string): number {
-    const match = degreeStr.match(/(\d+)°(\d+)['’](\d+)["”]/);
-    if (match) {
-      const deg = parseInt(match[1]);
-      const min = parseInt(match[2]);
-      const sec = parseInt(match[3]);
-      return deg + min / 60 + sec / 3600;
-    }
-    return 0;
-  }
-
-  /**
-   * Génère une clé de cache unique (inclut maintenant le systemPrompt)
-   */
-  private generateCacheKey(birthData: BirthData, systemPrompt?: string): string {
-    // Créer une empreinte du systemPrompt si fourni
-    const promptHash = systemPrompt 
-      ? this.hashString(systemPrompt).substring(0, 8) 
-      : 'default';
-    
-    return `${birthData.dateNaissance}-${birthData.heureNaissance}-${birthData.villeNaissance}-${promptHash}`.toLowerCase();
-  }
-
-  /**
-   * Fonction simple de hachage pour les strings
-   */
-  private hashString(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash).toString(16);
-  }
-
-  /**
-   * Nettoie le cache
-   */
-  private cleanupCache(): void {
-    const now = Date.now();
-    for (const [key, value] of this.analysisCache.entries()) {
-      if (now - value.timestamp > this.CACHE_TTL) {
-        this.analysisCache.delete(key);
-      }
-    }
-  }
-
-  /**
-   * Délai avec promesse
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Récupère les statistiques du service
-   */
-  getServiceStats(): {
-    cacheSize: number;
-    cacheHits: number;
-    apiCalls: number;
-  } {
-    return {
-      cacheSize: this.analysisCache.size,
-      cacheHits: 0, // À implémenter avec un compteur
-      apiCalls: 0, // À implémenter avec un compteur
-    };
-  }
-
-  /**
-   * Purge le cache
-   */
-  purgeCache(): void {
-    this.analysisCache.clear();
-    this.logger.log('Cache purgé');
-  }
-
-  getCachedAnalysis(cacheKey: string) {
-    const cached = this.analysisCache.get(cacheKey);
-    if (!cached) {
-      throw new HttpException('Aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
-    }
-    return cached.result;
-  }
-
-  /**
-   * Génère du contenu à partir d'un prompt simple (pour les templates d'analyses)
-   */
-  async generateContentFromPrompt(
-    prompt: string, 
-    temperature = 0.7, 
-    maxTokens = 4000,
-    systemPrompt?: string
-  ): Promise<string> {
-    const messages: DeepSeekMessage[] = [
-      {
-        role: 'system',
-        content: systemPrompt || 'Tu es un expert en astrologie, analyses psychologiques et développement personnel. Fournir des réponses détaillées, bienveillantes et éducatives.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ];
-
-    try {
-      const response = await this.callDeepSeekApi(messages, temperature, maxTokens);
-      return response.choices[0]?.message?.content || '';
-    } catch (error) {
-      throw new HttpException(
-        `Failed to generate content: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Méthode alternative qui utilise le prompt personnalisé pour une analyse simplifiée
-   */
-  async genererAnalyseAvecPromptPersonnalise(
-    birthData: BirthData,
-    promptPersonnalise: string,
-    consultationId?: string
-  ): Promise<any> {
-    this.logger.log(`Génération d'analyse avec prompt personnalisé pour ${birthData.prenoms}`);
-    
-    try {
-      const messages: DeepSeekMessage[] = [
-        {
-          role: 'system',
-          content: promptPersonnalise,
-        },
-        {
-          role: 'user',
-          content: `Analyse astrologique pour:
-          Nom: ${birthData.nom}
-          Prénom: ${birthData.prenoms}
-          Date de naissance: ${birthData.dateNaissance}
-          Heure: ${birthData.heureNaissance}
-          Lieu: ${birthData.villeNaissance}, ${birthData.paysNaissance}
-          Genre: ${birthData.genre}`,
-        },
-      ];
-
-      const response = await this.callDeepSeekApi(messages, 0.7, 4000);
-      
-      return {
-        success: true,
-        analysis: response.choices[0]?.message?.content || '',
-        tokensUsed: response.usage?.total_tokens || 0,
-        consultationId,
-        timestamp: new Date(),
-      };
-      
-    } catch (error) {
-      this.logger.error(`Erreur génération avec prompt personnalisé: ${error.message}`);
-      throw error;
-    }
+Réponds UNIQUEMENT avec la liste ci-dessus, sans texte supplémentaire.`;
   }
 }

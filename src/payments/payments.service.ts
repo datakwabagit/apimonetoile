@@ -797,7 +797,7 @@ export class PaymentsService {
         };
       }
 
-      const analyse = await this.deepseekService.genererAnalyseComplete(birthData, consultationId);
+      const analyse = await this.deepseekService.genererAnalyseComplete('birthData', consultationId);
       const analyseComplete = {
         consultationId,
         ...analyse,
