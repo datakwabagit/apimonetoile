@@ -1,5 +1,4 @@
-﻿
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+﻿import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 import { Offering } from '@/offerings/schemas/offering.schema';

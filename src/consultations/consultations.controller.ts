@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpException,
@@ -12,7 +11,7 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
+  UseGuards
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -20,7 +19,6 @@ import { Permissions } from '../common/decorators/permissions.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Permission } from '../common/enums/permission.enum';
-import { Role } from '../common/enums/role.enum';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -28,10 +26,8 @@ import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UserDocument } from '../users/schemas/user.schema';
 import { AnalysisService } from './analysis.service';
 import { ConsultationsService } from './consultations.service';
-import { ConsultationChoiceService } from './consultation-choice.service';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { PromptService } from './prompt.service';
 
 @ApiTags('Consultations')
 @Controller('consultations')
@@ -42,8 +38,6 @@ export class ConsultationsController {
     private readonly consultationsService: ConsultationsService,
     private readonly notificationsService: NotificationsService,
     private readonly analysisService: AnalysisService,
-    private readonly consultationChoiceService: ConsultationChoiceService,
-    private readonly promptService: PromptService,
   ) { }
 
   /**
@@ -67,8 +61,6 @@ export class ConsultationsController {
         console.error('Consultation ou utilisateur non trouvé', { consultation });
         throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
       }
-      // Correction : extraire l'_id si clientId est un objet
-      console.log('consultation.clientId:', consultation.clientId);
       const userId = consultation.clientId._id ? consultation.clientId._id.toString() : consultation.clientId.toString();
       console.log('userId utilisé pour notification:', userId);
       const notif = await this.notificationsService.create({
@@ -78,8 +70,6 @@ export class ConsultationsController {
         message: `Vous avez reçu une notification pour la consultation "${consultation.title || id}"`,
         metadata: { consultationId: id },
       });
-      console.log('Notification créée:', notif);
-      // Mettre à jour le champ analysisNotified à true
       const updateResult = await this.consultationsService.update(id, { analysisNotified: true });
       console.log('Consultation mise à jour (analysisNotified: true):', updateResult);
       return {
@@ -108,7 +98,6 @@ export class ConsultationsController {
   @ApiResponse({ status: 201, description: 'Consultation créée avec succès.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   async create(@Body() body: any, @CurrentUser() user: UserDocument) {
-    // Utiliser la méthode create() qui enregistre correctement le clientId
     const consultation = await this.consultationsService.create(user._id.toString(), body);
 
     return {
@@ -124,9 +113,6 @@ export class ConsultationsController {
    */
   @Post('personal')
   async createPersonalConsultation(@Body() body: any) {
-    // body contiendra tous les champs du formulaire
-    // Exemples de champs attendus :
-    // nom, prenoms, genre, dateNaissance, paysNaissance, villeNaissance, heureNaissance, choixConsultation
     return this.consultationsService.createPersonalConsultation(body);
   }
 
@@ -234,7 +220,6 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
   async getAnalysisByConsultationId(@Param('consultationId') consultationId: string) {
     try {
-      // Récupérer la consultation
       const consultation: any = await this.consultationsService.findOne(consultationId);
 
       if (!consultation) {
@@ -247,20 +232,9 @@ export class ConsultationsController {
         );
       }
 
-      // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
       let analysisData = null;
-      try {
-        const analysis = await this.analysisService.getAstrologicalAnalysis(consultationId);
-        if (analysis) {
-          analysisData = analysis.toObject();
-        }
-      } catch (error) {
-        // Si pas trouvé dans AstrologicalAnalysis, on essaie dans resultData
-        console.log('Analyse non trouvée dans AstrologicalAnalysis, tentative dans resultData');
-      }
 
-      // Fallback: vérifier dans resultData de la consultation
-      if (!analysisData && consultation.resultData) {
+      if (consultation.resultData) {
         // Vérifier les différents types d'analyses
         if (consultation.resultData.analyse) {
           analysisData = consultation.resultData.analyse;
@@ -316,7 +290,6 @@ export class ConsultationsController {
   @ApiResponse({ status: 200, description: 'Analyse trouvée.' })
   @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
   async getAnalysisAlternative(@Param('id') id: string) {
-    // Réutiliser la même logique que getAnalysisByConsultationId
     return this.getAnalysisByConsultationId(id);
   }
 
@@ -336,7 +309,6 @@ export class ConsultationsController {
   async updateAnalysis(
     @Param('id') id: string,
     @Body() analysisData: any,
-    @CurrentUser() user: UserDocument,
   ) {
     try {
       // Vérifier que la consultation existe
@@ -351,16 +323,6 @@ export class ConsultationsController {
           HttpStatus.NOT_FOUND,
         );
       }
-
-      // Mettre à jour la consultation avec l'analyse
-      const updatedConsultation = await this.consultationsService.update(id, {
-        resultData: {
-          ...consultation.resultData,
-          analyse: analysisData,
-        },
-        analysisNotified: false, // Réinitialiser la notification
-        status: ConsultationStatus.COMPLETED,
-      });
 
       return {
         success: true,
@@ -457,20 +419,7 @@ export class ConsultationsController {
     const consultation: any = await this.consultationsService.findOne(id);
     const consultationObj = consultation.toObject();
 
-    // Essayer de récupérer l'analyse depuis la collection AstrologicalAnalysis
     let analyse = consultation.resultData;
-    try {
-      const astroAnalysis = await this.analysisService.getAstrologicalAnalysis(id);
-      if (astroAnalysis) {
-        analyse = astroAnalysis.toObject();
-      }
-    } catch (error) {
-      console.warn(
-        "[API] Pas d'analyse trouvée dans AstrologicalAnalysis, utilisation de resultData",
-      );
-    }
-
-    // Populate alternatives with offering details
     let alternatives = consultation.alternatives || consultationObj.alternatives || [];
     if (alternatives.length) {
       alternatives = await this.consultationsService.populateAlternatives(alternatives);
@@ -535,20 +484,6 @@ export class ConsultationsController {
     @CurrentUser() user: UserDocument,
   ) {
     try {
-      // Vérifier que l'utilisateur est propriétaire de la consultation (sauf admin)
-      const consultation = await this.consultationsService.findOne(id);
-       if (consultation && user) {
-        const userRole = user.role || (typeof user.toObject === 'function' ? user.toObject().role : undefined);
-        const userId = user._id?.toString() || (typeof user.toObject === 'function' ? user.toObject()._id?.toString() : undefined);
-        const consultationClientId = consultation.clientId?.toString();
-
-        if (userRole && userRole !== Role.ADMIN && userRole !== Role.SUPER_ADMIN) {
-          if (consultationClientId && userId && consultationClientId !== userId) {
-            throw new ForbiddenException('You can only view your own consultations');
-          }
-        }
-      }
-
       return await this.analysisService.generateAnalysis(id, user);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -584,9 +519,7 @@ export class ConsultationsController {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
       }
 
-      // Vérifier si l'analyse existe dans resultData
       if (consultation.resultData && consultation.resultData.analyse) {
-
         return {
           success: true,
           consultationId: id,
@@ -595,7 +528,6 @@ export class ConsultationsController {
         };
       }
 
-      // Pas d'analyse encore générée
       throw new HttpException(
         {
           success: false,
@@ -625,7 +557,7 @@ export class ConsultationsController {
    * Mettre à jour une consultation
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto, @CurrentUser() user: UserDocument) {
+  update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto) {
     return this.consultationsService.update(id, updateConsultationDto);
   }
 

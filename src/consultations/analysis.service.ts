@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import fetch from 'node-fetch';
@@ -23,14 +23,6 @@ export class AnalysisService {
     @Inject(forwardRef(() => PromptService))
     private promptService: PromptService,
   ) { }
-
-  async getAstrologicalAnalysis(consultationId: string) {
-    const analysis = await this.analysisModel.findOne({ consultationId }).exec();
-    if (!analysis) {
-      throw new NotFoundException('Analyse non trouvée');
-    }
-    return analysis;
-  }
 
   private async loadPromptFromDatabase(choiceId: string): Promise<string> {
     try {
@@ -263,14 +255,13 @@ Type d'analyse: ${analysisType}`;
     try {
       const consultation = await this.consultationsService.findOne(id);
       let systemPrompt = this.getDefaultPrompt();
+
       if (consultation.choice && consultation.choice._id) {
         const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
         if (customPrompt) {
           systemPrompt = customPrompt;
         }
       }
-
-      console.log('SYSTEM_PROMPT utilisé pour la génération:', systemPrompt);
 
       const form = consultation?.formData || {};
       const birthData = this.extractBirthData(form);
@@ -297,12 +288,10 @@ Type d'analyse: ${analysisType}`;
         const userPrompt = this.generateHoroscopePrompt(horoscopePayload);
         analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt);
         await this.saveAnalysisResults(id, analyseComplete, 'HOROSCOPE');
-
       } else if (isNumerology) {
         const userPrompt = this.generateNumerologyPrompt(consultation.type, birthData);
         analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt);
         await this.saveAnalysisResults(id, analyseComplete, 'NUMEROLOGIE');
-
       } else {
         analyseComplete = await this.deepseekService.genererAnalyseComplete(birthData, id, systemPrompt);
         const analysisDocument = {
@@ -310,7 +299,6 @@ Type d'analyse: ${analysisType}`;
           ...analyseComplete,
           dateGeneration: new Date().toISOString(),
         };
-
         await this.saveAnalysisResults(id, analysisDocument, 'ASTROLOGIE');
 
         try {

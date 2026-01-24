@@ -5,19 +5,17 @@ import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OfferingsService } from '../offerings/offerings.service';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { AnalysisStatus, SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import {
-  AstrologicalAnalysis,
-  AstrologicalAnalysisDocument,
-} from './schemas/astrological-analysis.schema';
+import { AstrologicalAnalysis, AstrologicalAnalysisDocument, } from './schemas/astrological-analysis.schema';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
-import { User, UserDocument } from '../users/schemas/user.schema';
 
 @Injectable()
 export class ConsultationsService {
+
   constructor(
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
     @InjectModel(AstrologicalAnalysis.name)
@@ -242,8 +240,6 @@ export class ConsultationsService {
       throw new NotFoundException('Consultation not found');
     }
 
-    
-
     const previousStatus = currentConsultation.status;
     const newStatus = updateConsultationDto.status;
 
@@ -270,7 +266,7 @@ export class ConsultationsService {
     if (previousStatus !== newStatus) {
       const wasActive = previousStatus !== ConsultationStatus.CANCELLED;
       const willBeActive = newStatus !== ConsultationStatus.CANCELLED;
-      
+
       if (wasActive && !willBeActive) {
         // Passage à CANCELLED: décrémenter consultationsCount
         await this.userModel.findByIdAndUpdate(
@@ -531,10 +527,6 @@ export class ConsultationsService {
     }
   }
 
-  /**
-   * Récupérer l'analyse astrologique d'une consultation
-   */
-
 
   /**
    * Récupérer toutes les analyses d'un utilisateur
@@ -570,14 +562,11 @@ export class ConsultationsService {
   async generateAnalysis(
     id: string,
     body: { birthData: any },
-    user: any,
   ) {
     try {
-      const { birthData } = body || {};
-      // Récupérer la consultation pour fallback des données de naissance
       const consultation: any = await this.findOne(id);
       const form = consultation?.formData || {};
-
+      const { birthData } = body || {};
       const mergedBirthData: any = {
         nom: birthData?.nom ?? form.nom ?? form.lastName ?? '',
         prenoms: birthData?.prenoms ?? form.prenoms ?? form.firstName ?? '',
@@ -601,28 +590,20 @@ export class ConsultationsService {
       }
 
       let analyseComplete: any;
-      let horoscopeResult: any = null;
       const isNumerology = ['NUMEROLOGIE', 'CYCLES_PERSONNELS', 'NOMBRES_PERSONNELS'].includes(consultation.type);
 
       if (consultation.type === 'HOROSCOPE') {
-        // ...existing horoscope logic...
-        // Pour simplifier, à compléter selon votre logique
         analyseComplete = { type: 'HOROSCOPE', data: 'TODO' };
       } else if (isNumerology) {
-        // ...existing numerology logic...
         analyseComplete = { type: 'NUMEROLOGIE', data: 'TODO' };
       } else {
-        // ...existing classic analysis logic...
         analyseComplete = { type: 'CLASSIC', data: 'TODO' };
       }
-
-      // Appeler saveAnalysis pour enregistrer l'analyse et les choix utilisateur
       const saveAnalysisDto = {
         analyse: analyseComplete,
         statut: AnalysisStatus.COMPLETED,
       };
       await this.saveAnalysis(id, saveAnalysisDto);
-
       let messageSuccess = 'Analyse générée avec succès';
       if (consultation.type === 'HOROSCOPE') {
         messageSuccess = 'Horoscope généré avec succès';
