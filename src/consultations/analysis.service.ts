@@ -243,11 +243,9 @@ export class AnalysisService {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
 
-    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, genre, email } = birthData;
+    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, genre } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
-    const dateDemande = this.formatDate(new Date());
     const carteDuCielTexte = formData.carteDuCiel?.carteDuCiel?.aspectsTexte || '';
-    const missionDeVie = formData.carteDuCiel?.missionDeVie?.contenu || '';
 
     const sections: string[] = [];
     sections.push(`🌌 ANALYSE DES TALENTS INNÉS - DONNÉES PERSONNELLISÉES\n`);
@@ -255,14 +253,13 @@ export class AnalysisService {
       '## 👤 INFORMATIONS PERSONNELLES',
       `• **Prénom à utiliser** : ${prenoms || 'le consultant'}`,
       `• **Nom de famille** : ${nom || ''}`,
-      `• **Genre** : ${genre || 'Non spécifié'}`,
-      `• **Email** : ${email || 'Non fourni'}\n`
+      `• **Genre** : ${genre || 'Non spécifié'}\n`,
     );
 
     sections.push(
       '## 🎂 DONNÉES DE NAISSANCE EXACTES',
       `• **Date de naissance** : ${dateFormatee}`,
-      `• **Heure de naissance** : ${heureNaissance}`,
+      `• **Heure de naissance** : ${heureNaissance || 'Non spécifié'}`,
       `• **Lieu de naissance** : ${villeNaissance}, ${paysNaissance}\n`
     );
 
@@ -272,68 +269,9 @@ export class AnalysisService {
       carteDuCielTexte || 'Aucune carte du ciel disponible - veuillez générer une analyse basée sur les données de naissance ci-dessus\n'
     );
 
-    if (missionDeVie) {
-      sections.push(
-        '### ANALYSE DE MISSION DE VIE EXISTANTE (contexte supplémentaire) :',
-        `${missionDeVie.substring(0, 300)}${missionDeVie.length > 300 ? '...' : ''}\n`
-      );
-    }
-
     sections.push(
       '## 🎯 CONTEXTE DE LA CONSULTATION',
-      `• **Type d'analyse demandée** : ${consultation.type || 'Analyse standard'}`,
-      `• **Date de la demande** : ${dateDemande}`,
-      `• **Identifiant consultation** : ${consultation._id || 'N/A'}`,
-      consultation.choice?.title ? `• **Forfait choisi** : ${consultation.choice.title}` : '',
-      ''
-    );
-
-    sections.push(
-      '## 📝 CONSIGNES SPÉCIFIQUES POUR CETTE ANALYSE\n',
-      `1. **Adresse-toi directement à ${prenoms}** en utilisant systématiquement le tutoiement`,
-      `2. **Personnalise l'analyse** avec son prénom "${prenoms}" tout au long du texte`,
-      '3. **Base-toi sur les données astrologiques fournies** (carte du ciel ci-dessus)',
-      '4. **Si certaines données manquent**, utilise tes connaissances astrologiques pour compléter',
-      `5. **Propose des exemples concrets** adaptés au profil de ${prenoms}`,
-      '6. **Mets l\'accent sur les applications pratiques** dans la vie quotidienne',
-      `7. **Prends en compte le lieu de naissance** : ${villeNaissance}, ${paysNaissance}\n`
-    );
-
-    sections.push(
-      '## 💫 DOMAINES À EXPLORER EN PRIORITÉ\n',
-      '### 1. IDENTIFICATION DES TALENTS NATURELS',
-      `• Quels sont les dons innés de ${prenoms} basés sur ses positions planétaires ?`,
-      `• Comment ces talents se manifestent-ils dans sa vie actuelle ?`,
-      '• Quels potentiels restent à développer ou sont sous-utilisés ?\n',
-
-      '### 2. APPLICATIONS PROFESSIONNELLES',
-      `• Comment ${prenoms} peut-il/elle valoriser ses talents dans son travail ?`,
-      '• Quels métiers, secteurs ou activités seraient les plus épanouissants ?',
-      '• Comment transformer ses forces astrologiques en avantages compétitifs ?\n',
-
-      '### 3. DÉVELOPPEMENT PERSONNEL',
-      '• Quels exercices pratiques pour renforcer ses talents spécifiques ?',
-      '• Comment surmonter les blocages éventuels liés à sa configuration astrologique ?',
-      '• Quelles habitudes développer pour exprimer pleinement son potentiel astrologique ?\n',
-
-      '### 4. SYNERGIE DES COMPÉTENCES',
-      `• Comment les différents talents de ${prenoms} (basés sur Soleil, Mercure, Maison 2, etc.) interagissent-ils ?`,
-      '• Quelles combinaisons créerait un effet multiplicateur ?',
-      '• Comment équilibrer ses différentes facettes astrologiques ?\n'
-    );
-
-    sections.push(
-      '## 🏁 ATTENTES SPÉCIFIQUES\n',
-      'L\'analyse doit être :',
-      `• **Inspirante et encourageante** : motive ${prenoms} à exploiter son potentiel astrologique`,
-      '• **Concrète et applicable** : propose des actions réalisables dès maintenant',
-      '• **Personnalisée** : fait référence à son profil astrologique unique',
-      '• **Structurée** : suit le plan défini dans le prompt système',
-      '• **Bienveillante** : adopte un ton chaleureux et soutenant',
-      `• **Contextualisée** : prend en compte le contexte géographique (${paysNaissance})\n`,
-
-      '---',
-      `**Note importante** : Toute cette analyse doit être adaptée spécifiquement à ${prenoms} en utilisant ses données exactes de naissance (${dateFormatee} à ${heureNaissance} à ${villeNaissance}, ${paysNaissance}) et son contexte personnel.`
+      `• **Type d'analyse demandée** : ${consultation.type || 'Analyse standard'}`
     );
 
     return sections.join('\n');

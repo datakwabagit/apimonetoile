@@ -152,7 +152,9 @@ const REGEX_PATTERNS = {
 export class DeepseekService {
   private readonly logger = new Logger(DeepseekService.name);
   private readonly DEEPSEEK_API_KEY: string;
+  // Limite stricte du cache pour éviter l'explosion mémoire sur Render
   private readonly analysisCache = new Map<string, { result: AnalysisResult; timestamp: number }>();
+  private readonly MAX_CACHE_SIZE = 100; // Limite stricte à 100 analyses en mémoire
   private cacheHits = 0;
   private apiCalls = 0;
 
@@ -398,9 +400,13 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
       timestamp: Date.now(),
     });
 
-    // Nettoyage périodique du cache
-    if (this.analysisCache.size > 1000) {
-      this.cleanupCache();
+    // Si la taille du cache dépasse la limite, supprime les plus anciens
+    if (this.analysisCache.size > this.MAX_CACHE_SIZE) {
+      const keys = Array.from(this.analysisCache.keys());
+      const toDelete = keys.slice(0, this.analysisCache.size - this.MAX_CACHE_SIZE);
+      for (const k of toDelete) {
+        this.analysisCache.delete(k);
+      }
     }
   }
 
