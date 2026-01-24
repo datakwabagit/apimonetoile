@@ -525,6 +525,7 @@ export class ConsultationsController {
           consultationId: id,
           statut: ConsultationStatus.COMPLETED,
           analyse: consultation.resultData.analyse,
+          consultation: consultation,
         };
       }
 
@@ -546,6 +547,7 @@ export class ConsultationsController {
         {
           success: false,
           error: 'Erreur lors de la récupération des analyses',
+          consultation: null,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
