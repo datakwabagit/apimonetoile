@@ -3,10 +3,10 @@ services:
     name: mon-etoile-backend
     env: node
     plan: free
-    buildCommand: NODE_OPTIONS="--max-old-space-size=512" npm install && npm run build
-    startCommand: npm run start:prod
+    buildCommand: NODE_OPTIONS="--max-old-space-size=1024" npm install && npm run build
+    startCommand: NODE_OPTIONS="--max-old-space-size=1024" npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
-        value: --max-old-space-size=256
+        value: --max-old-space-size=1024
