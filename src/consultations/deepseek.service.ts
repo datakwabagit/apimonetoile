@@ -152,9 +152,7 @@ const REGEX_PATTERNS = {
 export class DeepseekService {
   private readonly logger = new Logger(DeepseekService.name);
   private readonly DEEPSEEK_API_KEY: string;
-  // Limite stricte du cache pour éviter l'explosion mémoire sur Render
-  private readonly analysisCache = new Map<string, { result: AnalysisResult; timestamp: number }>();
-  private readonly MAX_CACHE_SIZE = 100; // Limite stricte à 100 analyses en mémoire
+  // Suppression du cache mémoire pour limiter la consommation sur Render
   private cacheHits = 0;
   private apiCalls = 0;
 
@@ -305,15 +303,7 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
     const startTime = Date.now();
 
     try {
-      // Vérifier le cache si pertinent (avec hash du prompt)
-      const cacheKey = this.generateCacheKey(userPrompt, systemPrompt);
-      const cachedResult = this.getFromCache(cacheKey);
-
-      if (cachedResult) {
-        this.cacheHits++;
-        return cachedResult;
-      }
-
+      const messages: DeepSeekMessage[] = [
       const messages: DeepSeekMessage[] = [
         {
           role: 'system' as const,
@@ -351,11 +341,6 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
           model: DEFAULT_CONFIG.MODEL,
         },
       };
-
-      // Mettre en cache si le résultat est valide
-      if (aiContent.trim().length > 0) {
-        this.setCache(cacheKey, result);
-      }
 
       return result;
     } catch (error) {
@@ -427,7 +412,6 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
 
   getServiceStats() {
     return {
-      cacheSize: this.analysisCache.size,
       cacheHits: this.cacheHits,
       apiCalls: this.apiCalls,
       hitRate: this.apiCalls > 0 ? (this.cacheHits / this.apiCalls * 100).toFixed(2) + '%' : '0%',
@@ -435,17 +419,12 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
   }
 
   purgeCache(): void {
-    this.analysisCache.clear();
     this.cacheHits = 0;
-    this.logger.log('Cache purgé');
+    this.logger.log('Cache purgé (désactivé)');
   }
 
   getCachedAnalysis(cacheKey: string): AnalysisResult {
-    const cached = this.analysisCache.get(cacheKey);
-    if (!cached) {
-      throw new HttpException('Aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
-    }
-    return cached.result;
+    throw new HttpException('Cache désactivé : aucune analyse trouvée pour cette clé', HttpStatus.NOT_FOUND);
   }
 
   async generateContentFromPrompt(
