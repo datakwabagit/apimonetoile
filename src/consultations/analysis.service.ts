@@ -248,10 +248,9 @@ export class AnalysisService {
     const carteDuCielTexte = formData.carteDuCiel?.carteDuCiel?.aspectsTexte || '';
 
     const sections: string[] = [];
-    sections.push(`🌌 ANALYSE DES TALENTS INNÉS - DONNÉES PERSONNELLISÉES\n`);
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
-      `• **Prénom à utiliser** : ${prenoms || 'le consultant'}`,
+      `• **Prénoms à utiliser** : ${prenoms || ''}`,
       `• **Nom de famille** : ${nom || ''}`,
       `• **Genre** : ${genre || 'Non spécifié'}\n`,
     );
@@ -267,11 +266,6 @@ export class AnalysisService {
       '## 📊 DONNÉES ASTROLOGIQUES DISPONIBLES\n',
       '### CARTE DU CIEL CALCULÉE :',
       carteDuCielTexte || 'Aucune carte du ciel disponible - veuillez générer une analyse basée sur les données de naissance ci-dessus\n'
-    );
-
-    sections.push(
-      '## 🎯 CONTEXTE DE LA CONSULTATION',
-      `• **Type d'analyse demandée** : ${consultation.type || 'Analyse standard'}`
     );
 
     return sections.join('\n');
