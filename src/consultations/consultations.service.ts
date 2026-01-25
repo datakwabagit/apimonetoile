@@ -78,7 +78,9 @@ export class ConsultationsService {
       requiredOffering,
       requiredOfferingsDetails,
       tierce,
+      rubriqueId
     } = createConsultationDto;
+    console.log('Creating consultation with data:', createConsultationDto);
 
     // Mapping des alternatives et choix
     let mappedAlternatives = alternatives || [];
@@ -95,6 +97,7 @@ export class ConsultationsService {
       type,
       title,
       description,
+      rubriqueId,
       formData: mappedFormData,
       tierce: tierce || null,
       status: status || ConsultationStatus.PENDING,
@@ -119,7 +122,7 @@ export class ConsultationsService {
     ).exec();
 
     const populatedConsultation = await consultation.populate(['clientId', 'serviceId']);
-
+    console.log('Created consultation:', populatedConsultation);
     // Retourner avec l'ID explicitement dans la réponse
     return {
       ...populatedConsultation.toObject(),
@@ -164,6 +167,7 @@ export class ConsultationsService {
   /**
    * Récupérer toutes les consultations avec pagination et filtres
    */
+
   async findAll(query: {
     page?: number;
     limit?: number;
@@ -171,8 +175,9 @@ export class ConsultationsService {
     type?: string;
     clientId?: string;
     consultantId?: string;
+    rubriqueId?: string;
   }) {
-    const { page = 1, limit = 10, status, type, clientId, consultantId } = query;
+    const { page = 1, limit = 10, status, type, clientId, consultantId, rubriqueId } = query;
     const skip = (page - 1) * limit;
 
     // Construire le filtre
@@ -182,6 +187,9 @@ export class ConsultationsService {
     if (type) filter.type = type;
     if (clientId) filter.clientId = clientId;
     if (consultantId) filter.consultantId = consultantId;
+    if (rubriqueId) filter.rubriqueId = rubriqueId;
+
+    console.log('ConsultationsService.findAll - filter:', filter);
 
     // Récupérer les consultations
     const [consultations, total] = await Promise.all([

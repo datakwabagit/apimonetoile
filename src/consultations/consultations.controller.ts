@@ -83,6 +83,40 @@ export class ConsultationsController {
   }
 
   /**
+     * GET /consultations/rubrique/:rubriqueId
+     * Récupérer toutes les consultations de l'utilisateur connecté pour une rubrique donnée (filtrage par rubriqueId)
+     */
+  @Get('rubrique/:rubriqueId')
+  @ApiOperation({
+    summary: "Consultations de l'utilisateur connecté par rubriqueId",
+    description: "Retourne toutes les consultations de l'utilisateur connecté pour une rubrique donnée (filtrage par rubriqueId).",
+  })
+  @ApiResponse({ status: 200, description: "Liste des consultations de l'utilisateur pour la rubrique." })
+  async getMyConsultationsByRubrique(
+    @CurrentUser() user: UserDocument,
+    @Param('rubriqueId') rubriqueId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.consultationsService.findAll({
+      clientId: user._id.toString(),
+      rubriqueId,
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      userId: user._id.toString(),
+      rubriqueId,
+      consultations: result.consultations,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
+  }
+
+  /**
    * POST /consultations
    * Créer une consultation pour un utilisateur authentifié
    * L'ID du client est automatiquement récupéré depuis le token JWT

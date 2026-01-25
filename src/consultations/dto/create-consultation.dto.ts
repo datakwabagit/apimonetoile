@@ -85,6 +85,9 @@ export class CreateConsultationDto {
   @IsString()
   serviceId: string;
 
+  @IsString()
+  rubriqueId: string; // ObjectId de la rubrique, obligatoire
+
   @IsOptional()
   visible?: boolean;
 
@@ -172,4 +175,20 @@ export class CreateConsultationDto {
   @IsObject()
   @IsOptional()
   tierce?: any;
+
+  @IsOptional()
+  analysisNotified?: boolean;
+
+  @IsOptional()
+  @IsString()
+  result?: string;
+
+  @IsOptional()
+  @IsObject()
+  resultData?: {
+    horoscope?: any;
+    numerology?: any;
+    astrology?: any;
+    [key: string]: any;
+  };
 }

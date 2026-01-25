@@ -4,48 +4,23 @@ import { IsEnum, IsOptional, IsString, IsObject, IsNumber, Max, Min } from 'clas
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 
 export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
-  @IsEnum(ConsultationStatus)
-  @IsOptional()
-  status?: ConsultationStatus;
-
   @IsString()
   @IsOptional()
-  consultantId?: string;
-
-  @IsObject()
-  @IsOptional()
-  requiredOffering?: RequiredOfferingDto;
-
-  @IsString()
-  @IsOptional()
-  result?: string;
-
-  @IsObject()
-  @IsOptional()
-  resultData?: any;
-
-  @IsNumber()
-  @Min(0)
-  @Max(5)
-  @IsOptional()
-  rating?: number;
-
-  @IsString()
-  @IsOptional()
-  review?: string;
-
-  @IsString()
-  @IsOptional()
-  type?: ConsultationType;
-
-  @IsString()
-  @IsOptional()
-  notes?: string;
+  rubriqueId?: string; // Permet de modifier la rubrique liée
 
   @IsOptional()
   analysisNotified?: boolean;
-  
-  @IsObject()
+
   @IsOptional()
-  tierce?: any;
+  @IsString()
+  result?: string;
+
+  @IsOptional()
+  @IsObject()
+  resultData?: {
+    horoscope?: any;
+    numerology?: any;
+    astrology?: any;
+    [key: string]: any;
+  };
 }

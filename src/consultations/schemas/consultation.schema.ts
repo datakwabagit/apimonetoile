@@ -234,6 +234,14 @@ export class Consultation {
 
   @Prop({ default: null })
   notes: string; // Notes privées du consultant
+
+  /**
+   * Référence à la rubrique associée à la consultation (obligatoire)
+   */
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Rubrique', required: true })
+  rubriqueId: MongooseSchema.Types.ObjectId;
+
+   
   
   /**
    * Indique si l'analyse a déjà été notifiée au client
