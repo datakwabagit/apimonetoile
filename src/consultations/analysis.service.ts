@@ -292,15 +292,12 @@ export class AnalysisService {
 
   async generateAnalysis(id: string, user: any) {
     try {
-      console.log('[generateAnalysis] Start', { id, userId: user?.id || user?._id });
       const consultation = await this.consultationsService.findOne(id);
-      console.log('[generateAnalysis] Consultation loaded', { consultationId: consultation?._id });
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
       }
 
       const formData = consultation.formData || {};
-      console.log('[generateAnalysis] formData', formData);
 
       let systemPrompt = this.getDefaultPrompt();
       if (consultation.choice?._id) {
@@ -309,29 +306,22 @@ export class AnalysisService {
           systemPrompt = customPrompt;
         }
       }
-      console.log('[generateAnalysis] systemPrompt', systemPrompt);
 
       const userPrompt = this.buildUserPrompt(formData);
-      console.log('[generateAnalysis] userPrompt', userPrompt);
 
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
-      console.log('[generateAnalysis] analyseComplete (DeepSeek)', analyseComplete);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
         dateGeneration: new Date().toISOString(),
       };
-      console.log('[generateAnalysis] analysisDocument', analysisDocument);
 
       await this.saveAnalysisResults(id, analysisDocument);
-      console.log('[generateAnalysis] Results saved');
 
       const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
-      console.log('[generateAnalysis] Consultation updated', updatedConsultation?._id);
 
       const userId = this.extractUserId(consultation.clientId);
       if (userId) {
         await this.recordUserChoices(updatedConsultation, userId);
-        console.log('[generateAnalysis] User choices recorded');
       }
 
       return {
