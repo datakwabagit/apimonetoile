@@ -25,15 +25,15 @@ async function bootstrap() {
   server.setTimeout(180000); // 3 minutes
 
   // Log mémoire toutes les 60s pour diagnostic Render
-  setInterval(() => {
-    const used = process.memoryUsage();
-    console.log('[MEMORY]', {
-      rss: Math.round(used.rss / 1024 / 1024) + 'MB',
-      heapTotal: Math.round(used.heapTotal / 1024 / 1024) + 'MB',
-      heapUsed: Math.round(used.heapUsed / 1024 / 1024) + 'MB',
-      external: Math.round(used.external / 1024 / 1024) + 'MB',
-    });
-  }, 60000);
+  // setInterval(() => {
+  //   const used = process.memoryUsage();
+  //   console.log('[MEMORY]', {
+  //     rss: Math.round(used.rss / 1024 / 1024) + 'MB',
+  //     heapTotal: Math.round(used.heapTotal / 1024 / 1024) + 'MB',
+  //     heapUsed: Math.round(used.heapUsed / 1024 / 1024) + 'MB',
+  //     external: Math.round(used.external / 1024 / 1024) + 'MB',
+  //   });
+  // }, 60000);
 
   console.log(`🚀 Application démarrée sur le port ${process.env.PORT || 3000}`);
 }
