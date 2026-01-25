@@ -105,13 +105,13 @@ import PromptsManager from './scripts/prompts-manager';
 
 // Recherche par mot-clé
 const results = PromptsManager.searchConsultationChoices('carrière');
-console.log(results);
+
 ```
 
 ### Récupérer un Prompt
 ```typescript
 const prompt = PromptsManager.getPromptByConsultationId('mon_signe_solaire');
-console.log(prompt);
+
 ```
 
 ---

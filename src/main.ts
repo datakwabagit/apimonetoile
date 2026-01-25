@@ -20,7 +20,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Augmenter le timeout global pour les requêtes longues (génération AI)
   const server = await app.listen(process.env.PORT || 3000);
   server.setTimeout(180000); // 3 minutes
 
