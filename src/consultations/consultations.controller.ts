@@ -62,7 +62,6 @@ export class ConsultationsController {
         throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
       }
       const userId = consultation.clientId._id ? consultation.clientId._id.toString() : consultation.clientId.toString();
-      console.log('userId utilisé pour notification:', userId);
       const notif = await this.notificationsService.create({
         userId,
         type: NotificationType.CONSULTATION_RESULT,
@@ -71,7 +70,6 @@ export class ConsultationsController {
         metadata: { consultationId: id },
       });
       const updateResult = await this.consultationsService.update(id, { analysisNotified: true });
-      console.log('Consultation mise à jour (analysisNotified: true):', updateResult);
       return {
         success: true,
         message: "Notification envoyée à l'utilisateur.",

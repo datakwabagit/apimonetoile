@@ -95,10 +95,7 @@ export class RubriqueService {
     }));
   }
 
-  async update(id: string, dto: RubriqueDto) {
-    console.log('Service update called with ID:', id, 'and DTO:', JSON.stringify(dto, null, 2));
-      
-
+  async update(id: string, dto: RubriqueDto) {     
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
   }
 

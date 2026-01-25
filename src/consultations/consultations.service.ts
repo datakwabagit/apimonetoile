@@ -80,7 +80,6 @@ export class ConsultationsService {
       tierce,
       rubriqueId
     } = createConsultationDto;
-    console.log('Creating consultation with data:', createConsultationDto);
 
     // Mapping des alternatives et choix
     let mappedAlternatives = alternatives || [];
@@ -122,8 +121,6 @@ export class ConsultationsService {
     ).exec();
 
     const populatedConsultation = await consultation.populate(['clientId', 'serviceId']);
-    console.log('Created consultation:', populatedConsultation);
-    // Retourner avec l'ID explicitement dans la réponse
     return {
       ...populatedConsultation.toObject(),
       id: populatedConsultation._id.toString(),
@@ -189,7 +186,6 @@ export class ConsultationsService {
     if (consultantId) filter.consultantId = consultantId;
     if (rubriqueId) filter.rubriqueId = rubriqueId;
 
-    console.log('ConsultationsService.findAll - filter:', filter);
 
     // Récupérer les consultations
     const [consultations, total] = await Promise.all([
@@ -581,7 +577,6 @@ export class ConsultationsService {
     consultation.analysisNotified = true;
     await consultation.save();
 
-    console.log(`✅ Analyse ${consultationId} marquée comme notifiée`);
     return consultation;
   }
 

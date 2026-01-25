@@ -8,13 +8,13 @@ import { ConsultationChoiceService } from './consultation-choice.service';
 @ApiTags('Consultation Choices')
 @Controller('consultation-choices')
 export class ConsultationChoiceController {
-    @Get('from-rubriques/:id')
-    @ApiOperation({ summary: 'Trouver un choix de consultation par id dans toutes les rubriques' })
-    @ApiResponse({ status: 200, description: 'Choix de consultation trouvé dans une rubrique.' })
-    async getChoiceFromRubriques(@Param('id') id: string) {
-      return this.consultationChoiceService.findChoiceInRubriquesById(id);
-    }
-  constructor(private readonly consultationChoiceService: ConsultationChoiceService) {}
+  @Get('from-rubriques/:id')
+  @ApiOperation({ summary: 'Trouver un choix de consultation par id dans toutes les rubriques' })
+  @ApiResponse({ status: 200, description: 'Choix de consultation trouvé dans une rubrique.' })
+  async getChoiceFromRubriques(@Param('id') id: string) {
+    return this.consultationChoiceService.findChoiceInRubriquesById(id);
+  }
+  constructor(private readonly consultationChoiceService: ConsultationChoiceService) { }
 
   @Get(':id/with-prompt')
   async getChoiceWithPrompt(@Param('id') id: string) {
@@ -47,10 +47,7 @@ export class ConsultationChoiceController {
   @ApiOperation({ summary: 'Récupérer un choix de consultation par ID (public)' })
   @ApiResponse({ status: 200, description: 'Choix de consultation retourné.' })
   async getChoiceById(@Param('id') id: string) {
-    console.log('ID reçu pour consultation-choice:', id);
-     
     const result = await this.consultationChoiceService.findById(id);
-    console.log('Résultat de la recherche:', result);
     return result;
   }
 

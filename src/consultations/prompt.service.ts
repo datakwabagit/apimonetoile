@@ -22,7 +22,6 @@ export class PromptService {
     try {
       const prompt = new this.promptModel(createPromptDto);
       const savedPrompt = await prompt.save();
-      console.log('Prompt créé avec succès:', savedPrompt);
 
       // Mettre à jour le promptId dans ConsultationChoice pour la relation bidirectionnelle
       // await this.consultationChoiceModel.findByIdAndUpdate(
@@ -40,7 +39,6 @@ export class PromptService {
           rubrique.consultationChoices = rubrique.consultationChoices.map((choice: any) => {
             if (choice._id?.toString() === createPromptDto.choiceId) {
               updated = true;
-              console.log('[DEBUG] Mise à jour du promptId pour le choix', choice._id?.toString(), 'dans la rubrique', rubrique._id.toString());
               return { ...choice, promptId: savedPrompt._id };
             }
             return choice;
@@ -48,7 +46,6 @@ export class PromptService {
           if (updated) {
             rubriqueTrouvee = true;
             await rubrique.save();
-            console.log('[DEBUG] Rubrique sauvegardée avec succès:', rubrique._id.toString());
             break;
           }
         }

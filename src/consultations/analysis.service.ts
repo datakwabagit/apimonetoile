@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Inject, Injectable, forwardRef } from '@nest
 import fetch from 'node-fetch';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { ConsultationsService } from './consultations.service';
-import { BirthData, DeepseekService } from './deepseek.service';
+import { BirthData } from './deepseek.service';
 import { PromptService } from './prompt.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 
@@ -12,11 +12,9 @@ export class AnalysisService {
   private readonly DEFAULT_TEMPERATURE = 0.8;
   private readonly DEFAULT_MAX_TOKENS = 4500;
   private readonly DEFAULT_MODEL = 'deepseek-chat';
-  private readonly NUMEROLOGY_TYPES = new Set(['NUMEROLOGIE', 'CYCLES_PERSONNELS', 'NOMBRES_PERSONNELS']);
 
   constructor(
     private consultationsService: ConsultationsService,
-    private deepseekService: DeepseekService,
     private userConsultationChoiceService: UserConsultationChoiceService,
     @Inject(forwardRef(() => PromptService))
     private promptService: PromptService,
@@ -162,7 +160,6 @@ export class AnalysisService {
       const data = await response.json();
       const aiResponse = data.choices[0]?.message?.content || '';
 
-      // Tentative de parsing JSON, sinon retourne le texte brut
       try {
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
         return {
@@ -239,7 +236,7 @@ export class AnalysisService {
     }
   }
 
-  private buildUserPrompt(formData: any, consultation: any): string {
+  private buildUserPrompt(formData: any): string {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
 
@@ -295,12 +292,15 @@ export class AnalysisService {
 
   async generateAnalysis(id: string, user: any) {
     try {
+      console.log('[generateAnalysis] Start', { id, userId: user?.id || user?._id });
       const consultation = await this.consultationsService.findOne(id);
+      console.log('[generateAnalysis] Consultation loaded', { consultationId: consultation?._id });
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
       }
 
       const formData = consultation.formData || {};
+      console.log('[generateAnalysis] formData', formData);
 
       let systemPrompt = this.getDefaultPrompt();
       if (consultation.choice?._id) {
@@ -309,31 +309,29 @@ export class AnalysisService {
           systemPrompt = customPrompt;
         }
       }
+      console.log('[generateAnalysis] systemPrompt', systemPrompt);
 
-      const userPrompt = this.buildUserPrompt(formData, consultation);
+      const userPrompt = this.buildUserPrompt(formData);
+      console.log('[generateAnalysis] userPrompt', userPrompt);
 
-      let analyseComplete: any;
-      const isNumerology = this.NUMEROLOGY_TYPES.has(consultation.type);
-      const hasCarteDuCiel = !!formData.carteDuCiel?.carteDuCiel?.aspectsTexte;
-
-      if (consultation.type === 'HOROSCOPE' || isNumerology || hasCarteDuCiel) {
-        analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
-      } else {
-        analyseComplete = await this.deepseekService.genererAnalyseComplete(userPrompt, systemPrompt);
-      }
-
+      const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
+      console.log('[generateAnalysis] analyseComplete (DeepSeek)', analyseComplete);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
         dateGeneration: new Date().toISOString(),
       };
+      console.log('[generateAnalysis] analysisDocument', analysisDocument);
 
       await this.saveAnalysisResults(id, analysisDocument);
+      console.log('[generateAnalysis] Results saved');
 
       const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
+      console.log('[generateAnalysis] Consultation updated', updatedConsultation?._id);
 
       const userId = this.extractUserId(consultation.clientId);
       if (userId) {
         await this.recordUserChoices(updatedConsultation, userId);
+        console.log('[generateAnalysis] User choices recorded');
       }
 
       return {
