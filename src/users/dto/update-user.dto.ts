@@ -8,4 +8,7 @@ import { CreateUserDto } from './create-user.dto';
 export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['password'] as const)) {
   /** Email optionnel pour la mise à jour */
   email?: string;
+
+  /** Carte du ciel astrologique (optionnel) */
+  carteDuCiel?: any;
 }

@@ -1,3 +1,4 @@
+import { UsersService } from '@/users/users.service';
 import {
   Body,
   Controller,
@@ -21,11 +22,12 @@ import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Permission } from '../common/enums/permission.enum';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/schemas/notification.schema';
+import { RubriqueService } from '../rubriques/rubrique.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { AnalysisService } from './analysis.service';
 import { ConsultationsService } from './consultations.service';
+import { DeepseekService } from './deepseek.service';
+import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 
@@ -36,9 +38,375 @@ export class ConsultationsController {
 
   constructor(
     private readonly consultationsService: ConsultationsService,
-    private readonly notificationsService: NotificationsService,
     private readonly analysisService: AnalysisService,
+    private readonly rubriqueService: RubriqueService,
+    private readonly deepseekService: DeepseekService,
+    private readonly usersService: UsersService,
   ) { }
+
+  /**
+    * POST /consultations/generate-consultations-for-rubrique
+    * Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant (sans générer d'analyse).
+    */
+  @Post('generate-consultations-for-rubrique')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: "Créer consultations pour chaque choix d'une rubrique",
+    description: "Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant, sans générer d'analyse."
+  })
+  async generateConsultationsForRubrique(
+    @Body('rubriqueId') rubriqueId: string,
+    @CurrentUser() user: UserDocument
+  ) {
+    try {
+      // Supprimer toutes les consultations de la rubrique pour l'utilisateur courant
+      await this.consultationsService.deleteMany({
+        clientId: user._id.toString(),
+        rubriqueId,
+      });
+
+      const rubrique = await this.rubriqueService.findOne(rubriqueId);
+      const choixConsultations = rubrique.consultationChoices;
+      if (!choixConsultations || choixConsultations.length === 0) {
+        throw new HttpException('Aucun choix de consultation pour cette rubrique', HttpStatus.NOT_FOUND);
+      }
+
+      const results = [];
+      for (const choix of choixConsultations) {
+        // Patch temporaire pour test : renseigne paysNaissance si manquant
+        if (!user.paysNaissance) {
+          user.paysNaissance = 'Côte d’Ivoire';
+        }
+        const choiceDto = {
+          _id: choix._id ?? '',
+          promptId: choix.promptId,
+          title: choix.title,
+          description: choix.description,
+          order: choix.order,
+          frequence: choix.frequence,
+          participants: choix.participants,
+          offering: {
+            alternatives: (choix.offering?.alternatives || []).map((alt: any) => ({
+              _id: alt._id ?? '',
+              category: alt.category,
+              offeringId: alt.offeringId,
+              quantity: alt.quantity ?? 1,
+            })),
+          },
+        };
+
+        const ledto: CreateConsultationDto = {
+          rubriqueId,
+          choice: choiceDto,
+          title: choiceDto.title,
+          description: choiceDto.description,
+          formData: {
+            nom: user.nom,
+            prenoms: user.prenoms,
+            dateNaissance: user.dateNaissance,
+            heureNaissance: user.heureNaissance,
+            villeNaissance: user.villeNaissance,
+            paysNaissance: user.paysNaissance || 'Côte d’Ivoire',
+            genre: user.genre || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            premium: user.premium || false,
+            carteDuCiel: user.carteDuCiel || null,
+          },
+          status: 'PENDING',
+          scheduledDate: null,
+          price: 0,
+          alternatives: choiceDto.offering.alternatives,
+          requiredOffering: null,
+          requiredOfferingsDetails: [],
+          tierce: null,
+          analysisNotified: false,
+          result: null,
+          resultData: null,
+          visible: false,
+        };
+
+        const consultation = await this.consultationsService.create(user._id.toString(), ledto);
+        results.push({ consultation });
+      }
+
+      return {
+        success: true,
+        message: `Consultations créées pour la rubrique ${rubriqueId}`,
+        results,
+      };
+    } catch (err) {
+      console.error('[generateConsultationsForRubrique] ERROR:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * POST /consultations/generate-analysis-for-choice
+   * Génère une consultation et une analyse pour un choix de consultation d'une rubrique pour l'utilisateur courant
+   * Body: { rubriqueId: string, choiceId: string }
+   */
+  @Post('generate-analysis-for-choice')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: "Générer une analyse pour un choix de consultation d'une rubrique",
+    description: "Crée une consultation et génère une analyse pour un choix de consultation d'une rubrique pour l'utilisateur courant."
+  })
+  async generateAnalysisForChoice(
+    @Body('rubriqueId') rubriqueId: string,
+    @Body('choiceId') choiceId: string,
+    @CurrentUser() user: UserDocument
+  ) {
+    try {
+      const rubrique = await this.rubriqueService.findOne(rubriqueId);
+      if (!rubrique || !rubrique.consultationChoices) {
+        throw new HttpException('Rubrique ou choix non trouvés', HttpStatus.NOT_FOUND);
+      }
+      const choix = rubrique.consultationChoices.find((c: any) => c._id?.toString() === choiceId || c._id === choiceId);
+      if (!choix) {
+        throw new HttpException('Choix de consultation non trouvé', HttpStatus.NOT_FOUND);
+      }
+
+      // Patch temporaire pour test : renseigne paysNaissance si manquant
+      // if (!user.paysNaissance) {
+      //   user.paysNaissance = 'Côte d’Ivoire';
+      // }
+
+      const choiceDto = {
+        _id: choix._id ?? '',
+        promptId: choix.promptId,
+        title: choix.title,
+        description: choix.description,
+        order: choix.order,
+        frequence: choix.frequence,
+        participants: choix.participants,
+        offering: {
+          alternatives: (choix.offering?.alternatives || []).map((alt: any) => ({
+            _id: alt._id ?? '',
+            category: alt.category,
+            offeringId: alt.offeringId,
+            quantity: alt.quantity ?? 1,
+          })),
+        },
+      };
+
+      const ledto: CreateConsultationDto = {
+        rubriqueId,
+        choice: choiceDto,
+        title: choiceDto.title,
+        description: choiceDto.description,
+        formData: {
+          nom: user.nom,
+          prenoms: user.prenoms,
+          dateNaissance: user.dateNaissance,
+          heureNaissance: user.heureNaissance,
+          villeNaissance: user.villeNaissance,
+          paysNaissance: user.paysNaissance || 'Côte d’Ivoire',
+          genre: user.genre || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          premium: user.premium || false,
+          carteDuCiel: user.carteDuCiel || null,
+        },
+        status: 'PENDING',
+        scheduledDate: null,
+        price: 0,
+        alternatives: choiceDto.offering.alternatives,
+        requiredOffering: null,
+        requiredOfferingsDetails: [],
+        tierce: null,
+        analysisNotified: false,
+        result: null,
+        resultData: null,
+      };
+
+      const consultation = await this.consultationsService.create(user._id.toString(), ledto);
+      const analysis = await this.analysisService.generateAnalysis(consultation.id, user);
+
+      return {
+        success: true,
+        message: `Consultation et analyse générées pour le choix ${choiceId} de la rubrique ${rubriqueId}`,
+        consultation,
+        analysis,
+      };
+    } catch (err) {
+      console.error('[generateAnalysisForChoice] ERROR:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * POST /consultations/generate-sky-chart
+   * Génère la carte du ciel pour l'utilisateur courant
+   */
+  @Post('generate-sky-chart')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Générer la carte du ciel de l'utilisateur courant",
+    description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
+  })
+  async generateSkyChartForCurrentUser(@CurrentUser() user: UserDocument) {
+    try {
+      const formData = this.extractUserFormData(user);
+      const skyChart = await this.deepseekService.generateSkyChart(formData);
+      // Optionnel : mettre à jour l'utilisateur avec la carte du ciel
+      await this.usersService.update(user._id.toString(), { carteDuCiel: skyChart });
+      return {
+        success: true,
+        carteDuCiel: skyChart,
+      };
+    } catch (error) {
+      console.error('[generateSkyChartForCurrentUser] Erreur:', error);
+      throw new HttpException(
+        {
+          success: false,
+          message: "Erreur lors de la génération de la carte du ciel",
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * POST /consultations/generate-for-rubrique
+   * Génère une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant,
+   * puis génère une analyse pour chacune d'elles.
+   */
+  @Post('generate-for-rubrique')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: "Générer consultations et analyses pour une rubrique",
+    description: "Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant, puis génère une analyse pour chacune."
+  })
+
+  async generateForRubrique(
+    @Body('rubriqueId') rubriqueId: string,
+    @CurrentUser() user: UserDocument
+  ) {
+    try {
+      const rubrique = await this.rubriqueService.findOne(rubriqueId);
+      const choixConsultations = rubrique.consultationChoices;
+      if (!choixConsultations || choixConsultations.length === 0) {
+        console.warn('[generateForRubrique] Aucun choix de consultation pour cette rubrique:', rubriqueId);
+        throw new HttpException('Aucun choix de consultation pour cette rubrique', HttpStatus.NOT_FOUND);
+      }
+
+
+
+      console.log("[generateForRubrique] myuser:", user.carteDuCiel);
+
+      const results = [];
+      for (const choix of choixConsultations) {
+
+        // Patch temporaire pour test : renseigne paysNaissance si manquant
+        if (!user.paysNaissance) {
+          user.paysNaissance = 'Côte d’Ivoire';
+          console.warn('[generateForRubrique] Patch: paysNaissance ajouté pour user:', user._id);
+        }
+        const choiceDto = {
+          _id: choix._id ?? '',
+          promptId: choix.promptId,
+          title: choix.title,
+          description: choix.description,
+          order: choix.order,
+          frequence: choix.frequence,
+          participants: choix.participants,
+          offering: {
+            alternatives: (choix.offering?.alternatives || []).map((alt: any) => ({
+              _id: alt._id ?? '',
+              category: alt.category,
+              offeringId: alt.offeringId,
+              quantity: alt.quantity ?? 1,
+            })),
+          },
+        };
+        console.log('[generateForRubrique] choiceDto:', choiceDto);
+
+        const ledto: CreateConsultationDto = {
+          rubriqueId,
+          choice: choiceDto,
+          title: choiceDto.title,
+          description: choiceDto.description,
+          // Champs formData pour l'analyse
+          formData: {
+            nom: user.nom,
+            prenoms: user.prenoms,
+            dateNaissance: user.dateNaissance,
+            heureNaissance: user.heureNaissance,
+            villeNaissance: user.villeNaissance,
+            paysNaissance: user.paysNaissance,
+            genre: user.genre || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            premium: user.premium || false,
+            carteDuCiel: user.carteDuCiel || null,
+          },
+          status: 'PENDING',
+          // Ajout d'autres champs optionnels si besoin
+          scheduledDate: null,
+          price: 0,
+          alternatives: choiceDto.offering.alternatives,
+          requiredOffering: null,
+          requiredOfferingsDetails: [],
+          tierce: null,
+          analysisNotified: false,
+          result: null,
+          resultData: null,
+          // visible: false,
+        };
+
+        console.log('[generateForRubrique] ledto:', ledto);
+        const consultation = await this.consultationsService.create(user._id.toString(), ledto);
+        console.log('[generateForRubrique] consultation créée:', consultation);
+
+        const analysis = await this.analysisService.generateAnalysis(consultation.id, user);
+        console.log('[generateForRubrique] analysis générée:', analysis);
+
+        results.push({
+          consultation,
+          analysis,
+        });
+      }
+
+      console.log('[generateForRubrique] results:', results);
+      return {
+        success: true,
+        message: `Consultations et analyses générées pour la rubrique ${rubriqueId}`,
+        results,
+      };
+    } catch (err) {
+      console.error('[generateForRubrique] ERROR:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Extract user form data for sky chart generation
+   */
+  private extractUserFormData(user: UserDocument): any {
+    const defaultPaysNaissance = user.country || user.paysNaissance || 'Côte d’Ivoire';
+
+    return {
+      nom: user.nom || '',
+      prenoms: user.prenoms || '',
+      dateNaissance: this.formatDate(user.dateNaissance),
+      heureNaissance: user.heureNaissance || '',
+      villeNaissance: user.villeNaissance || '',
+      paysNaissance: defaultPaysNaissance,
+      genre: user.genre || '',
+      email: user.email || '',
+    };
+  }
+
+  private formatDate(date: any): string {
+    if (!date) return '';
+
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString().split('T')[0];
+
+    return String(date);
+  }
 
   /**
    * POST /consultations/:id/notify-user
@@ -61,15 +429,6 @@ export class ConsultationsController {
         console.error('Consultation ou utilisateur non trouvé', { consultation });
         throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
       }
-      const userId = consultation.clientId._id ? consultation.clientId._id.toString() : consultation.clientId.toString();
-      const notif = await this.notificationsService.create({
-        userId,
-        type: NotificationType.CONSULTATION_RESULT,
-        title: 'Notification de consultation',
-        message: `Vous avez reçu une notification pour la consultation "${consultation.title || id}"`,
-        metadata: { consultationId: id },
-      });
-      const updateResult = await this.consultationsService.update(id, { analysisNotified: true });
       return {
         success: true,
         message: "Notification envoyée à l'utilisateur.",

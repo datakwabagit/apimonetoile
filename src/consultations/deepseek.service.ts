@@ -110,6 +110,7 @@ const REGEX_PATTERNS = {
 
 @Injectable()
 export class DeepseekService {
+
   private readonly logger = new Logger(DeepseekService.name);
   private readonly DEEPSEEK_API_KEY: string;
   // Pas de cache pour éviter la surcharge mémoire
@@ -127,7 +128,7 @@ Tu réponds UNIQUEMENT avec les données astronomiques calculées à partir des 
 Format strict requis. Les positions planétaires doivent être calculées avec les données officielles de la NASA pour la date, l'heure et le lieu de naissance spécifiés.`,
   } as const;
 
-  constructor(
+    constructor(
     private configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
@@ -139,6 +140,67 @@ Format strict requis. Les positions planétaires doivent être calculées avec l
       this.logger.log('Service DeepSeek initialisé avec succès (sans cache)');
     }
   }
+  /**
+   * Génère la carte du ciel complète pour un utilisateur (format AnalysisResult.carteDuCiel)
+   */
+  async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+    const startTime = Date.now();
+    try {
+      const prompt = this.buildCarteDuCielPrompt(data);
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system',
+          content: this.SYSTEM_PROMPTS.carteDuCiel,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ];
+      const response = await this.callDeepSeekApi(messages, 0.2, 1500);
+      const aiContent = response.choices[0]?.message?.content || '';
+
+      // Extraction des positions planétaires à partir du texte brut
+      const positions: PlanetPosition[] = [];
+      const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        // Ex: Soleil en Verseau - Maison 11
+        const match = REGEX_PATTERNS.principal.exec(line);
+        if (match) {
+          const planete = match[1].replace(/\[RÉTROGRADE\]/i, '').trim();
+          const retrograde = REGEX_PATTERNS.retrogradeCheck.test(line);
+          const signe = match[2].trim();
+          const maison = match[3] ? parseInt(match[3], 10) : undefined;
+          positions.push({
+            planete,
+            signe,
+            maison,
+            retrograde,
+          });
+        }
+      }
+
+      const carteDuCiel: AnalysisResult['carteDuCiel'] = {
+        sujet: {
+          nom: data.nom,
+          prenoms: data.prenoms,
+          dateNaissance: data.dateNaissance,
+          lieuNaissance: `${data.villeNaissance}, ${data.paysNaissance}`,
+          heureNaissance: data.heureNaissance,
+        },
+        positions,
+        aspectsTexte: aiContent,
+      };
+      return carteDuCiel;
+    } catch (error) {
+      this.logger.error('[generateSkyChart] Erreur:', error);
+      throw new HttpException(
+        "Erreur lors de la génération de la carte du ciel",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
 
   /**
    * Appelle l'API DeepSeek avec retry logic
@@ -468,7 +530,7 @@ Réponds UNIQUEMENT avec la liste ci-dessus, sans texte supplémentaire.`;
    */
   async checkApiHealth(): Promise<{ healthy: boolean; latency?: number }> {
     const startTime = Date.now();
-    
+
     try {
       const messages: DeepSeekMessage[] = [
         {
@@ -483,7 +545,7 @@ Réponds UNIQUEMENT avec la liste ci-dessus, sans texte supplémentaire.`;
 
       await this.callDeepSeekApi(messages, 0.1, 10);
       const latency = Date.now() - startTime;
-      
+
       return {
         healthy: true,
         latency,

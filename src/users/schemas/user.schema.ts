@@ -141,7 +141,7 @@ export class User {
   credits?: number;
 
   // Système de grades initiatiques
-  @Prop({ type: String, enum: UserGrade, default: null })
+  @Prop({ type: String, enum: UserGrade, default: UserGrade.ASPIRANT })
   grade?: UserGrade;
 
   @Prop({ default: 0 })

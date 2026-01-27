@@ -29,6 +29,9 @@ import { ConsultationChoiceController } from './consultation-choice.controller';
 import { PromptService } from './prompt.service';
 import { PromptController } from './prompt.controller';
 import { Rubrique, RubriqueSchema } from '../rubriques/rubrique.schema';
+import { RubriqueModule } from '../rubriques/rubrique.module';
+import { RubriqueService } from '../rubriques/rubrique.service';
+import { UsersService } from '@/users/users.service';
 
 @Module({
   imports: [
@@ -46,9 +49,10 @@ import { Rubrique, RubriqueSchema } from '../rubriques/rubrique.schema';
       { name: Rubrique.name, schema: RubriqueSchema },
     ]),
     NotificationsModule,
+    RubriqueModule,
   ],
   controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController, ConsultationChoiceStatusController, ConsultationChoiceController, PromptController],
-  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService],
-  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService],
+  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService, RubriqueService, UsersService],
+  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService, RubriqueService, UsersService],
 })
 export class ConsultationsModule { }

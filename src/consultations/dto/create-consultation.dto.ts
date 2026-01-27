@@ -83,16 +83,19 @@ export class RequiredOfferingDetailDto {
 
 export class CreateConsultationDto {
   @IsString()
-  serviceId: string;
+  @IsOptional()
+  serviceId?: string;
 
   @IsString()
-  rubriqueId: string; // ObjectId de la rubrique, obligatoire
+  @IsOptional()
+  rubriqueId?: string; // ObjectId de la rubrique, obligatoire
 
   @IsOptional()
   visible?: boolean;
 
   @IsEnum(ConsultationType)
-  type: ConsultationType;
+  @IsOptional()
+  type?: ConsultationType;
 
   @IsOptional()
   @IsString()
@@ -100,11 +103,13 @@ export class CreateConsultationDto {
 
   @IsString()
   @MaxLength(200)
-  title: string;
+  @IsOptional()
+  title?: string;
 
   @IsString()
   @MaxLength(2000)
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @IsObject()
   @IsOptional()
@@ -146,6 +151,7 @@ export class CreateConsultationDto {
     carteDuCiel?: any;
     [key: string]: any;
   };
+
   @IsOptional()
   @Type(() => ConsultationChoiceDto)
   choice?: ConsultationChoiceDto;

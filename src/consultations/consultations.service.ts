@@ -16,6 +16,14 @@ import { UserConsultationChoiceService } from './user-consultation-choice.servic
 @Injectable()
 export class ConsultationsService {
 
+  /**
+   * Supprimer plusieurs consultations selon un filtre
+   */
+  async deleteMany(filter: any): Promise<{ deletedCount: number }> {
+    const result = await this.consultationModel.deleteMany(filter).exec();
+    return { deletedCount: result.deletedCount || 0 };
+  }
+
   constructor(
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
     @InjectModel(AstrologicalAnalysis.name)

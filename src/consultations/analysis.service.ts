@@ -135,30 +135,47 @@ export class AnalysisService {
     }
 
     try {
+      const requestBody = {
+        model: this.DEFAULT_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: this.DEFAULT_TEMPERATURE,
+        max_tokens: this.DEFAULT_MAX_TOKENS,
+      };
+      console.debug('[DeepSeek] Requête envoyée:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch(this.DEEPSEEK_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: this.DEFAULT_MODEL,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: this.DEFAULT_TEMPERATURE,
-          max_tokens: this.DEFAULT_MAX_TOKENS,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erreur API DeepSeek (${response.status}): ${errorText}`);
+      let rawResponseText = '';
+      try {
+        rawResponseText = await response.clone().text();
+        console.debug('[DeepSeek] Réponse brute:', rawResponseText);
+      } catch (e) {
+        console.warn('[DeepSeek] Impossible de lire la réponse brute:', e);
       }
 
-      const data = await response.json();
-      const aiResponse = data.choices[0]?.message?.content || '';
+      if (!response.ok) {
+        throw new Error(`Erreur API DeepSeek (${response.status}): ${rawResponseText}`);
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('[DeepSeek] Erreur parsing JSON:', e, 'Réponse brute:', rawResponseText);
+        throw new Error('Réponse DeepSeek non valide (JSON)');
+      }
+
+      const aiResponse = data.choices?.[0]?.message?.content || '';
 
       try {
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
@@ -167,7 +184,8 @@ export class AnalysisService {
           ...(jsonMatch ? JSON.parse(jsonMatch[0]) : { texte: aiResponse }),
           dateGeneration: new Date().toISOString(),
         };
-      } catch {
+      } catch (e) {
+        console.warn('[DeepSeek] Erreur parsing JSON dans le message AI:', e, 'Texte:', aiResponse);
         return {
           consultationId,
           texte: aiResponse,
@@ -176,6 +194,7 @@ export class AnalysisService {
       }
 
     } catch (error) {
+      console.error('[DeepSeek] Erreur lors de l’appel API:', error);
       throw new HttpException(
         `Échec de l'appel à l'API DeepSeek: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -262,7 +281,7 @@ export class AnalysisService {
     sections.push(
       '## 📊 DONNÉES ASTROLOGIQUES DISPONIBLES\n',
       '### CARTE DU CIEL CALCULÉE :',
-      carteDuCielTexte || 'Aucune carte du ciel disponible - veuillez générer une analyse basée sur les données de naissance ci-dessus\n'
+      carteDuCielTexte || 'Veuillez générer une carte du ciel en utilisant les Éphémérides de la NASA (Swiss Ephemeris) basée sur les données de naissance ci-dessus\n'
     );
 
     return sections.join('\n');
