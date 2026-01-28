@@ -68,7 +68,6 @@ const userData = {
 };
 
 const filledPrompt = PromptsManager.fillPromptPlaceholders(prompt, userData);
-console.log(filledPrompt);
 // Le prompt avec tous les [PRÉNOM] remplacés par "Sophie", etc.
 ```
 
@@ -87,8 +86,6 @@ const result = PromptsManager.getCompletePromptForConsultation(
 );
 
 if (result) {
-  console.log('Informations :', result.info);
-  console.log('Prompt rempli :', result.prompt);
   
   // Utiliser le prompt avec votre API d'IA
   const response = await sendToAI(result.prompt);
@@ -112,7 +109,6 @@ results.forEach(choice => {
 ```typescript
 const categories = PromptsManager.getAllCategories();
 
-console.log(categories);
 // [
 //   'CARTE_DU_CIEL_ET_5_PORTES',
 //   'MA_VIE_PERSONNELLE',
@@ -215,7 +211,6 @@ export class ConsultationsService {
 4. **Tester**
    ```typescript
    const prompt = PromptsManager.getPromptByConsultationId('nouveau_prompt');
-   console.log(prompt ? '✅ OK' : '❌ Erreur');
    ```
 
 ### Modifier un prompt existant
