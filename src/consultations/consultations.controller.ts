@@ -721,39 +721,7 @@ export class ConsultationsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
-
-  /**
-   * GET /consultations/my-analyses
-   * Récupérer toutes les analyses astrologiques de l'utilisateur connecté
-   */
-  @Get('my-analyses')
-  @UseGuards(PermissionsGuard)
-  @Permissions(Permission.READ_OWN_CONSULTATION)
-  @ApiOperation({
-    summary: 'Récupérer mes analyses',
-    description: "Retourne toutes les analyses astrologiques de l'utilisateur connecté.",
-  })
-  @ApiResponse({ status: 200, description: 'Liste des analyses.' })
-  async getMyAnalyses(
-    @CurrentUser() user: UserDocument,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-  ) {
-    const result = await this.consultationsService.getUserAnalyses(user._id.toString(), {
-      page,
-      limit,
-    });
-
-    return {
-      success: true,
-      analyses: result.analyses,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages,
-    };
-  }
+  }   
 
   /**
    * GET /consultations/assigned

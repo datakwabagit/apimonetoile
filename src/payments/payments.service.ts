@@ -804,18 +804,7 @@ export class PaymentsService {
         dateGeneration: new Date().toISOString(),
       };
 
-      if (userId) {
-        await this.consultationsService.saveAstrologicalAnalysis(
-          userId,
-          consultationId,
-          analyseComplete,
-        );
-      }
-
-      await this.consultationsService.saveAnalysis(consultationId, {
-        statut: AnalysisStatus.COMPLETED,
-        analyse: analyseComplete,
-      });
+     
 
       await this.consultationsService.update(consultationId, {
         status: ConsultationStatus.COMPLETED,

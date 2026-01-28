@@ -1,16 +1,15 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '../users/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
-import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
-import { Payment, PaymentDocument } from '../payments/schemas/payment.schema';
-import { AstrologicalAnalysis, AstrologicalAnalysisDocument } from '../consultations/schemas/astrological-analysis.schema';
+import { Model } from 'mongoose';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { Role } from '../common/enums/role.enum';
+import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
+import { Payment, PaymentDocument } from '../payments/schemas/payment.schema';
 import { UpdateUserDto } from '../users/dto/update-user.dto';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import { WalletTransaction, WalletTransactionDocument } from '../wallet/schemas/wallet-transaction.schema';
 
 @Injectable()
@@ -20,8 +19,7 @@ export class AdminService {
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(WalletTransaction.name) private walletTransactionModel: Model<WalletTransactionDocument>,
-    @InjectModel(AstrologicalAnalysis.name) private astrologicalAnalysisModel: Model<AstrologicalAnalysisDocument>,
-    private readonly configService: ConfigService,
+     private readonly configService: ConfigService,
   ) { }
 
   private startOfDay(date = new Date()) {
@@ -412,21 +410,14 @@ export class AdminService {
 
     // Fetch all analysis for the returned consultations in one query
     const consultationIds = docs.map((c: any) => c._id);
-    const analyses = await this.astrologicalAnalysisModel
-      .find({ consultationId: { $in: consultationIds } })
-      .lean()
-      .exec();
-    const analysisMap = new Map(
-      analyses.map((a: any) => [a.consultationId.toString(), a])
-    );
-
+     
     const consultations = docs.map((c: any) => {
       const { _id, ...consultationData } = c;
-      const analysis = analysisMap.get(_id.toString()) || null;
+   
       return {
         ...consultationData,
         id: _id.toString(),
-        analysis,
+ 
       };
     });
 

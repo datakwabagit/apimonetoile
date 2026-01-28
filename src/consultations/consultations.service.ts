@@ -1,15 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OfferingsService } from '../offerings/offerings.service';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
-import { AnalysisStatus, SaveAnalysisDto } from './dto/save-analysis.dto';
+import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { AstrologicalAnalysis, AstrologicalAnalysisDocument, } from './schemas/astrological-analysis.schema';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 
@@ -26,8 +25,6 @@ export class ConsultationsService {
 
   constructor(
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
-    @InjectModel(AstrologicalAnalysis.name)
-    private analysisModel: Model<AstrologicalAnalysisDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private notificationsService: NotificationsService,
     private offeringsService: OfferingsService,
@@ -489,83 +486,7 @@ export class ConsultationsService {
   async findByConsultant(consultantId: string, query: { page?: number; limit?: number }) {
     return this.findAll({ ...query, consultantId });
   }
-
-  /**
-   * Sauvegarder une analyse astrologique complète
-   */
-  async saveAstrologicalAnalysis(userId: string, consultationId: string, analysisData: any) {
-    const existingAnalysis = await this.analysisModel.findOne({ consultationId }).exec();
-
-    if (existingAnalysis) {
-      Object.assign(existingAnalysis, {
-        userId,
-        carteDuCiel: analysisData.carteDuCiel,
-        missionDeVie: analysisData.missionDeVie,
-        talentsNaturels: analysisData.talentsNaturels,
-        defisViePersonnelle: analysisData.defisViePersonnelle,
-        relations: analysisData.relations,
-        carriereVocation: analysisData.carriereVocation,
-        spiritualiteCroissance: analysisData.spiritualiteCroissance,
-        dateGeneration: new Date(),
-      });
-
-      await existingAnalysis.save();
-      return existingAnalysis;
-    }
-
-    const analysis = new this.analysisModel({
-      userId: new Types.ObjectId(userId),
-      consultationId: new Types.ObjectId(consultationId),
-      carteDuCiel: analysisData.carteDuCiel,
-      missionDeVie: analysisData.missionDeVie,
-      talentsNaturels: analysisData.talentsNaturels,
-      defisViePersonnelle: analysisData.defisViePersonnelle,
-      relations: analysisData.relations,
-      carriereVocation: analysisData.carriereVocation,
-      spiritualiteCroissance: analysisData.spiritualiteCroissance,
-      dateGeneration: new Date(),
-    });
-
-    try {
-      const savedAnalysis = await analysis.save();
-      return savedAnalysis;
-    } catch (error) {
-      console.error('[ConsultationService] ❌ Erreur lors de la sauvegarde:', {
-        message: error.message,
-        code: error.code,
-        errors: error.errors,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Récupérer toutes les analyses d'un utilisateur
-   */
-  async getUserAnalyses(userId: string, query: { page?: number; limit?: number }) {
-    const page = query.page || 1;
-    const limit = query.limit || 10;
-    const skip = (page - 1) * limit;
-
-    const [analyses, total] = await Promise.all([
-      this.analysisModel
-        .find({ userId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('consultationId')
-        .exec(),
-      this.analysisModel.countDocuments({ userId }).exec(),
-    ]);
-
-    return {
-      analyses,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
-  }
+ 
 
   /**
    * Marquer une analyse comme notifiée
