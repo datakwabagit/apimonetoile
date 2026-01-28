@@ -10,7 +10,7 @@ export class CreateCategorieDto {
 
   @IsArray()
   @IsOptional()
-  rubriques?: string[]; // Array of Rubrique IDs
+  rubriques?: string[];  
 }
 
 export class UpdateCategorieDto {

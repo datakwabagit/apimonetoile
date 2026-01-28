@@ -27,7 +27,6 @@ export class NotificationsController {
     return await this.notificationsService.updatePreferences(userId, preferences);
   }
 
-
   /**
    * Récupérer mes notifications
    */

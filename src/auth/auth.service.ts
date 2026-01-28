@@ -17,7 +17,7 @@ import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
 export class AuthService {
- 
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
@@ -37,12 +37,6 @@ export class AuthService {
       throw new ConflictException('Username or email already exists');
     }
 
-    // Mapper le genre français vers anglais
-    let mappedGender = gender;
-    if (gender === 'Homme') mappedGender = 'male';
-    else mappedGender = 'female';
-
-    // Hasher le password
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -50,8 +44,8 @@ export class AuthService {
     const user = new this.userModel({
       ...optionals,
       username,
-      gender: mappedGender,
-      country,
+      gender: gender,
+      country: country || 'Cote d\'Ivoire',
       phone,
       email,
       password: hashedPassword,
@@ -102,8 +96,6 @@ export class AuthService {
       ...tokens,
     };
   }
-
-
 
   /**
    * Valider les credentials d'un utilisateur

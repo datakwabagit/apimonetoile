@@ -1,21 +1,20 @@
 import {
   Controller,
   Get,
-  Post,
-  Patch,
-  Body,
   Param,
-  UseGuards,
+  Patch,
+  Post,
   Req,
+  UseGuards
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { GradeService } from './grade.service';
 import {
-  GradeProgressDto,
   GradeInfoDto,
+  GradeProgressDto,
   GradeUpdateResponseDto,
 } from './dto/grade.dto';
+import { GradeService } from './grade.service';
 
 @ApiTags('Grades')
 @Controller('grades')

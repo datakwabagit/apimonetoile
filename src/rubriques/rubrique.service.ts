@@ -18,11 +18,11 @@ export class RubriqueService {
   ) { }
 
   async findAll() {
-    return this.rubriqueModel.find().populate('categorieId').exec();
+    return this.rubriqueModel.find().populate('categorieId').lean().exec();
   }
 
   async findOne(id: string) {
-    const rubrique = await this.rubriqueModel.findById(id).populate('categorieId').exec();
+    const rubrique = await this.rubriqueModel.findById(id).populate('categorieId').lean().exec();
     if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
     return rubrique;
   }
@@ -104,8 +104,6 @@ export class RubriqueService {
     if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
     return { deleted: true };
   }
-
-
 
   async reorderChoices(id: string, dto: ReorderChoicesDto) {
     const rubrique = await this.rubriqueModel.findById(id).exec();

@@ -362,8 +362,6 @@ export class AdminService {
       return userData;
     });
 
-
-
     return { users, total };
   }
 

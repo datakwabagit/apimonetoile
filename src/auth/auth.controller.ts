@@ -39,10 +39,7 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
- 
-
-
-  /**
+   /**
    * POST /auth/refresh
    * Rafraîchir le token d'accès
    */

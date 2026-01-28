@@ -23,7 +23,7 @@ async function bootstrap() {
   const server = await app.listen(process.env.PORT || 3000);
   server.setTimeout(180000); // 3 minutes
 
-  // Log mémoire toutes les 60s pour diagnostic Render
+  //Log mémoire toutes les 60s pour diagnostic Render
   // setInterval(() => {
   //   const used = process.memoryUsage();
   //   console.log('[MEMORY]', {

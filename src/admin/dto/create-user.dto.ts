@@ -46,6 +46,5 @@ export class CreateUserDto {
   preferences?: {
     notifications?: boolean;
     newsletter?: boolean;
-  };
-  
+  };  
 }

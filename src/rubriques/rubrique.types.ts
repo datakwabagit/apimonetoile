@@ -16,4 +16,3 @@ export interface ConsultationChoice {
     alternatives: ConsultationOffering[];
   };
 }
- 

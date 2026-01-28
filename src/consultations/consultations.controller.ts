@@ -292,14 +292,8 @@ export class ConsultationsController {
         throw new HttpException('Aucun choix de consultation pour cette rubrique', HttpStatus.NOT_FOUND);
       }
 
-
-
-      console.log("[generateForRubrique] myuser:", user.carteDuCiel);
-
       const results = [];
       for (const choix of choixConsultations) {
-
-        // Patch temporaire pour test : renseigne paysNaissance si manquant
         if (!user.paysNaissance) {
           user.paysNaissance = 'Côte d’Ivoire';
           console.warn('[generateForRubrique] Patch: paysNaissance ajouté pour user:', user._id);
@@ -321,8 +315,6 @@ export class ConsultationsController {
             })),
           },
         };
-        console.log('[generateForRubrique] choiceDto:', choiceDto);
-
         const ledto: CreateConsultationDto = {
           rubriqueId,
           choice: choiceDto,
@@ -356,20 +348,15 @@ export class ConsultationsController {
           // visible: false,
         };
 
-        console.log('[generateForRubrique] ledto:', ledto);
         const consultation = await this.consultationsService.create(user._id.toString(), ledto);
-        console.log('[generateForRubrique] consultation créée:', consultation);
 
         const analysis = await this.analysisService.generateAnalysis(consultation.id, user);
-        console.log('[generateForRubrique] analysis générée:', analysis);
 
         results.push({
           consultation,
           analysis,
         });
       }
-
-      console.log('[generateForRubrique] results:', results);
       return {
         success: true,
         message: `Consultations et analyses générées pour la rubrique ${rubriqueId}`,

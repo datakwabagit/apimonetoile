@@ -38,55 +38,7 @@ export class AstrologicalAnalysis {
     };
     synthese: string[];
   };
-
-  @Prop({ type: Object })
-  talentsNaturels: {
-    titre: string;
-    intellectCommunication: {
-      soleil: string;
-      mercure: string;
-      description: string;
-      talents: string[];
-    };
-    synthese: string[];
-  };
-
-  @Prop({ type: Object })
-  defisViePersonnelle: {
-    titre: string;
-    defis: any[];
-  };
-
-  @Prop({ type: Object })
-  relations: {
-    titre: string;
-    styleRelationnel: {
-      venus: string;
-      description: string;
-    };
-    compatibilite: {
-      signesCompatibles: string[];
-    };
-  };
-
-  @Prop({ type: Object })
-  carriereVocation: {
-    titre: string;
-    milieuDuCiel: {
-      position: string;
-      description: string;
-    };
-    domainesRecommandes: string[];
-  };
-
-  @Prop({ type: Object })
-  spiritualiteCroissance: {
-    titre: string;
-    cheminSpirituel: {
-      description: string;
-    };
-    pratiquesRecommandees: string[];
-  };
+ 
 
   @Prop({ type: Date, default: Date.now })
   dateGeneration: Date;
