@@ -6,7 +6,6 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { WalletTransaction, WalletTransactionSchema } from '../wallet/schemas/wallet-transaction.schema';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
-import { HoroscopeController } from './horoscope.controller';
 
 @Module({
   imports: [
@@ -17,7 +16,7 @@ import { HoroscopeController } from './horoscope.controller';
       { name: WalletTransaction.name, schema: WalletTransactionSchema },
      ]),
   ],
-  controllers: [AdminController, HoroscopeController],
+  controllers: [AdminController],
   providers: [AdminService],
   exports: [AdminService],
 })
