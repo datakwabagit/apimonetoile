@@ -83,12 +83,11 @@ export class PaymentsService {
     return {
       nom: formData.lastName || personalInfo?.lastName || personalInfo?.nom || 'Client',
       prenoms: formData.firstName || personalInfo?.firstName || personalInfo?.prenoms || 'Client',
-      genre:
+      gender:
         formData.gender ||
         formData.sexe ||
-        personalInfo?.genre ||
-        personalInfo?.gender ||
-        'Inconnu',
+        personalInfo?.gender || 
+        'male',
       dateNaissance: this.normalizeDateInput(
         formData.dateOfBirth || personalInfo?.dateNaissance || personalInfo?.dateOfBirth,
       ),
@@ -106,14 +105,13 @@ export class PaymentsService {
         personalInfo?.countryOfBirth ||
         personalInfo?.pays ||
         '',
+        country: formData.country || personalInfo?.country || personalInfo?.pays || '', 
       villeNaissance:
         formData.cityOfBirth ||
         formData.villeNaissance ||
         personalInfo?.villeNaissance ||
         personalInfo?.cityOfBirth ||
-        personalInfo?.ville ||
-        '',
-      email: formData.email || personalInfo?.email || undefined,
+        personalInfo?.ville ||        '' 
     };
   }
 

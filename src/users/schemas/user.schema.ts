@@ -15,17 +15,20 @@ export class User {
   @Prop({ required: true, unique: true, trim: true, index: true })
   username: string;
 
-  @Prop({ required: true, enum: ['male', 'female'] })
+  @Prop({ required: false, enum: ['male', 'female'] })
   gender: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   country: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   phone: string;
 
   @Prop({ type: Object })
   carteDuCiel?: any;
+
+  @Prop({ type: Object })
+  aspectsTexte?: any;
 
   @Prop({ trim: true })
   nom?: string; // Nom de famille

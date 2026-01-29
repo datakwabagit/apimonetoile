@@ -6,20 +6,15 @@ import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface BirthData {
-  zodiacSign?: string;
-  horoscopeType?: string;
   dateOfBirth?: string;
-  partnerSign?: string;
-  element?: string;
-  symbol?: string;
   nom: string;
+  country: string;
   prenoms: string;
-  genre: string;
   dateNaissance: string;
   heureNaissance: string;
   paysNaissance: string;
   villeNaissance: string;
-  email?: string;
+  gender?: string;
 }
 
 export interface DeepSeekMessage {
@@ -58,19 +53,8 @@ export interface DeepSeekResponse {
 export interface AnalysisResult {
   timestamp: Date;
   carteDuCiel: {
-    sujet: {
-      nom: string;
-      prenoms: string;
-      dateNaissance: string;
-      lieuNaissance: string;
-      heureNaissance: string;
-    };
     positions: PlanetPosition[];
     aspectsTexte: string;
-  };
-  missionDeVie: {
-    titre: string;
-    contenu: string;
   };
   metadata: {
     processingTime: number;
@@ -168,7 +152,7 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
   "Calculs planétaires conformes aux éphémérides JPL DE440. Domification Placidus basée sur le Temps Sidéral Local dérivé de l'heure UTC vérifiée historiquement en Section 0. Certification de conformité aux standards de la NASA pour le référentiel donné."`
   } as const;
 
-    constructor(
+  constructor(
     private configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
@@ -184,7 +168,7 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
    * Génère la carte du ciel complète pour un utilisateur (format AnalysisResult.carteDuCiel)
    */
   async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
-    const startTime = Date.now();
+
     try {
       const prompt = this.buildCarteDuCielPrompt(data);
       const messages: DeepSeekMessage[] = [
@@ -221,13 +205,6 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
       }
 
       const carteDuCiel: AnalysisResult['carteDuCiel'] = {
-        sujet: {
-          nom: data.nom,
-          prenoms: data.prenoms,
-          dateNaissance: data.dateNaissance,
-          lieuNaissance: `${data.villeNaissance}, ${data.paysNaissance}`,
-          heureNaissance: data.heureNaissance,
-        },
         positions,
         aspectsTexte: aiContent,
       };
@@ -388,24 +365,12 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
       ];
 
       const response = await this.callDeepSeekApi(messages, 0.8, 4000);
-      const aiContent = response.choices[0]?.message?.content || '';
 
       const result: AnalysisResult = {
         timestamp: new Date(),
         carteDuCiel: {
-          sujet: {
-            nom: '',
-            prenoms: '',
-            dateNaissance: '',
-            lieuNaissance: '',
-            heureNaissance: '',
-          },
           positions: [],
           aspectsTexte: '',
-        },
-        missionDeVie: {
-          titre: 'Analyse générée',
-          contenu: aiContent,
         },
         metadata: {
           processingTime: Date.now() - startTime,
@@ -499,7 +464,7 @@ PRÉNOMS: ${data.prenoms}
 DATE: ${data.dateNaissance}
 HEURE: ${data.heureNaissance}
 LIEU: ${data.villeNaissance}, ${data.paysNaissance}
-GENRE: ${data.genre}
+GENRE: ${data.gender}
 
 INSTRUCTIONS DE CALCUL:
 ⚠️ CRITIQUE: Base-toi EXCLUSIVEMENT sur les Éphémérides de la NASA (Swiss Ephemeris / JPL Horizons) pour tous les calculs.

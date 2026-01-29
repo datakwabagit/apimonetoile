@@ -5,6 +5,7 @@ import { ConsultationsService } from './consultations.service';
 import { BirthData } from './deepseek.service';
 import { PromptService } from './prompt.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { User, UserDocument } from '@/users/schemas/user.schema';
 
 @Injectable()
 export class AnalysisService {
@@ -84,9 +85,8 @@ export class AnalysisService {
       heureNaissance: form.heureNaissance ?? form.timeOfBirth ?? '',
       villeNaissance: form.villeNaissance ?? form.cityOfBirth ?? '',
       paysNaissance: (form.paysNaissance || form.countryOfBirth || form.country || '').trim(),
-      email: form.email ?? '',
-      genre: form.genre || form.gender || '',
-      phone: form.phone || '',
+      gender: form.genre || form.gender || '',
+      country: form.country || '',
     } as BirthData;
   }
 
@@ -98,14 +98,9 @@ export class AnalysisService {
       heureNaissance: 'Heure de naissance',
       villeNaissance: 'Ville de naissance',
       paysNaissance: 'Pays de naissance',
-      email: 'Email',
-      genre: 'Genre',
-      zodiacSign: 'Signe zodiacal',
-      horoscopeType: 'Type d\'horoscope',
+      gender: 'Genre',
       dateOfBirth: 'Date de naissance',
-      partnerSign: 'Signe du partenaire',
-      element: 'Élément',
-      symbol: 'Symbole',
+      country: 'Pays',
     };
 
     const requiredFields: (keyof BirthData)[] = [
@@ -259,16 +254,16 @@ export class AnalysisService {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
 
-    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, genre } = birthData;
+    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
-    const carteDuCielTexte = formData.carteDuCiel?.carteDuCiel?.aspectsTexte || '';
+    const carteDuCielTexte = formData.carteDuCiel || '';
 
     const sections: string[] = [];
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
       `• **Prénoms à utiliser** : ${prenoms || ''}`,
       `• **Nom de famille** : ${nom || ''}`,
-      `• **Genre** : ${genre || 'Non spécifié'}\n`,
+      `• **Genre** : ${gender || 'Non spécifié'}\n`,
     );
 
     sections.push(
@@ -280,8 +275,41 @@ export class AnalysisService {
 
     sections.push(
       '## 📊 DONNÉES ASTROLOGIQUES DISPONIBLES\n',
-      '### CARTE DU CIEL CALCULÉE :',
+      '### CARTE DU CIEL :',
       carteDuCielTexte || 'Veuillez générer une carte du ciel en utilisant les Éphémérides de la NASA (Swiss Ephemeris) basée sur les données de naissance ci-dessus\n'
+    );
+
+    return sections.join('\n');
+  }
+
+  private buildUserPromptuser(formData: any, user: UserDocument): string {
+    const birthData = this.extractBirthData(formData);
+    this.validateBirthData(birthData);
+
+    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
+    const dateFormatee = this.formatDate(dateNaissance);
+    const carteDuCielTexte = user.carteDuCiel || '';
+
+    const sections: string[] = [];
+    sections.push(
+      '## 👤 INFORMATIONS PERSONNELLES',
+      `• **Prénoms à utiliser** : ${prenoms || ''}`,
+      `• **Nom de famille** : ${nom || ''}`,
+      `• **Genre** : ${gender || 'Non spécifié'}\n`,
+    );
+
+    sections.push(
+      '## 🎂 DONNÉES DE NAISSANCE EXACTES',
+      `• **Date de naissance** : ${dateFormatee}`,
+      `• **Heure de naissance** : ${heureNaissance || 'Non spécifié'}`,
+      `• **Pays de naissance** : ${paysNaissance || 'Non spécifié'}`,
+      `• **Lieu de naissance** : ${villeNaissance}, ${paysNaissance}\n`
+    );
+
+    sections.push(
+      '## 📊 DONNÉES ASTROLOGIQUES DISPONIBLES\n',
+      '### CARTE DU CIEL :',
+      carteDuCielTexte
     );
 
     return sections.join('\n');
@@ -325,8 +353,64 @@ export class AnalysisService {
           systemPrompt = customPrompt;
         }
       }
-
       const userPrompt = this.buildUserPrompt(formData);
+      const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
+      const analysisDocument = {
+        consultationId: id, ...analyseComplete,
+        dateGeneration: new Date().toISOString(),
+      };
+
+      await this.saveAnalysisResults(id, analysisDocument);
+
+      const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
+
+      const userId = this.extractUserId(consultation.clientId);
+      if (userId) {
+        await this.recordUserChoices(updatedConsultation, userId);
+      }
+
+      return {
+        success: true,
+        consultationId: id,
+        statut: ConsultationStatus.COMPLETED,
+        message: this.getSuccessMessage(consultation.type),
+        consultation: updatedConsultation,
+      };
+      return null;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          error: `Erreur lors de la génération: ${error.message}`,
+          statut: 'error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async generateAnalysisuser(id: string, user: UserDocument) {
+    try {
+      const consultation = await this.consultationsService.findOne(id);
+      if (!consultation) {
+        throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
+      }
+
+      const formData = consultation.formData || {};
+
+      let systemPrompt = this.getDefaultPrompt();
+      if (consultation.choice?._id) {
+        const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
+        if (customPrompt) {
+          systemPrompt = customPrompt;
+        }
+      }
+
+      const userPrompt = this.buildUserPromptuser(formData, user);
 
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
@@ -342,6 +426,8 @@ export class AnalysisService {
       if (userId) {
         await this.recordUserChoices(updatedConsultation, userId);
       }
+
+      console.log('Updated Consultation:', updatedConsultation);
 
       return {
         success: true,

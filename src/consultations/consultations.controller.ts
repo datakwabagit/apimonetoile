@@ -19,6 +19,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
+import { ConsultationType } from '../common/enums/consultation-status.enum';
 import { Permission } from '../common/enums/permission.enum';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -73,10 +74,7 @@ export class ConsultationsController {
 
       const results = [];
       for (const choix of choixConsultations) {
-        // Patch temporaire pour test : renseigne paysNaissance si manquant
-        if (!user.paysNaissance) {
-          user.paysNaissance = 'Côte d’Ivoire';
-        }
+        if (!user.paysNaissance) { user.paysNaissance = 'Côte d’Ivoire'; }
         const choiceDto = {
           _id: choix._id ?? '',
           promptId: choix.promptId,
@@ -100,6 +98,7 @@ export class ConsultationsController {
           choice: choiceDto,
           title: choiceDto.title,
           description: choiceDto.description,
+          type: ConsultationType.CINQ_ETOILES,
           formData: {
             nom: user.nom,
             prenoms: user.prenoms,
@@ -107,7 +106,7 @@ export class ConsultationsController {
             heureNaissance: user.heureNaissance,
             villeNaissance: user.villeNaissance,
             paysNaissance: user.paysNaissance || 'Côte d’Ivoire',
-            genre: user.genre || '',
+            gender: user.gender || user.genre || '',
             email: user.email || '',
             phone: user.phone || '',
             premium: user.premium || false,
@@ -125,6 +124,7 @@ export class ConsultationsController {
           resultData: null,
           visible: false,
         };
+        console.log('Creating consultation with DTO:', ledto);
 
         const consultation = await this.consultationsService.create(user._id.toString(), ledto);
         results.push({ consultation });
@@ -248,9 +248,10 @@ export class ConsultationsController {
   async generateSkyChartForCurrentUser(@CurrentUser() user: UserDocument) {
     try {
       const formData = this.extractUserFormData(user);
+      const { positions, aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
       const skyChart = await this.deepseekService.generateSkyChart(formData);
       // Optionnel : mettre à jour l'utilisateur avec la carte du ciel
-      await this.usersService.update(user._id.toString(), { carteDuCiel: skyChart });
+      await this.usersService.update(user._id.toString(), { carteDuCiel: positions, aspectsTexte: aspectsTexte });
       return {
         success: true,
         carteDuCiel: skyChart,
@@ -381,7 +382,7 @@ export class ConsultationsController {
       heureNaissance: user.heureNaissance || '',
       villeNaissance: user.villeNaissance || '',
       paysNaissance: defaultPaysNaissance,
-      genre: user.genre || '',
+      genre: user.genre || user.gender || '',
       email: user.email || '',
     };
   }
@@ -721,7 +722,7 @@ export class ConsultationsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }   
+  }
 
   /**
    * GET /consultations/assigned
@@ -843,6 +844,41 @@ export class ConsultationsController {
       );
     }
   }
+
+
+  /**
+    * POST /consultations/:id/generate-analysis
+    * Générer l'analyse astrologique complète via DeepSeek (Authentifié)
+    */
+  @Post(':id/generate-analysis-user')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Générer l'analyse astrologique",
+    description: 'Génère une analyse astrologique complète via DeepSeek AI.',
+  })
+  @ApiResponse({ status: 200, description: 'Analyse générée avec succès.' })
+  @ApiResponse({ status: 400, description: 'Données invalides.' })
+  @ApiResponse({ status: 401, description: 'Non authentifié.' })
+  @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
+  async generateAnalysisuser(
+    @Param('id') id: string,
+    @CurrentUser() user: UserDocument,
+  ) {
+    try {
+      return await this.analysisService.generateAnalysisuser(id, user);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      throw new HttpException(
+        {
+          success: false,
+          error: `Erreur lors de la génération: ${errorMessage}`,
+          statut: 'error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
 
   /**
    * GET /consultations/:id/generate-analysis
