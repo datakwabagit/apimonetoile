@@ -139,7 +139,8 @@ export class AnalysisService {
         temperature: this.DEFAULT_TEMPERATURE,
         max_tokens: this.DEFAULT_MAX_TOKENS,
       };
-      console.debug('[DeepSeek] Requête envoyée:', JSON.stringify(requestBody, null, 2));
+      // console.debug('[DeepSeek] Requête envoyée:', JSON.stringify(requestBody, null, 2));
+      console.log('[DeepSeek] Requête envoyée:', requestBody);
 
       const response = await fetch(this.DEEPSEEK_API_URL, {
         method: 'POST',
@@ -250,13 +251,85 @@ export class AnalysisService {
     }
   }
 
+  private formatCarteDuCielForAI(carteDuCielData: any[]): string {
+    if (!carteDuCielData || !Array.isArray(carteDuCielData)) {
+      return 'Données de carte du ciel non disponibles';
+    }
+
+    const sections: string[] = [];
+
+    // 1. Points principaux
+    sections.push('## 🌟 POSITIONS PLANÉTAIRES');
+
+    const planetesPrincipales = carteDuCielData.filter(p =>
+      ['Soleil', 'Lune', 'Mercure', 'Vénus', 'Mars',
+        'Jupiter', 'Saturne', 'Uranus', 'Neptune', 'Pluton', 'Ascendant', 'Milieu du Ciel'].includes(p.planete)
+    );
+
+    planetesPrincipales.forEach(planete => {
+      const retro = planete.retrograde ? ' (Rétrograde)' : '';
+      sections.push(`• **${planete.planete}** en ${planete.signe}, Maison ${planete.maison}${retro}`);
+    });
+
+    // 2. Points astéroïdes et spéciaux
+    sections.push('\n## 🪐 ASTÉROÏDES ET POINTS SPÉCIAUX');
+
+    const asteroides = carteDuCielData.filter(p =>
+      !planetesPrincipales.map(pp => pp.planete).includes(p.planete)
+    );
+
+    asteroides.forEach(point => {
+      const retro = point.retrograde ? ' (Rétrograde)' : '';
+      sections.push(`• **${point.planete}** en ${point.signe}, Maison ${point.maison}${retro}`);
+    });
+
+    // 3. Synthèse par maison
+    sections.push('\n## 🏠 SYNTHÈSE PAR MAISON');
+
+    const maisons: Record<number, string[]> = {};
+    carteDuCielData.forEach(p => {
+      if (!maisons[p.maison]) maisons[p.maison] = [];
+      maisons[p.maison].push(`${p.planete} en ${p.signe}`);
+    });
+
+    Object.keys(maisons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(maison => {
+      sections.push(`**Maison ${maison}** : ${maisons[parseInt(maison)].join(', ')}`);
+    });
+
+    // 4. Synthèse par signe
+    sections.push('\n## ♈️ SYNTHÈSE PAR SIGNE');
+
+    const signes: Record<string, string[]> = {};
+    carteDuCielData.forEach(p => {
+      if (!signes[p.signe]) signes[p.signe] = [];
+      signes[p.signe].push(p.planete);
+    });
+
+    Object.keys(signes).forEach(signe => {
+      sections.push(`**${signe}** : ${signes[signe].join(', ')}`);
+    });
+
+    // 5. Planètes rétrogrades
+    const retrogradees = carteDuCielData.filter(p => p.retrograde);
+    if (retrogradees.length > 0) {
+      sections.push('\n## 🔄 PLANÈTES RÉTROGRADES');
+      retrogradees.forEach(p => {
+        sections.push(`• **${p.planete}** en ${p.signe}, Maison ${p.maison}`);
+      });
+    }
+
+    return sections.join('\n');
+  }
+
+
   private buildUserPrompt(formData: any): string {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
 
     const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
-    const carteDuCielTexte = formData.carteDuCiel || '';
+    const carteDuCielTexte = this.formatCarteDuCielForAI(formData.carteDuCiel || []);
+    console.log('CARTE DU CIEL TEXTE:', carteDuCielTexte);
 
     const sections: string[] = [];
     sections.push(
@@ -274,10 +347,58 @@ export class AnalysisService {
     );
 
     sections.push(
-      '## 📊 DONNÉES ASTROLOGIQUES DISPONIBLES\n',
-      '### CARTE DU CIEL :',
-      carteDuCielTexte || 'Veuillez générer une carte du ciel en utilisant les Éphémérides de la NASA (Swiss Ephemeris) basée sur les données de naissance ci-dessus\n'
+      '## CARTE DU CIEL\n',
+      carteDuCielTexte,
     );
+
+    console.log('CARTE DU CIEL TEXTE:', carteDuCielTexte);
+
+    return sections.join('\n');
+  }
+
+  private buildUserPrompttierce(formData: any, tierce: any): string {
+    const birthData = this.extractBirthData(formData);
+    this.validateBirthData(birthData);
+
+    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
+    const dateFormatee = this.formatDate(dateNaissance);
+    const carteDuCielTexte = this.formatCarteDuCielForAI(formData.carteDuCiel || []);
+    console.log('CARTE DU CIEL TEXTE:', carteDuCielTexte);
+
+    const sections: string[] = [];
+    sections.push(
+      '## 👤 INFORMATIONS PERSONNELLES',
+      `• **Prénoms à utiliser** : ${prenoms || ''}`,
+      `• **Nom de famille** : ${nom || ''}`,
+      `• **Genre** : ${gender || 'Non spécifié'}\n`,
+    );
+
+    sections.push(
+      '## 🎂 DONNÉES DE NAISSANCE EXACTES',
+      `• **Date de naissance** : ${dateFormatee}`,
+      `• **Heure de naissance** : ${heureNaissance || 'Non spécifié'}`,
+      `• **Lieu de naissance** : ${villeNaissance}, ${paysNaissance}\n`
+    );
+
+    sections.push(
+      '## CARTE DU CIEL\n',
+      carteDuCielTexte,
+    );
+
+      sections.push(
+      '## 👤 INFORMATIONS PERSONNELLES de la personne tierce',
+      `• **Prénoms de la personne tierce à utiliser** : ${tierce.prenoms || ''}`,
+      `• **Nom de famille de la personne tierce** : ${tierce.nom || ''}`,
+      `• **Genre de la personne tierce** : ${tierce.gender || 'Non spécifié'}\n`,
+    );
+
+    sections.push(
+      '## 🎂 DONNÉES DE NAISSANCE EXACTES de la personne tierce',
+      `• **Date de naissance de la personne tierce** : ${tierce.dateNaissance || 'Non spécifié'}`,
+      `• **Heure de naissance de la personne tierce** : ${tierce.heureNaissance || 'Non spécifié'}`,
+      `• **Lieu de naissance de la personne tierce** : ${tierce.villeNaissance}, ${tierce.paysNaissance}\n`
+    );
+
 
     return sections.join('\n');
   }
@@ -288,7 +409,9 @@ export class AnalysisService {
 
     const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
-    const carteDuCielTexte = user.carteDuCiel || '';
+
+    const carteDuCielTexte = this.formatCarteDuCielForAI(user.carteDuCiel);
+
 
     const sections: string[] = [];
     sections.push(
@@ -307,9 +430,8 @@ export class AnalysisService {
     );
 
     sections.push(
-      '## 📊 DONNÉES ASTROLOGIQUES DISPONIBLES\n',
-      '### CARTE DU CIEL :',
-      carteDuCielTexte
+      '## CARTE DU CIEL\n',
+      carteDuCielTexte,
     );
 
     return sections.join('\n');
@@ -353,7 +475,13 @@ export class AnalysisService {
           systemPrompt = customPrompt;
         }
       }
-      const userPrompt = this.buildUserPrompt(formData);
+      let userPrompt = null
+
+      if (consultation.tierce) {
+        userPrompt = this.buildUserPrompttierce(formData, consultation.tierce);
+      } else {
+        userPrompt = this.buildUserPrompt(formData);
+      }
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
@@ -376,7 +504,6 @@ export class AnalysisService {
         message: this.getSuccessMessage(consultation.type),
         consultation: updatedConsultation,
       };
-      return null;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;

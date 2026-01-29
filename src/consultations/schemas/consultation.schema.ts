@@ -144,6 +144,7 @@ export class Consultation {
     country?: string;
     question?: string;
     username?: string;
+    tierce?: string;
     _id?: string;
     role?: string;
     customPermissions?: any[];
