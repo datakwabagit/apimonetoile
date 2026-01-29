@@ -124,7 +124,6 @@ export class ConsultationsController {
           resultData: null,
           visible: false,
         };
-        console.log('Creating consultation with DTO:', ledto);
 
         const consultation = await this.consultationsService.create(user._id.toString(), ledto);
         results.push({ consultation });

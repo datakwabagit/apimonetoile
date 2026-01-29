@@ -427,8 +427,6 @@ export class AnalysisService {
         await this.recordUserChoices(updatedConsultation, userId);
       }
 
-      console.log('Updated Consultation:', updatedConsultation);
-
       return {
         success: true,
         consultationId: id,
