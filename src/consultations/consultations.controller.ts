@@ -1,3 +1,8 @@
+// ...existing code...
+
+// (imports, decorators, class declaration, constructeur...)
+
+// ...existing code...
 import { UsersService } from '@/users/users.service';
 import {
   Body,
@@ -36,6 +41,17 @@ import { UpdateConsultationDto } from './dto/update-consultation.dto';
 @Controller('consultations')
 @UseGuards(JwtAuthGuard)
 export class ConsultationsController {
+  /**
+   * PATCH /consultations/:id/analyse-texte
+   * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
+   */
+  @Patch(':id/analyse-texte')
+  async updateAnalyseTexte(
+    @Param('id') id: string,
+    @Body('texte') texte: string
+  ) {
+    return this.consultationsService.updateAnalyseTexte(id, texte);
+  }
 
   constructor(
     private readonly consultationsService: ConsultationsService,
@@ -251,6 +267,8 @@ export class ConsultationsController {
       const skyChart = await this.deepseekService.generateSkyChart(formData);
       // Optionnel : mettre à jour l'utilisateur avec la carte du ciel
       await this.usersService.update(user._id.toString(), { carteDuCiel: positions, aspectsTexte: aspectsTexte });
+     console.log('Positions de la  Carte du ciel générée pour user:', positions);
+     
       return {
         success: true,
         carteDuCiel: skyChart,
@@ -345,7 +363,6 @@ export class ConsultationsController {
           analysisNotified: false,
           result: null,
           resultData: null,
-          // visible: false,
         };
 
         const consultation = await this.consultationsService.create(user._id.toString(), ledto);
@@ -941,6 +958,15 @@ export class ConsultationsController {
    */
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto) {
+    return this.consultationsService.update(id, updateConsultationDto);
+  }
+
+  /**
+   * PUT /consultations/:id
+   * Mettre à jour une consultation (alternative PUT)
+   */
+  @Put(':id')
+  updatePut(@Param('id') id: string, @Body() updateConsultationDto: UpdateConsultationDto) {
     return this.consultationsService.update(id, updateConsultationDto);
   }
 

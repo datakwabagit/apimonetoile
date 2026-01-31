@@ -21,7 +21,7 @@ import { BooksModule } from './books/books.module';
 import { SpiritualiteModule } from './spiritualite/spiritualite.module';
 import { ConfigModule as CustomConfigModule } from './config/config.module';
 
-import { AnalysisModule } from './analysis/analysis.module';
+// import { AnalysisModule } from './analysis/analysis.module';
 import { WalletModule } from './wallet/wallet.module';
 import { OfferingsModule } from './offerings/offerings.module';
 import { OfferingStockModule } from './offerings/offering-stock.module';
@@ -74,7 +74,7 @@ import { CategoriesModule } from './categories/categories.module';
           AdminModule,
           BooksModule,
           SpiritualiteModule,
-          AnalysisModule,
+          // AnalysisModule,
           WalletModule,
           OfferingsModule,
           OfferingStockModule,

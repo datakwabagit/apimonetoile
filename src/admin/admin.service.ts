@@ -19,7 +19,7 @@ export class AdminService {
     @InjectModel(Consultation.name) private consultationModel: Model<ConsultationDocument>,
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(WalletTransaction.name) private walletTransactionModel: Model<WalletTransactionDocument>,
-     private readonly configService: ConfigService,
+    private readonly configService: ConfigService,
   ) { }
 
   private startOfDay(date = new Date()) {
@@ -36,7 +36,7 @@ export class AdminService {
     if (existingUser) {
       throw new ConflictException('Username or email already exists');
     }
-  
+
     let mappedGender = gender;
     if (gender === 'Homme') mappedGender = 'male';
     else mappedGender = 'female';
@@ -408,16 +408,13 @@ export class AdminService {
         .exec(),
     ]);
 
-    // Fetch all analysis for the returned consultations in one query
-    const consultationIds = docs.map((c: any) => c._id);
-     
     const consultations = docs.map((c: any) => {
       const { _id, ...consultationData } = c;
-   
+
       return {
         ...consultationData,
         id: _id.toString(),
- 
+
       };
     });
 

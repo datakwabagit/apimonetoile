@@ -4,7 +4,6 @@
 export enum ConsultationStatus {
   PENDING = 'PENDING', // En attente d'attribution
   ASSIGNED = 'ASSIGNED', // Attribuée à un consultant
-  IN_PROGRESS = 'IN_PROGRESS', // En cours de réalisation
   COMPLETED = 'COMPLETED', // Terminée
   CANCELLED = 'CANCELLED', // Annulée
   REFUNDED = 'REFUNDED', // Remboursée

@@ -1,13 +1,12 @@
-import { plainToInstance } from 'class-transformer';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ConsultationChoice, Rubrique, RubriqueDocument } from './rubrique.schema';
-import { RubriqueDto, ConsultationOfferingDto } from './dto/rubrique.dto';
-import { ReorderChoicesDto } from './dto/reorder-choices.dto';
-import { RubriqueWithChoiceCountDto, ConsultationChoiceWithCountDto } from './dto/rubrique-with-count.dto';
-import { UserConsultationChoice, UserConsultationChoiceDocument } from '../consultations/schemas/user-consultation-choice.schema';
 import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
+import { UserConsultationChoice, UserConsultationChoiceDocument } from '../consultations/schemas/user-consultation-choice.schema';
+import { ReorderChoicesDto } from './dto/reorder-choices.dto';
+import { ConsultationChoiceWithCountDto, RubriqueWithChoiceCountDto } from './dto/rubrique-with-count.dto';
+import { RubriqueDto } from './dto/rubrique.dto';
+import { ConsultationChoice, Rubrique, RubriqueDocument } from './rubrique.schema';
 
 @Injectable()
 export class RubriqueService {
@@ -95,7 +94,7 @@ export class RubriqueService {
     }));
   }
 
-  async update(id: string, dto: RubriqueDto) {     
+  async update(id: string, dto: RubriqueDto) {
     return this.rubriqueModel.findByIdAndUpdate(id, dto, { new: true });
   }
 

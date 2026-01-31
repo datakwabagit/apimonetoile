@@ -4,7 +4,6 @@ import { Rubrique, RubriqueSchema } from './rubrique.schema';
 import { RubriqueService } from './rubrique.service';
 import { RubriqueController } from './rubrique.controller';
 import { UserConsultationChoice, UserConsultationChoiceSchema } from '../consultations/schemas/user-consultation-choice.schema';
-
 import { Consultation, ConsultationSchema } from '../consultations/schemas/consultation.schema';
 
 @Module({
@@ -19,4 +18,4 @@ import { Consultation, ConsultationSchema } from '../consultations/schemas/consu
   controllers: [RubriqueController],
   exports: [RubriqueService],
 })
-export class RubriqueModule {}
+export class RubriqueModule { }

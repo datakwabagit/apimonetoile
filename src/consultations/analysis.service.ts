@@ -5,6 +5,7 @@ import { ConsultationsService } from './consultations.service';
 import { BirthData } from './deepseek.service';
 import { PromptService } from './prompt.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { AnalysisDbService } from './analysis-db.service';
 import { User, UserDocument } from '@/users/schemas/user.schema';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class AnalysisService {
     private userConsultationChoiceService: UserConsultationChoiceService,
     @Inject(forwardRef(() => PromptService))
     private promptService: PromptService,
+    private analysisDbService: AnalysisDbService,
   ) { }
 
   private async loadPromptFromDatabase(choiceId: string): Promise<string | null> {
@@ -203,9 +205,32 @@ export class AnalysisService {
     analysisData: any,
   ): Promise<void> {
     const resultDataKey = 'analyse';
+    console.log(`[AnalysisService] configuration des résultats de l'analyse`, analysisData);
     await this.consultationsService.update(consultationId, {
       resultData: { [resultDataKey]: analysisData }
     });
+    console.log(`[AnalysisService] Résultats de l'analyse sauvegardés pour la consultation ${consultationId}`);
+
+    // Récupérer la consultation pour enrichir l'analyse
+    const consultation = await this.consultationsService.findOne(consultationId);
+    if (!consultation) {
+      console.warn(`[AnalysisService] Consultation non trouvée pour enrichir l'analyse (${consultationId})`);
+      return;
+    }
+
+    // Préparer tous les champs pertinents pour l'analyse
+    const analysisToSave = {
+      consultationID: consultationId,
+      texte: analysisData.texte,
+      clientId: consultation.clientId?.toString?.() || consultation.clientId,
+      type: consultation.type,
+      status: consultation.status,
+      title: consultation.title,
+      completedDate: consultation.completedDate,
+    };
+
+    await this.analysisDbService.createAnalysis(analysisToSave as any);
+    console.log(`[AnalysisService] Analyse enrichie enregistrée dans la base de données pour la consultation ${consultationId}`);
   }
 
   private async recordUserChoices(consultation: any, userId: string): Promise<void> {
@@ -385,7 +410,7 @@ export class AnalysisService {
       carteDuCielTexte,
     );
 
-      sections.push(
+    sections.push(
       '## 👤 INFORMATIONS PERSONNELLES de la personne tierce',
       `• **Prénoms de la personne tierce à utiliser** : ${tierce.prenoms || ''}`,
       `• **Nom de famille de la personne tierce** : ${tierce.nom || ''}`,

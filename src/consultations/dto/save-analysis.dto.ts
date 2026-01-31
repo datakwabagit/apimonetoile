@@ -13,6 +13,26 @@ export class SaveAnalysisDto {
   statut: AnalysisStatus;
 
   @IsOptional()
-  @IsObject()
+  consultationID?: string;
+
+  @IsOptional()
+  texte?: string;
+
+  @IsOptional()
+  clientId?: string;
+
+  @IsOptional()
+  type?: string;
+
+  @IsOptional()
+  status?: string;
+
+  @IsOptional()
+  title?: string;
+
+  @IsOptional()
+  completedDate?: Date;
+
+  @IsOptional()
   metadata?: any;
 }

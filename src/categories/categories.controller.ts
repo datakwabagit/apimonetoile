@@ -20,11 +20,7 @@ export class CategoriesController {
     const userId = user?._id?.toString();
     return this.categoriesService.findOne(id, userId);
   }
-
-  /**
-   * GET /categories/:id/with-rubriques
-   * Retourne une catégorie avec id, titre, description et ses rubriques (id, nom, titre, description, categorieId)
-   */
+ 
   @Get(':id/with-rubriques')
   async getCategorieWithRubriques(@Param('id') id: string) {
     return this.categoriesService.getCategorieWithRubriques(id);

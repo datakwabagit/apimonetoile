@@ -167,7 +167,115 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
   /**
    * Génère la carte du ciel complète pour un utilisateur (format AnalysisResult.carteDuCiel)
    */
-  async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+async generateSkyChart3(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+  try {
+    const prompt = this.buildCarteDuCielPrompt(data);
+    const messages: DeepSeekMessage[] = [
+      {
+        role: 'system',
+        content: this.SYSTEM_PROMPTS.carteDuCiel,
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ];
+    const response = await this.callDeepSeekApi(messages, 0.2, 1500);
+    const aiContent = response.choices[0]?.message?.content || '';
+
+    console.log('[DeepSeek] Réponse brute carte du ciel:', aiContent);
+    
+    // Extraction des positions planétaires
+    const positions: PlanetPosition[] = this.extractPositionsFromResponse(aiContent);
+    
+    console.log('[DeepSeek] Positions extraites:', positions.length);
+    positions.forEach(p => console.log(`  - ${p.planete}: ${p.signe}, Maison ${p.maison}${p.retrograde ? ' (Rétrograde)' : ''}`));
+
+    const carteDuCiel: AnalysisResult['carteDuCiel'] = {
+      positions,
+      aspectsTexte: aiContent,
+    };
+    return carteDuCiel;
+  } catch (error) {
+    this.logger.error('[generateSkyChart] Erreur:', error);
+    throw new HttpException(
+      "Erreur lors de la génération de la carte du ciel",
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
+private extractPositionsFromResponse2(aiContent: string): PlanetPosition[] {
+  const positions: PlanetPosition[] = [];
+  const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
+  
+  for (const line of lines) {
+    // Chercher les sections avec les positions planétaires
+    if (line.includes('SECTION 2 :') || 
+        line.includes('SECTION 3 :') || 
+        line.includes('SECTION 4 :')) {
+      continue; // Ce sont des titres de section
+    }
+    
+    // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+    const pipeFormatMatch = this.parsePipeFormat(line);
+    if (pipeFormatMatch) {
+      positions.push(pipeFormatMatch);
+      continue;
+    }
+    
+    // Format alternatif avec "Maison X"
+    const maisonFormatMatch = this.parseMaisonFormat(line);
+    if (maisonFormatMatch) {
+      positions.push(maisonFormatMatch);
+    }
+  }
+  
+  return positions;
+}
+
+private parsePipeFormat2(line: string): PlanetPosition | null {
+  // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+  const pipePattern = /^([A-Za-zÀ-ÿ\s]+?)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:[^|]*\|\s*)?Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)$/i;
+  
+  const match = pipePattern.exec(line);
+  if (!match) return null;
+  
+  const planete = match[1].trim();
+  const signe = match[2].trim();
+  const maison = parseInt(match[3], 10);
+  const retrograde = match[4].toLowerCase() === 'rétrograde';
+  
+  return { planete, signe, maison, retrograde };
+}
+
+private parseMaisonFormat2(line: string): PlanetPosition | null {
+  // Cherche pattern: [Planète] ... Maison [Numéro]
+  const maisonPattern = /([A-Za-zÀ-ÿ\s]+?)(?:\s*\||\s+-\s+|\s+)([A-Za-zÀ-ÿ]+)(?:[^|]*?)Maison\s*(\d+)/i;
+  
+  const match = maisonPattern.exec(line);
+  if (!match) return null;
+  
+  const planete = match[1].trim();
+  const signe = match[2].trim();
+  const maison = parseInt(match[3], 10);
+  const retrograde = line.toLowerCase().includes('rétrograde');
+  
+  return { planete, signe, maison, retrograde };
+}
+  
+  async generateSkyChart4(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+
+    const REGEX_PATTERNS = {
+  // Pour le format de votre réponse: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+  principal: /([A-Za-zÀ-ÿ\s]+)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:\d+°\s*\d+['′]\s*\d+['′]{0,2})\s*\|\s*Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)/i,
+  
+  // Alternative plus simple: cherche "Maison X" près d'un nom de planète
+  simple: /([A-Za-zÀ-ÿ\s]+?)\s*(?:\||-)\s*([A-Za-zÀ-ÿ]+)\s*(?:\||-)[^|]*Maison\s*(\d+)/i,
+  
+  // Pour détecter rétrograde
+  retrogradeCheck: /rétrograde/i,
+};
 
     try {
       const prompt = this.buildCarteDuCielPrompt(data);
@@ -183,6 +291,9 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
       ];
       const response = await this.callDeepSeekApi(messages, 0.2, 1500);
       const aiContent = response.choices[0]?.message?.content || '';
+
+      // DEBUG: Afficher la réponse brute pour ajuster le parsing
+      console.log('[DeepSeek] Réponse brute carte du ciel:', aiContent);
 
       // Extraction des positions planétaires à partir du texte brut
       const positions: PlanetPosition[] = [];
@@ -217,6 +328,106 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
       );
     }
   }
+
+
+async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+  try {
+    const prompt = this.buildCarteDuCielPrompt(data);
+    const messages: DeepSeekMessage[] = [
+      {
+        role: 'system',
+        content: this.SYSTEM_PROMPTS.carteDuCiel,
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ];
+    const response = await this.callDeepSeekApi(messages, 0.2, 1500);
+    const aiContent = response.choices[0]?.message?.content || '';
+
+    console.log('[DeepSeek] Réponse brute carte du ciel:', aiContent);
+    
+    // Extraction des positions planétaires
+    const positions: PlanetPosition[] = this.extractPositionsFromResponse(aiContent);
+    
+    console.log('[DeepSeek] Positions extraites:', positions.length);
+    positions.forEach(p => console.log(`  - ${p.planete}: ${p.signe}, Maison ${p.maison}${p.retrograde ? ' (Rétrograde)' : ''}`));
+
+    const carteDuCiel: AnalysisResult['carteDuCiel'] = {
+      positions,
+      aspectsTexte: aiContent,
+    };
+    return carteDuCiel;
+  } catch (error) {
+    this.logger.error('[generateSkyChart] Erreur:', error);
+    throw new HttpException(
+      "Erreur lors de la génération de la carte du ciel",
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
+private extractPositionsFromResponse(aiContent: string): PlanetPosition[] {
+  const positions: PlanetPosition[] = [];
+  const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
+  
+  for (const line of lines) {
+    // Chercher les sections avec les positions planétaires
+    if (line.includes('SECTION 2 :') || 
+        line.includes('SECTION 3 :') || 
+        line.includes('SECTION 4 :')) {
+      continue; // Ce sont des titres de section
+    }
+    
+    // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+    const pipeFormatMatch = this.parsePipeFormat(line);
+    if (pipeFormatMatch) {
+      positions.push(pipeFormatMatch);
+      continue;
+    }
+    
+    // Format alternatif avec "Maison X"
+    const maisonFormatMatch = this.parseMaisonFormat(line);
+    if (maisonFormatMatch) {
+      positions.push(maisonFormatMatch);
+    }
+  }
+  
+  return positions;
+}
+
+private parsePipeFormat(line: string): PlanetPosition | null {
+  // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+  const pipePattern = /^([A-Za-zÀ-ÿ\s]+?)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:[^|]*\|\s*)?Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)$/i;
+  
+  const match = pipePattern.exec(line);
+  if (!match) return null;
+  
+  const planete = match[1].trim();
+  const signe = match[2].trim();
+  const maison = parseInt(match[3], 10);
+  const retrograde = match[4].toLowerCase() === 'rétrograde';
+  
+  return { planete, signe, maison, retrograde };
+}
+
+private parseMaisonFormat(line: string): PlanetPosition | null {
+  // Cherche pattern: [Planète] ... Maison [Numéro]
+  const maisonPattern = /([A-Za-zÀ-ÿ\s]+?)(?:\s*\||\s+-\s+|\s+)([A-Za-zÀ-ÿ]+)(?:[^|]*?)Maison\s*(\d+)/i;
+  
+  const match = maisonPattern.exec(line);
+  if (!match) return null;
+  
+  const planete = match[1].trim();
+  const signe = match[2].trim();
+  const maison = parseInt(match[3], 10);
+  const retrograde = line.toLowerCase().includes('rétrograde');
+  
+  return { planete, signe, maison, retrograde };
+}
+
+
 
 
   /**

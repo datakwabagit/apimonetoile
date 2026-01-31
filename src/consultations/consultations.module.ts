@@ -2,7 +2,7 @@ import { UsersService } from '@/users/users.service';
 import { HttpModule } from '@nestjs/axios';
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AnalysisModule } from '../analysis/analysis.module';
+// import { AnalysisModule } from '../analysis/analysis.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
 import { OfferingsModule } from '../offerings/offerings.module';
@@ -22,16 +22,19 @@ import { DeepseekService } from './deepseek.service';
 import { PromptController } from './prompt.controller';
 import { PromptService } from './prompt.service';
 import { ConsultationChoiceSchema } from './schemas/consultation-choice.schema';
+import { Analysis, AnalysisSchema } from './schemas/analysis.schema';
 import { Consultation, ConsultationSchema } from './schemas/consultation.schema';
 import { Prompt, PromptSchema } from './schemas/prompt.schema';
 import { UserConsultationChoice, UserConsultationChoiceSchema } from './schemas/user-consultation-choice.schema';
 import { UserConsultationChoiceController } from './user-consultation-choice.controller';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { AnalysisDbService } from './analysis-db.service';
+import { AnalysisController } from './analysis.controller';
 
 @Module({
   imports: [
     HttpModule,
-    forwardRef(() => AnalysisModule),
+    // forwardRef(() => AnalysisModule),
     OfferingsModule,
     MongooseModule.forFeature([
       { name: Consultation.name, schema: ConsultationSchema },
@@ -41,12 +44,13 @@ import { UserConsultationChoiceService } from './user-consultation-choice.servic
       { name: Prompt.name, schema: PromptSchema },
       { name: User.name, schema: UserSchema },
       { name: Rubrique.name, schema: RubriqueSchema },
+      { name: Analysis.name, schema: AnalysisSchema },
     ]),
     NotificationsModule,
     RubriqueModule,
   ],
-  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController, ConsultationChoiceStatusController, ConsultationChoiceController, PromptController],
-  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService, RubriqueService, UsersService],
-  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService, RubriqueService, UsersService],
+  controllers: [ConsultationsController, DeepseekController, UserConsultationChoiceController, ConsultationChoiceStatusController, ConsultationChoiceController, PromptController, AnalysisController],
+  providers: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, AnalysisDbService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService, RubriqueService, UsersService],
+  exports: [ConsultationsService, DeepseekService, UserConsultationChoiceService, AnalysisService, AnalysisDbService, ConsultationChoiceStatusService, ConsultationChoiceService, PromptService, RubriqueService, UsersService],
 })
 export class ConsultationsModule { }

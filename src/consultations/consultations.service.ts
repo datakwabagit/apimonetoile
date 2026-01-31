@@ -14,6 +14,27 @@ import { UserConsultationChoiceService } from './user-consultation-choice.servic
 
 @Injectable()
 export class ConsultationsService {
+  /**
+   * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
+   */
+  async updateAnalyseTexte(id: string, texte: string) {
+  console.log('Mise à jour de l’analyse texte pour la consultation ID:', id);
+  console.log('Texte reçu:', texte);
+    const consultation = await this.consultationModel.findById(id).exec();
+    if (!consultation) {
+      throw new NotFoundException('Consultation not found');
+    }
+    if (!consultation.resultData) {
+      consultation.resultData = {};
+    }
+    if (!consultation.resultData.analyse) {
+      consultation.resultData.analyse = {};
+    }
+    consultation.resultData.analyse.texte = texte;
+    await consultation.save();
+    console.log('Analyse texte mise à jour avec succès pour la consultation ID:', id);
+    return consultation;
+  }
 
   /**
    * Supprimer plusieurs consultations selon un filtre
