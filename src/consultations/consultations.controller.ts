@@ -1,8 +1,3 @@
-// ...existing code...
-
-// (imports, decorators, class declaration, constructeur...)
-
-// ...existing code...
 import { UsersService } from '@/users/users.service';
 import {
   Body,
@@ -41,7 +36,16 @@ import { UpdateConsultationDto } from './dto/update-consultation.dto';
 @Controller('consultations')
 @UseGuards(JwtAuthGuard)
 export class ConsultationsController {
-  /**
+ 
+  constructor(
+    private readonly consultationsService: ConsultationsService,
+    private readonly analysisService: AnalysisService,
+    private readonly rubriqueService: RubriqueService,
+    private readonly deepseekService: DeepseekService,
+    private readonly usersService: UsersService,
+  ) { }
+
+ /**
    * PATCH /consultations/:id/analyse-texte
    * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
    */
@@ -52,14 +56,6 @@ export class ConsultationsController {
   ) {
     return this.consultationsService.updateAnalyseTexte(id, texte);
   }
-
-  constructor(
-    private readonly consultationsService: ConsultationsService,
-    private readonly analysisService: AnalysisService,
-    private readonly rubriqueService: RubriqueService,
-    private readonly deepseekService: DeepseekService,
-    private readonly usersService: UsersService,
-  ) { }
 
   /**
     * POST /consultations/generate-consultations-for-rubrique
@@ -126,7 +122,6 @@ export class ConsultationsController {
             email: user.email || '',
             phone: user.phone || '',
             premium: user.premium || false,
-            carteDuCiel: user.carteDuCiel || null,
           },
           status: 'PENDING',
           scheduledDate: null,
@@ -221,7 +216,6 @@ export class ConsultationsController {
           email: user.email || '',
           phone: user.phone || '',
           premium: user.premium || false,
-          carteDuCiel: user.carteDuCiel || null,
         },
         status: 'PENDING',
         scheduledDate: null,
@@ -261,17 +255,54 @@ export class ConsultationsController {
     description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
   })
   async generateSkyChartForCurrentUser(@CurrentUser() user: UserDocument) {
+    console.log('[generateSkyChartForCurrentUser] Début de la génération de la carte du ciel pour l\'utilisateur:', user);
     try {
       const formData = this.extractUserFormData(user);
-      const { positions, aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
-      const skyChart = await this.deepseekService.generateSkyChart(formData);
-      // Optionnel : mettre à jour l'utilisateur avec la carte du ciel
-      await this.usersService.update(user._id.toString(), { carteDuCiel: positions, aspectsTexte: aspectsTexte });
-     console.log('Positions de la  Carte du ciel générée pour user:', positions);
-     
+      console.log('[generateSkyChartForCurrentUser] formData:', formData);
+      const { aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
+      console.log('[generateSkyChartForCurrentUser] aspectsTexte:', aspectsTexte);
+      await this.usersService.update(user._id.toString(), { aspectsTexte: aspectsTexte });
+
       return {
         success: true,
-        carteDuCiel: skyChart,
+        aspectsTexte: aspectsTexte,
+      };
+    } catch (error) {
+      console.error('[generateSkyChartForCurrentUser] Erreur:', error);
+      throw new HttpException(
+        {
+          success: false,
+          message: "Erreur lors de la génération de la carte du ciel",
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+
+    /**
+   * POST /consultations/generate-sky-chart-brute
+   * Génère la carte du ciel pour l'utilisateur courant
+   */
+  @Post('generate-sky-chart-brute')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Générer la carte du ciel de l'utilisateur courant",
+    description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
+  })
+  async generateSkyChartForCurrentUserbrute(@CurrentUser() user: UserDocument) {
+    console.log('[generateSkyChartForCurrentUserbrute] Début de la génération de la carte du ciel pour l\'utilisateur:', user);
+    try {
+      const formData = this.extractUserFormData(user);
+      console.log('[generateSkyChartForCurrentUser] formData:', formData);
+      const { aspectsTexte } = await this.deepseekService.generateSkyChartBrute(formData);
+      console.log('[generateSkyChartForCurrentUser] aspectsTexte:', aspectsTexte);
+      await this.usersService.update(user._id.toString(), { aspectsTexteBrute: aspectsTexte });
+
+      return {
+        success: true,
+        aspectsTexte: aspectsTexte,
       };
     } catch (error) {
       console.error('[generateSkyChartForCurrentUser] Erreur:', error);
@@ -350,7 +381,7 @@ export class ConsultationsController {
             email: user.email || '',
             phone: user.phone || '',
             premium: user.premium || false,
-            carteDuCiel: user.carteDuCiel || null,
+            aspectsTexte: user.aspectsTexte || null,
           },
           status: 'PENDING',
           // Ajout d'autres champs optionnels si besoin
@@ -384,10 +415,6 @@ export class ConsultationsController {
       throw err;
     }
   }
-
-  /**
-   * Extract user form data for sky chart generation
-   */
   private extractUserFormData(user: UserDocument): any {
     const defaultPaysNaissance = user.country || user.paysNaissance || 'Côte d’Ivoire';
 
@@ -566,6 +593,7 @@ export class ConsultationsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
+    console.log(user);
     return this.consultationsService.findByClient(user._id.toString(), { page, limit });
   }
 
@@ -894,7 +922,6 @@ export class ConsultationsController {
       );
     }
   }
-
 
   /**
    * GET /consultations/:id/generate-analysis

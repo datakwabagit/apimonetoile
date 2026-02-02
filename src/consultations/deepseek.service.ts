@@ -53,7 +53,6 @@ export interface DeepSeekResponse {
 export interface AnalysisResult {
   timestamp: Date;
   carteDuCiel: {
-    positions: PlanetPosition[];
     aspectsTexte: string;
   };
   metadata: {
@@ -149,7 +148,39 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
 
   PROTOCOLE DE SORTIE ET CERTIFICATION
   Le rendu doit s'achever par la déclaration de conformité standardisée suivante, sans aucun ajout de texte ou message de clôture :
-  "Calculs planétaires conformes aux éphémérides JPL DE440. Domification Placidus basée sur le Temps Sidéral Local dérivé de l'heure UTC vérifiée historiquement en Section 0. Certification de conformité aux standards de la NASA pour le référentiel donné."`
+  "Calculs planétaires conformes aux éphémérides JPL DE440. Domification Placidus basée sur le Temps Sidéral Local dérivé de l'heure UTC vérifiée historiquement en Section 0. Certification de conformité aux standards de la NASA pour le référentiel donné."`,
+  
+    carteDuCieltierce: `EXTRACTEUR DE COORDONNÉES CÉLESTES BRUTES
+RÔLE Agis comme un Ingénieur en astrométrie. Ta fonction est l'extraction exclusive de données positionnelles brutes basées sur les éphémérides du Jet Propulsion Laboratory (JPL DE440). Aucun texte introductif, aucune analyse et aucune donnée de domification (maisons) ne doivent être générés.
+
+OBJECTIF Calculer les positions exactes pour : [PRÉNOM], né(e) le [DATE] à [HEURE LOCALE] à [LIEU]. Note : Tu dois effectuer la conversion UTC en interne via la base IANA avant le calcul.
+
+CONTRAINTES DE SORTIE (STRICTES)
+
+Zéro Prose : Ne réponds que par les trois sections listées ci-dessous.
+
+Zéro Domification : Ne pas calculer l'Ascendant ni les Maisons.
+
+Format Unique : [Nom] | [Signe] | [Degrés]° [Minutes]' [Secondes]'' | [État : Direct/Rétrograde]
+
+STRUCTURE DE RÉPONSE EXCLUSIVE
+
+SECTION 1 : CORPS DU SYSTÈME SOLAIRE (JPL DE440)
+
+(Calculer : Soleil, Lune, Mercure, Vénus, Mars, Jupiter, Saturne, Uranus, Neptune, Pluton)
+
+SECTION 2 : CORPS SECONDAIRES ET ASTÉROÏDES
+
+(Calculer : Chiron, Cérès, Pallas, Junon, Vesta)
+
+SECTION 3 : POINTS MATHÉMATIQUES
+
+(Calculer : Nœud Nord Vrai, Nœud Sud Vrai, Lune Noire Lilith moyenne, Part de Fortune, Vertex)
+
+Note : Pour la Part de Fortune, utilise la formule diurne ou nocturne selon la position du Soleil par rapport à l'horizon local calculé en interne.
+
+CERTIFICATION "Calculs planétaires conformes aux éphémérides JPL DE440. Certification de conformité aux standards de positionnement astronomique."`,
+  
   } as const;
 
   constructor(
@@ -164,119 +195,9 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
       this.logger.log('Service DeepSeek initialisé avec succès (sans cache)');
     }
   }
-  /**
-   * Génère la carte du ciel complète pour un utilisateur (format AnalysisResult.carteDuCiel)
-   */
-async generateSkyChart3(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
-  try {
-    const prompt = this.buildCarteDuCielPrompt(data);
-    const messages: DeepSeekMessage[] = [
-      {
-        role: 'system',
-        content: this.SYSTEM_PROMPTS.carteDuCiel,
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ];
-    const response = await this.callDeepSeekApi(messages, 0.2, 1500);
-    const aiContent = response.choices[0]?.message?.content || '';
+ 
 
-    console.log('[DeepSeek] Réponse brute carte du ciel:', aiContent);
-    
-    // Extraction des positions planétaires
-    const positions: PlanetPosition[] = this.extractPositionsFromResponse(aiContent);
-    
-    console.log('[DeepSeek] Positions extraites:', positions.length);
-    positions.forEach(p => console.log(`  - ${p.planete}: ${p.signe}, Maison ${p.maison}${p.retrograde ? ' (Rétrograde)' : ''}`));
-
-    const carteDuCiel: AnalysisResult['carteDuCiel'] = {
-      positions,
-      aspectsTexte: aiContent,
-    };
-    return carteDuCiel;
-  } catch (error) {
-    this.logger.error('[generateSkyChart] Erreur:', error);
-    throw new HttpException(
-      "Erreur lors de la génération de la carte du ciel",
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
-  }
-}
-
-private extractPositionsFromResponse2(aiContent: string): PlanetPosition[] {
-  const positions: PlanetPosition[] = [];
-  const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
-  
-  for (const line of lines) {
-    // Chercher les sections avec les positions planétaires
-    if (line.includes('SECTION 2 :') || 
-        line.includes('SECTION 3 :') || 
-        line.includes('SECTION 4 :')) {
-      continue; // Ce sont des titres de section
-    }
-    
-    // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-    const pipeFormatMatch = this.parsePipeFormat(line);
-    if (pipeFormatMatch) {
-      positions.push(pipeFormatMatch);
-      continue;
-    }
-    
-    // Format alternatif avec "Maison X"
-    const maisonFormatMatch = this.parseMaisonFormat(line);
-    if (maisonFormatMatch) {
-      positions.push(maisonFormatMatch);
-    }
-  }
-  
-  return positions;
-}
-
-private parsePipeFormat2(line: string): PlanetPosition | null {
-  // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-  const pipePattern = /^([A-Za-zÀ-ÿ\s]+?)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:[^|]*\|\s*)?Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)$/i;
-  
-  const match = pipePattern.exec(line);
-  if (!match) return null;
-  
-  const planete = match[1].trim();
-  const signe = match[2].trim();
-  const maison = parseInt(match[3], 10);
-  const retrograde = match[4].toLowerCase() === 'rétrograde';
-  
-  return { planete, signe, maison, retrograde };
-}
-
-private parseMaisonFormat2(line: string): PlanetPosition | null {
-  // Cherche pattern: [Planète] ... Maison [Numéro]
-  const maisonPattern = /([A-Za-zÀ-ÿ\s]+?)(?:\s*\||\s+-\s+|\s+)([A-Za-zÀ-ÿ]+)(?:[^|]*?)Maison\s*(\d+)/i;
-  
-  const match = maisonPattern.exec(line);
-  if (!match) return null;
-  
-  const planete = match[1].trim();
-  const signe = match[2].trim();
-  const maison = parseInt(match[3], 10);
-  const retrograde = line.toLowerCase().includes('rétrograde');
-  
-  return { planete, signe, maison, retrograde };
-}
-  
-  async generateSkyChart4(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
-
-    const REGEX_PATTERNS = {
-  // Pour le format de votre réponse: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-  principal: /([A-Za-zÀ-ÿ\s]+)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:\d+°\s*\d+['′]\s*\d+['′]{0,2})\s*\|\s*Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)/i,
-  
-  // Alternative plus simple: cherche "Maison X" près d'un nom de planète
-  simple: /([A-Za-zÀ-ÿ\s]+?)\s*(?:\||-)\s*([A-Za-zÀ-ÿ]+)\s*(?:\||-)[^|]*Maison\s*(\d+)/i,
-  
-  // Pour détecter rétrograde
-  retrogradeCheck: /rétrograde/i,
-};
-
+  async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
     try {
       const prompt = this.buildCarteDuCielPrompt(data);
       const messages: DeepSeekMessage[] = [
@@ -290,34 +211,9 @@ private parseMaisonFormat2(line: string): PlanetPosition | null {
         },
       ];
       const response = await this.callDeepSeekApi(messages, 0.2, 1500);
-      const aiContent = response.choices[0]?.message?.content || '';
-
-      // DEBUG: Afficher la réponse brute pour ajuster le parsing
-      console.log('[DeepSeek] Réponse brute carte du ciel:', aiContent);
-
-      // Extraction des positions planétaires à partir du texte brut
-      const positions: PlanetPosition[] = [];
-      const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
-      for (const line of lines) {
-        // Ex: Soleil en Verseau - Maison 11
-        const match = REGEX_PATTERNS.principal.exec(line);
-        if (match) {
-          const planete = match[1].replace(/\[RÉTROGRADE\]/i, '').trim();
-          const retrograde = REGEX_PATTERNS.retrogradeCheck.test(line);
-          const signe = match[2].trim();
-          const maison = match[3] ? parseInt(match[3], 10) : undefined;
-          positions.push({
-            planete,
-            signe,
-            maison,
-            retrograde,
-          });
-        }
-      }
-
+ 
       const carteDuCiel: AnalysisResult['carteDuCiel'] = {
-        positions,
-        aspectsTexte: aiContent,
+        aspectsTexte: response.choices[0]?.message?.content || '',
       };
       return carteDuCiel;
     } catch (error) {
@@ -329,103 +225,121 @@ private parseMaisonFormat2(line: string): PlanetPosition | null {
     }
   }
 
-
-async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
-  try {
-    const prompt = this.buildCarteDuCielPrompt(data);
-    const messages: DeepSeekMessage[] = [
-      {
-        role: 'system',
-        content: this.SYSTEM_PROMPTS.carteDuCiel,
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ];
-    const response = await this.callDeepSeekApi(messages, 0.2, 1500);
-    const aiContent = response.choices[0]?.message?.content || '';
-
-    console.log('[DeepSeek] Réponse brute carte du ciel:', aiContent);
-    
-    // Extraction des positions planétaires
-    const positions: PlanetPosition[] = this.extractPositionsFromResponse(aiContent);
-    
-    console.log('[DeepSeek] Positions extraites:', positions.length);
-    positions.forEach(p => console.log(`  - ${p.planete}: ${p.signe}, Maison ${p.maison}${p.retrograde ? ' (Rétrograde)' : ''}`));
-
-    const carteDuCiel: AnalysisResult['carteDuCiel'] = {
-      positions,
-      aspectsTexte: aiContent,
-    };
-    return carteDuCiel;
-  } catch (error) {
-    this.logger.error('[generateSkyChart] Erreur:', error);
-    throw new HttpException(
-      "Erreur lors de la génération de la carte du ciel",
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+  async generateSkyChartBrute(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+    try {
+      const prompt = this.buildCarteDuCielPrompt(data);
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system',
+          content: this.SYSTEM_PROMPTS.carteDuCieltierce,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ];
+      const response = await this.callDeepSeekApi(messages, 0.2, 1500);
+ 
+      const carteDuCiel: AnalysisResult['carteDuCiel'] = {
+        aspectsTexte: response.choices[0]?.message?.content || '',
+      };
+      return carteDuCiel;
+    } catch (error) {
+      this.logger.error('[generateSkyChartBrute] Erreur:', error);
+      throw new HttpException(
+        "Erreur lors de la génération de la carte du ciel",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
-}
-
-private extractPositionsFromResponse(aiContent: string): PlanetPosition[] {
-  const positions: PlanetPosition[] = [];
-  const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
   
-  for (const line of lines) {
-    // Chercher les sections avec les positions planétaires
-    if (line.includes('SECTION 2 :') || 
-        line.includes('SECTION 3 :') || 
+
+    async generateSkyChartTierce(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
+    try {
+      const prompt = this.buildCarteDuCielPrompt(data);
+      const messages: DeepSeekMessage[] = [
+        {
+          role: 'system',
+          content: this.SYSTEM_PROMPTS.carteDuCieltierce,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ];
+      const response = await this.callDeepSeekApi(messages, 0.2, 1500);
+ 
+      const carteDuCiel: AnalysisResult['carteDuCiel'] = {
+        aspectsTexte: response.choices[0]?.message?.content || '',
+      };
+      return carteDuCiel;
+    } catch (error) {
+      this.logger.error('[generateSkyChart] Erreur:', error);
+      throw new HttpException(
+        "Erreur lors de la génération de la carte du ciel",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private extractPositionsFromResponse(aiContent: string): PlanetPosition[] {
+    const positions: PlanetPosition[] = [];
+    const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
+
+    for (const line of lines) {
+      // Chercher les sections avec les positions planétaires
+      if (line.includes('SECTION 2 :') ||
+        line.includes('SECTION 3 :') ||
         line.includes('SECTION 4 :')) {
-      continue; // Ce sont des titres de section
+        continue; // Ce sont des titres de section
+      }
+
+      // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+      const pipeFormatMatch = this.parsePipeFormat(line);
+      if (pipeFormatMatch) {
+        positions.push(pipeFormatMatch);
+        continue;
+      }
+
+      // Format alternatif avec "Maison X"
+      const maisonFormatMatch = this.parseMaisonFormat(line);
+      if (maisonFormatMatch) {
+        positions.push(maisonFormatMatch);
+      }
     }
-    
-    // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-    const pipeFormatMatch = this.parsePipeFormat(line);
-    if (pipeFormatMatch) {
-      positions.push(pipeFormatMatch);
-      continue;
-    }
-    
-    // Format alternatif avec "Maison X"
-    const maisonFormatMatch = this.parseMaisonFormat(line);
-    if (maisonFormatMatch) {
-      positions.push(maisonFormatMatch);
-    }
+
+    return positions;
   }
-  
-  return positions;
-}
 
-private parsePipeFormat(line: string): PlanetPosition | null {
-  // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-  const pipePattern = /^([A-Za-zÀ-ÿ\s]+?)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:[^|]*\|\s*)?Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)$/i;
-  
-  const match = pipePattern.exec(line);
-  if (!match) return null;
-  
-  const planete = match[1].trim();
-  const signe = match[2].trim();
-  const maison = parseInt(match[3], 10);
-  const retrograde = match[4].toLowerCase() === 'rétrograde';
-  
-  return { planete, signe, maison, retrograde };
-}
+  private parsePipeFormat(line: string): PlanetPosition | null {
+    // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
+    const pipePattern = /^([A-Za-zÀ-ÿ\s]+?)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:[^|]*\|\s*)?Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)$/i;
 
-private parseMaisonFormat(line: string): PlanetPosition | null {
-  // Cherche pattern: [Planète] ... Maison [Numéro]
-  const maisonPattern = /([A-Za-zÀ-ÿ\s]+?)(?:\s*\||\s+-\s+|\s+)([A-Za-zÀ-ÿ]+)(?:[^|]*?)Maison\s*(\d+)/i;
-  
-  const match = maisonPattern.exec(line);
-  if (!match) return null;
-  
-  const planete = match[1].trim();
-  const signe = match[2].trim();
-  const maison = parseInt(match[3], 10);
-  const retrograde = line.toLowerCase().includes('rétrograde');
-  
-  return { planete, signe, maison, retrograde };
-}
+    const match = pipePattern.exec(line);
+    if (!match) return null;
+
+    const planete = match[1].trim();
+    const signe = match[2].trim();
+    const maison = parseInt(match[3], 10);
+    const retrograde = match[4].toLowerCase() === 'rétrograde';
+
+    return { planete, signe, maison, retrograde };
+  }
+
+  private parseMaisonFormat(line: string): PlanetPosition | null {
+    // Cherche pattern: [Planète] ... Maison [Numéro]
+    const maisonPattern = /([A-Za-zÀ-ÿ\s]+?)(?:\s*\||\s+-\s+|\s+)([A-Za-zÀ-ÿ]+)(?:[^|]*?)Maison\s*(\d+)/i;
+
+    const match = maisonPattern.exec(line);
+    if (!match) return null;
+
+    const planete = match[1].trim();
+    const signe = match[2].trim();
+    const maison = parseInt(match[3], 10);
+    const retrograde = line.toLowerCase().includes('rétrograde');
+
+    return { planete, signe, maison, retrograde };
+  }
 
 
 
@@ -580,7 +494,6 @@ private parseMaisonFormat(line: string): PlanetPosition | null {
       const result: AnalysisResult = {
         timestamp: new Date(),
         carteDuCiel: {
-          positions: [],
           aspectsTexte: '',
         },
         metadata: {

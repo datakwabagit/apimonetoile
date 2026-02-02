@@ -2,11 +2,12 @@ import { HttpException, HttpStatus, Inject, Injectable, forwardRef } from '@nest
 import fetch from 'node-fetch';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { ConsultationsService } from './consultations.service';
-import { BirthData } from './deepseek.service';
+import { BirthData, DeepseekService } from './deepseek.service';
 import { PromptService } from './prompt.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { AnalysisDbService } from './analysis-db.service';
 import { User, UserDocument } from '@/users/schemas/user.schema';
+import { Cons } from 'rxjs';
 
 @Injectable()
 export class AnalysisService {
@@ -21,6 +22,7 @@ export class AnalysisService {
     @Inject(forwardRef(() => PromptService))
     private promptService: PromptService,
     private analysisDbService: AnalysisDbService,
+    private deepseekService: DeepseekService,
   ) { }
 
   private async loadPromptFromDatabase(choiceId: string): Promise<string | null> {
@@ -141,17 +143,34 @@ export class AnalysisService {
         temperature: this.DEFAULT_TEMPERATURE,
         max_tokens: this.DEFAULT_MAX_TOKENS,
       };
-      // console.debug('[DeepSeek] Requête envoyée:', JSON.stringify(requestBody, null, 2));
-      console.log('[DeepSeek] Requête envoyée:', requestBody);
 
-      const response = await fetch(this.DEEPSEEK_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
+
+      // Timeout helper for fetch
+      const fetchWithTimeout = (url, options, timeoutMs = 60000) => {
+        return Promise.race([
+          fetch(url, options),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout API DeepSeek')), timeoutMs))
+        ]);
+      };
+
+      let response;
+      try {
+        response = await fetchWithTimeout(this.DEEPSEEK_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          },
+          body: JSON.stringify(requestBody),
+        }, 60000);
+      } catch (err) {
+        if (err && err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+          console.error('[DeepSeek] Erreur de flux réseau (fermeture prématurée):', err);
+          throw new HttpException('Connexion interrompue prématurément avec DeepSeek', HttpStatus.BAD_GATEWAY);
+        }
+        console.error('[DeepSeek] Erreur lors de la requête fetch:', err);
+        throw new HttpException('Erreur réseau lors de l’appel à DeepSeek: ' + err.message, HttpStatus.BAD_GATEWAY);
+      }
 
       let rawResponseText = '';
       try {
@@ -176,10 +195,17 @@ export class AnalysisService {
       const aiResponse = data.choices?.[0]?.message?.content || '';
 
       try {
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        // Remove code block markers if present
+        let cleaned = aiResponse.trim();
+        if (cleaned.startsWith('```json')) {
+          cleaned = cleaned.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        } else if (cleaned.startsWith('```')) {
+          cleaned = cleaned.replace(/^```\s*/i, '').replace(/```$/, '').trim();
+        }
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
         return {
           consultationId,
-          ...(jsonMatch ? JSON.parse(jsonMatch[0]) : { texte: aiResponse }),
+          ...(jsonMatch ? JSON.parse(jsonMatch[0]) : { texte: cleaned }),
           dateGeneration: new Date().toISOString(),
         };
       } catch (e) {
@@ -205,11 +231,9 @@ export class AnalysisService {
     analysisData: any,
   ): Promise<void> {
     const resultDataKey = 'analyse';
-    console.log(`[AnalysisService] configuration des résultats de l'analyse`, analysisData);
     await this.consultationsService.update(consultationId, {
       resultData: { [resultDataKey]: analysisData }
     });
-    console.log(`[AnalysisService] Résultats de l'analyse sauvegardés pour la consultation ${consultationId}`);
 
     // Récupérer la consultation pour enrichir l'analyse
     const consultation = await this.consultationsService.findOne(consultationId);
@@ -230,7 +254,6 @@ export class AnalysisService {
     };
 
     await this.analysisDbService.createAnalysis(analysisToSave as any);
-    console.log(`[AnalysisService] Analyse enrichie enregistrée dans la base de données pour la consultation ${consultationId}`);
   }
 
   private async recordUserChoices(consultation: any, userId: string): Promise<void> {
@@ -249,17 +272,6 @@ export class AnalysisService {
     );
   }
 
-  private getSuccessMessage(consultationType: string): string {
-    const messages: Record<string, string> = {
-      'HOROSCOPE': 'Horoscope généré avec succès',
-      'NUMEROLOGIE': 'Analyse numérologique générée avec succès',
-      'CYCLES_PERSONNELS': 'Analyse des cycles personnels générée avec succès',
-      'NOMBRES_PERSONNELS': 'Analyse des nombres personnels générée avec succès',
-    };
-
-    return messages[consultationType] || 'Analyse générée avec succès';
-  }
-
   private formatDate(date: string | Date, options: Intl.DateTimeFormatOptions = {}): string {
     const defaultOptions: Intl.DateTimeFormatOptions = {
       weekday: 'long',
@@ -276,92 +288,27 @@ export class AnalysisService {
     }
   }
 
-  private formatCarteDuCielForAI(carteDuCielData: any[]): string {
-    if (!carteDuCielData || !Array.isArray(carteDuCielData)) {
-      return 'Données de carte du ciel non disponibles';
-    }
-
-    const sections: string[] = [];
-
-    // 1. Points principaux
-    sections.push('## 🌟 POSITIONS PLANÉTAIRES');
-
-    const planetesPrincipales = carteDuCielData.filter(p =>
-      ['Soleil', 'Lune', 'Mercure', 'Vénus', 'Mars',
-        'Jupiter', 'Saturne', 'Uranus', 'Neptune', 'Pluton', 'Ascendant', 'Milieu du Ciel'].includes(p.planete)
-    );
-
-    planetesPrincipales.forEach(planete => {
-      const retro = planete.retrograde ? ' (Rétrograde)' : '';
-      sections.push(`• **${planete.planete}** en ${planete.signe}, Maison ${planete.maison}${retro}`);
-    });
-
-    // 2. Points astéroïdes et spéciaux
-    sections.push('\n## 🪐 ASTÉROÏDES ET POINTS SPÉCIAUX');
-
-    const asteroides = carteDuCielData.filter(p =>
-      !planetesPrincipales.map(pp => pp.planete).includes(p.planete)
-    );
-
-    asteroides.forEach(point => {
-      const retro = point.retrograde ? ' (Rétrograde)' : '';
-      sections.push(`• **${point.planete}** en ${point.signe}, Maison ${point.maison}${retro}`);
-    });
-
-    // 3. Synthèse par maison
-    sections.push('\n## 🏠 SYNTHÈSE PAR MAISON');
-
-    const maisons: Record<number, string[]> = {};
-    carteDuCielData.forEach(p => {
-      if (!maisons[p.maison]) maisons[p.maison] = [];
-      maisons[p.maison].push(`${p.planete} en ${p.signe}`);
-    });
-
-    Object.keys(maisons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(maison => {
-      sections.push(`**Maison ${maison}** : ${maisons[parseInt(maison)].join(', ')}`);
-    });
-
-    // 4. Synthèse par signe
-    sections.push('\n## ♈️ SYNTHÈSE PAR SIGNE');
-
-    const signes: Record<string, string[]> = {};
-    carteDuCielData.forEach(p => {
-      if (!signes[p.signe]) signes[p.signe] = [];
-      signes[p.signe].push(p.planete);
-    });
-
-    Object.keys(signes).forEach(signe => {
-      sections.push(`**${signe}** : ${signes[signe].join(', ')}`);
-    });
-
-    // 5. Planètes rétrogrades
-    const retrogradees = carteDuCielData.filter(p => p.retrograde);
-    if (retrogradees.length > 0) {
-      sections.push('\n## 🔄 PLANÈTES RÉTROGRADES');
-      retrogradees.forEach(p => {
-        sections.push(`• **${p.planete}** en ${p.signe}, Maison ${p.maison}`);
-      });
-    }
-
-    return sections.join('\n');
-  }
-
-
-  private buildUserPrompt(formData: any): string {
+  private buildUserPrompt(formData: any, user: UserDocument): string {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
-
     const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
-    const carteDuCielTexte = this.formatCarteDuCielForAI(formData.carteDuCiel || []);
-    console.log('CARTE DU CIEL TEXTE:', carteDuCielTexte);
-
     const sections: string[] = [];
+
+    // Format gender to French
+    let genderFr = 'Non spécifié';
+    if (gender) {
+      const g = gender.toLowerCase();
+      if (g === 'male' || g === 'masculin' || g === 'm') genderFr = 'Homme';
+      else if (g === 'female' || g === 'feminin' || g === 'f') genderFr = 'Femme';
+      else genderFr = gender;
+    }
+
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
       `• **Prénoms à utiliser** : ${prenoms || ''}`,
       `• **Nom de famille** : ${nom || ''}`,
-      `• **Genre** : ${gender || 'Non spécifié'}\n`,
+      `• **Genre** : ${genderFr}\n`,
     );
 
     sections.push(
@@ -372,61 +319,172 @@ export class AnalysisService {
     );
 
     sections.push(
-      '## CARTE DU CIEL\n',
-      carteDuCielTexte,
+      '## CARTE DU CIEL :\n',
+      user.aspectsTexte,
     );
-
-    console.log('CARTE DU CIEL TEXTE:', carteDuCielTexte);
 
     return sections.join('\n');
   }
 
-  private buildUserPrompttierce(formData: any, tierce: any): string {
+    private buildUserPrompttiercenouveau(formData: any, user: UserDocument, tierce: any, consultation:any): string {
+    // Si la consultation est pour une tierce personne uniquement
+    if (
+      consultation?.choice?.frequence === 'LIBRE' &&
+      consultation?.choice?.participants === 'POUR_TIERS'
+    ) {
+      // Tierce data extraction and formatting
+      const tiercePrenoms = tierce?.prenoms || '';
+      const tierceNom = tierce?.nom || '';
+      const tierceDateNaissance = tierce?.dateNaissance || '';
+      const tierceHeureNaissance = tierce?.heureNaissance || '';
+      const tierceVilleNaissance = tierce?.villeNaissance || '';
+      const tiercePaysNaissance = tierce?.paysNaissance || tierce?.country || '';
+      const tierceGender = this.normalizeGenderFr(tierce?.gender);
+      const tierceDateFormatee = this.formatDate(tierceDateNaissance);
+      const lieuTierce = [tierceVilleNaissance, tiercePaysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
+
+      const sections: string[] = [];
+      sections.push(
+        '## 👤 INFORMATIONS PERSONNELLES',
+        this.safeLine('Prénoms à utiliser', tiercePrenoms),
+        this.safeLine('Nom de famille', tierceNom),
+        this.safeLine('Genre', tierceGender),
+        '',
+        '## 🎂 DONNÉES DE NAISSANCE EXACTES',
+        this.safeLine('Date de naissance', tierceDateFormatee, 'Non spécifié'),
+        this.safeLine('Heure de naissance', tierceHeureNaissance, 'Non spécifié'),
+        this.safeLine('Lieu de naissance', lieuTierce, 'Non spécifié'),
+        '',
+      );
+      return sections.join('\n');
+    }
+
+    // Sinon, comportement standard (utilisateur + tierce)
+    const birthData = this.extractBirthData(formData);
+    this.validateBirthData(birthData);
+    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
+    const dateFormatee = this.formatDate(dateNaissance);
+    const genderFr = this.normalizeGenderFr(gender);
+
+    // Tierce data extraction and formatting
+    const tiercePrenoms = tierce?.prenoms || '';
+    const tierceNom = tierce?.nom || '';
+    const tierceDateNaissance = tierce?.dateNaissance || '';
+    const tierceHeureNaissance = tierce?.heureNaissance || '';
+    const tierceVilleNaissance = tierce?.villeNaissance || '';
+    const tiercePaysNaissance = tierce?.paysNaissance || tierce?.country || '';
+    const tierceGender = this.normalizeGenderFr(tierce?.gender);
+    const tierceDateFormatee = this.formatDate(tierceDateNaissance);
+    const lieuUser = [villeNaissance, paysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
+    const lieuTierce = [tierceVilleNaissance, tiercePaysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
+
+    const sections: string[] = [];
+
+    // Utilisateur principal
+    sections.push(
+      '## 👤 INFORMATIONS PERSONNELLES',
+      this.safeLine('Prénoms à utiliser', prenoms),
+      this.safeLine('Nom de famille', nom),
+      this.safeLine('Genre', genderFr),
+      '',
+      '## 🎂 DONNÉES DE NAISSANCE EXACTES',
+      this.safeLine('Date de naissance', dateFormatee, 'Non spécifié'),
+      this.safeLine('Heure de naissance', heureNaissance, 'Non spécifié'),
+      this.safeLine('Lieu de naissance', lieuUser, 'Non spécifié'),
+      '',
+      '## 🌌 CARTE DU CIEL UTILISATEUR',
+      user.aspectsTexte || 'Non disponible',
+      '',
+      '---',
+      '',
+      '## 👤 INFORMATIONS PERSONNELLES — PERSONNE TIERCe',
+      this.safeLine('Prénoms de la personne tierce à utiliser', tiercePrenoms),
+      this.safeLine('Nom de famille de la personne tierce', tierceNom),
+      this.safeLine('Genre de la personne tierce', tierceGender),
+      '',
+      '## 🎂 DONNÉES DE NAISSANCE EXACTES — PERSONNE TIERCe',
+      this.safeLine('Date de naissance de la personne tierce', tierceDateFormatee, 'Non spécifié'),
+      this.safeLine('Heure de naissance de la personne tierce', tierceHeureNaissance, 'Non spécifié'),
+      this.safeLine('Lieu de naissance de la personne tierce', lieuTierce, 'Non spécifié'),
+      '',
+    );
+    
+
+      const messections = sections.join('\n');
+      console.log('MES SECTIONS:', messections);
+    return messections;
+  }
+  safeLine(label: string, value: unknown, fallback = ""): string {
+    const v = typeof value === "string" ? value.trim() : value == null ? "" : String(value);
+    return `• **${label}** : ${v || fallback}`;
+  }
+
+  normalizeGenderFr(g: any): string {
+    if (!g) return "Non spécifié";
+    const v = String(g).trim().toLowerCase();
+
+    if (v === "male" || v === "masculin" || v === "m" || v === "homme") return "Homme";
+    if (v === "female" || v === "feminin" || v === "féminin" || v === "f" || v === "femme") return "Femme";
+
+    // fallback: on garde tel quel (mais propre)
+    return String(g).trim() || "Non spécifié";
+  }
+
+  buildUserPrompttierce(formData: unknown, user: UserDocument, tierce: any): string {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
 
-    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
+    const {
+      prenoms,
+      nom,
+      dateNaissance,
+      heureNaissance,
+      villeNaissance,
+      paysNaissance,
+      gender,
+    } = birthData;
+
     const dateFormatee = this.formatDate(dateNaissance);
-    const carteDuCielTexte = this.formatCarteDuCielForAI(formData.carteDuCiel || []);
-    console.log('CARTE DU CIEL TEXTE:', carteDuCielTexte);
+    const genderFr = this.normalizeGenderFr(gender);
+    const genderTierceFr = this.normalizeGenderFr(tierce?.gender);
+    const final = "\nCarte du ciel brute utilisateur : \n" + user?.aspectsTexteBrute + "\ncarte du ciel brute personne tierce : \n" + tierce?.carteDuCielTexte;
 
-    const sections: string[] = [];
-    sections.push(
-      '## 👤 INFORMATIONS PERSONNELLES',
-      `• **Prénoms à utiliser** : ${prenoms || ''}`,
-      `• **Nom de famille** : ${nom || ''}`,
-      `• **Genre** : ${gender || 'Non spécifié'}\n`,
-    );
+    // Pour éviter les "undefined, undefined"
+    const lieuUser = [villeNaissance, paysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
+    const lieuTierce = [tierce?.villeNaissance, tierce?.paysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
 
-    sections.push(
-      '## 🎂 DONNÉES DE NAISSANCE EXACTES',
-      `• **Date de naissance** : ${dateFormatee}`,
-      `• **Heure de naissance** : ${heureNaissance || 'Non spécifié'}`,
-      `• **Lieu de naissance** : ${villeNaissance}, ${paysNaissance}\n`
-    );
+    const sections: string[] = [
+      "## 👤 INFORMATIONS PERSONNELLES",
+      this.safeLine("Prénoms à utiliser", prenoms),
+      this.safeLine("Nom de famille", nom),
+      this.safeLine("Genre", genderFr),
+      "",
+      "## 🎂 DONNÉES DE NAISSANCE EXACTES",
+      this.safeLine("Date de naissance", dateFormatee, "Non spécifié"),
+      this.safeLine("Heure de naissance", heureNaissance, "Non spécifié"),
+      this.safeLine("Lieu de naissance", lieuUser, "Non spécifié"),
+      // "",
+      // "---",
+      // "",
+      // "## 🌌 CARTE DU CIEL CONJOINTE",
+      // final,
+      // "",
+      // "---",
+      // "",
+      // "## 👤 INFORMATIONS PERSONNELLES — PERSONNE TIERCe",
+      // this.safeLine("Prénoms de la personne tierce à utiliser", tierce?.prenoms),
+      // this.safeLine("Nom de famille de la personne tierce", tierce?.nom),
+      // this.safeLine("Genre de la personne tierce", genderTierceFr),
+      // "",
+      // "## 🎂 DONNÉES DE NAISSANCE EXACTES — PERSONNE TIERCe",
+      // this.safeLine("Lieu de naissance de la personne tierce", lieuTierce, "Non spécifié"),
+      // this.safeLine("Date de naissance de la personne tierce", tierce?.dateNaissance, "Non spécifié"),
+      // this.safeLine("Heure de naissance de la personne tierce", tierce?.heureNaissance, "Non spécifié"),
+    ];
 
-    sections.push(
-      '## CARTE DU CIEL\n',
-      carteDuCielTexte,
-    );
-
-    sections.push(
-      '## 👤 INFORMATIONS PERSONNELLES de la personne tierce',
-      `• **Prénoms de la personne tierce à utiliser** : ${tierce.prenoms || ''}`,
-      `• **Nom de famille de la personne tierce** : ${tierce.nom || ''}`,
-      `• **Genre de la personne tierce** : ${tierce.gender || 'Non spécifié'}\n`,
-    );
-
-    sections.push(
-      '## 🎂 DONNÉES DE NAISSANCE EXACTES de la personne tierce',
-      `• **Date de naissance de la personne tierce** : ${tierce.dateNaissance || 'Non spécifié'}`,
-      `• **Heure de naissance de la personne tierce** : ${tierce.heureNaissance || 'Non spécifié'}`,
-      `• **Lieu de naissance de la personne tierce** : ${tierce.villeNaissance}, ${tierce.paysNaissance}\n`
-    );
-
-
-    return sections.join('\n');
+    return sections.join("\n");
   }
+
 
   private buildUserPromptuser(formData: any, user: UserDocument): string {
     const birthData = this.extractBirthData(formData);
@@ -434,9 +492,6 @@ export class AnalysisService {
 
     const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
-
-    const carteDuCielTexte = this.formatCarteDuCielForAI(user.carteDuCiel);
-
 
     const sections: string[] = [];
     sections.push(
@@ -456,7 +511,7 @@ export class AnalysisService {
 
     sections.push(
       '## CARTE DU CIEL\n',
-      carteDuCielTexte,
+      user.aspectsTexte,
     );
 
     return sections.join('\n');
@@ -500,13 +555,42 @@ export class AnalysisService {
           systemPrompt = customPrompt;
         }
       }
-      let userPrompt = null
+      let userPrompt = null;
 
       if (consultation.tierce) {
-        userPrompt = this.buildUserPrompttierce(formData, consultation.tierce);
+        console.log('Génération avec tierce personne');
+        const tierceBirthData: BirthData = {
+              nom: consultation.tierce.nom || '',
+              prenoms: consultation.tierce.prenoms || '',
+              dateNaissance: consultation.tierce.dateNaissance || '',
+              heureNaissance: consultation.tierce.heureNaissance || '',
+              villeNaissance: consultation.tierce.villeNaissance || '',
+              paysNaissance: consultation.tierce.paysNaissance || consultation.tierce.country || '',
+              country: consultation.tierce.country || consultation.tierce.paysNaissance || '',
+              gender: consultation.tierce.gender || '',
+            };
+         userPrompt = this.buildUserPrompttiercenouveau(formData, user,tierceBirthData,consultation);
+        // Générer la carte du ciel de la personne tierce
+        // let carteDuCielTierce = '';
+        // if (consultation.tierce) {
+        //   try {
+        //     // S'assure que tous les champs requis sont présents pour BirthData
+            
+        //     const skyChart = await this.deepseekService.generateSkyChartTierce(tierceBirthData);
+        //     carteDuCielTierce = skyChart?.aspectsTexte || 'Carte du ciel de la personne tierce non disponible';
+        //   } catch (e) {
+        //     carteDuCielTierce = 'Carte du ciel de la personne tierce non disponible';
+        //   }
+        // }
+       
+        // userPrompt = this.buildUserPrompttierce(formData, user, {
+        //   ...consultation.tierce,
+        //   carteDuCielTexte: carteDuCielTierce,
+        // });
       } else {
-        userPrompt = this.buildUserPrompt(formData);
+        userPrompt = this.buildUserPrompt(formData, user);
       }
+      console.log('USER PROMPT NOUVEAU:', userPrompt);
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
@@ -526,9 +610,10 @@ export class AnalysisService {
         success: true,
         consultationId: id,
         statut: ConsultationStatus.COMPLETED,
-        message: this.getSuccessMessage(consultation.type),
+        message: 'Analyse générée avec succès',
         consultation: updatedConsultation,
       };
+      // return null;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -563,6 +648,9 @@ export class AnalysisService {
       }
 
       const userPrompt = this.buildUserPromptuser(formData, user);
+      console.log('USER PROMPT:', userPrompt);
+
+      console.log('SYSTEM PROMPT:', systemPrompt);
 
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
@@ -583,7 +671,7 @@ export class AnalysisService {
         success: true,
         consultationId: id,
         statut: ConsultationStatus.COMPLETED,
-        message: this.getSuccessMessage(consultation.type),
+        message: 'Analyse générée avec succès',
         consultation: updatedConsultation,
       };
 

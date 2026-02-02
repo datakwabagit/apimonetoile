@@ -25,10 +25,10 @@ export class User {
   phone: string;
 
   @Prop({ type: Object })
-  carteDuCiel?: any;
-
-  @Prop({ type: Object })
   aspectsTexte?: any;
+
+    @Prop({ type: Object })
+  aspectsTexteBrute?: any;
 
   @Prop({ trim: true })
   nom?: string; // Nom de famille

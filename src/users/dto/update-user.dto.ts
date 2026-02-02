@@ -9,6 +9,7 @@ export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['passwor
   /** Email optionnel pour la mise à jour */
   email?: string;
   aspectsTexte?: any; 
+  aspectsTexteBrute?: any;
 
   /** Carte du ciel astrologique (optionnel) */
   carteDuCiel?: any;

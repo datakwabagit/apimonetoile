@@ -18,8 +18,6 @@ export class ConsultationsService {
    * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
    */
   async updateAnalyseTexte(id: string, texte: string) {
-  console.log('Mise à jour de l’analyse texte pour la consultation ID:', id);
-  console.log('Texte reçu:', texte);
     const consultation = await this.consultationModel.findById(id).exec();
     if (!consultation) {
       throw new NotFoundException('Consultation not found');
@@ -32,7 +30,6 @@ export class ConsultationsService {
     }
     consultation.resultData.analyse.texte = texte;
     await consultation.save();
-    console.log('Analyse texte mise à jour avec succès pour la consultation ID:', id);
     return consultation;
   }
 
@@ -212,7 +209,7 @@ export class ConsultationsService {
     if (consultantId) filter.consultantId = consultantId;
     if (rubriqueId) filter.rubriqueId = rubriqueId;
 
-
+console.log('Consultation filter:', filter);
     // Récupérer les consultations
     const [consultations, total] = await Promise.all([
       this.consultationModel
@@ -226,6 +223,8 @@ export class ConsultationsService {
         .exec(),
       this.consultationModel.countDocuments(filter).exec(),
     ]);
+
+   console.log('Found consultations:', consultations, 'Total:', total);
 
     return {
       consultations,
@@ -496,9 +495,11 @@ export class ConsultationsService {
   /**
    * Récupérer les consultations d'un client
    */
-  async findByClient(clientId: string, query: { page?: number; limit?: number }) {
+  async findByClient(userId: string, query: { page?: number; limit?: number }) {
     // Utilise l'enum pour le statut
-    return this.findAll({ ...query, clientId, status: ConsultationStatus.COMPLETED });
+    console.log('Finding consultations for client:', userId);
+    console.log('Query params:', query);
+    return this.findAll({ ...query, clientId: userId, status: ConsultationStatus.COMPLETED });
   }
 
   /**
@@ -507,7 +508,7 @@ export class ConsultationsService {
   async findByConsultant(consultantId: string, query: { page?: number; limit?: number }) {
     return this.findAll({ ...query, consultantId });
   }
- 
+
 
   /**
    * Marquer une analyse comme notifiée
