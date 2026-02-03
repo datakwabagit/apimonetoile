@@ -149,38 +149,7 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
   PROTOCOLE DE SORTIE ET CERTIFICATION
   Le rendu doit s'achever par la déclaration de conformité standardisée suivante, sans aucun ajout de texte ou message de clôture :
   "Calculs planétaires conformes aux éphémérides JPL DE440. Domification Placidus basée sur le Temps Sidéral Local dérivé de l'heure UTC vérifiée historiquement en Section 0. Certification de conformité aux standards de la NASA pour le référentiel donné."`,
-  
-    carteDuCieltierce: `EXTRACTEUR DE COORDONNÉES CÉLESTES BRUTES
-RÔLE Agis comme un Ingénieur en astrométrie. Ta fonction est l'extraction exclusive de données positionnelles brutes basées sur les éphémérides du Jet Propulsion Laboratory (JPL DE440). Aucun texte introductif, aucune analyse et aucune donnée de domification (maisons) ne doivent être générés.
 
-OBJECTIF Calculer les positions exactes pour : [PRÉNOM], né(e) le [DATE] à [HEURE LOCALE] à [LIEU]. Note : Tu dois effectuer la conversion UTC en interne via la base IANA avant le calcul.
-
-CONTRAINTES DE SORTIE (STRICTES)
-
-Zéro Prose : Ne réponds que par les trois sections listées ci-dessous.
-
-Zéro Domification : Ne pas calculer l'Ascendant ni les Maisons.
-
-Format Unique : [Nom] | [Signe] | [Degrés]° [Minutes]' [Secondes]'' | [État : Direct/Rétrograde]
-
-STRUCTURE DE RÉPONSE EXCLUSIVE
-
-SECTION 1 : CORPS DU SYSTÈME SOLAIRE (JPL DE440)
-
-(Calculer : Soleil, Lune, Mercure, Vénus, Mars, Jupiter, Saturne, Uranus, Neptune, Pluton)
-
-SECTION 2 : CORPS SECONDAIRES ET ASTÉROÏDES
-
-(Calculer : Chiron, Cérès, Pallas, Junon, Vesta)
-
-SECTION 3 : POINTS MATHÉMATIQUES
-
-(Calculer : Nœud Nord Vrai, Nœud Sud Vrai, Lune Noire Lilith moyenne, Part de Fortune, Vertex)
-
-Note : Pour la Part de Fortune, utilise la formule diurne ou nocturne selon la position du Soleil par rapport à l'horizon local calculé en interne.
-
-CERTIFICATION "Calculs planétaires conformes aux éphémérides JPL DE440. Certification de conformité aux standards de positionnement astronomique."`,
-  
   } as const;
 
   constructor(
@@ -195,7 +164,7 @@ CERTIFICATION "Calculs planétaires conformes aux éphémérides JPL DE440. Cert
       this.logger.log('Service DeepSeek initialisé avec succès (sans cache)');
     }
   }
- 
+
 
   async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
     try {
@@ -211,7 +180,7 @@ CERTIFICATION "Calculs planétaires conformes aux éphémérides JPL DE440. Cert
         },
       ];
       const response = await this.callDeepSeekApi(messages, 0.2, 1500);
- 
+
       const carteDuCiel: AnalysisResult['carteDuCiel'] = {
         aspectsTexte: response.choices[0]?.message?.content || '',
       };
@@ -224,124 +193,6 @@ CERTIFICATION "Calculs planétaires conformes aux éphémérides JPL DE440. Cert
       );
     }
   }
-
-  async generateSkyChartBrute(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
-    try {
-      const prompt = this.buildCarteDuCielPrompt(data);
-      const messages: DeepSeekMessage[] = [
-        {
-          role: 'system',
-          content: this.SYSTEM_PROMPTS.carteDuCieltierce,
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ];
-      const response = await this.callDeepSeekApi(messages, 0.2, 1500);
- 
-      const carteDuCiel: AnalysisResult['carteDuCiel'] = {
-        aspectsTexte: response.choices[0]?.message?.content || '',
-      };
-      return carteDuCiel;
-    } catch (error) {
-      this.logger.error('[generateSkyChartBrute] Erreur:', error);
-      throw new HttpException(
-        "Erreur lors de la génération de la carte du ciel",
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-  
-
-    async generateSkyChartTierce(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
-    try {
-      const prompt = this.buildCarteDuCielPrompt(data);
-      const messages: DeepSeekMessage[] = [
-        {
-          role: 'system',
-          content: this.SYSTEM_PROMPTS.carteDuCieltierce,
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ];
-      const response = await this.callDeepSeekApi(messages, 0.2, 1500);
- 
-      const carteDuCiel: AnalysisResult['carteDuCiel'] = {
-        aspectsTexte: response.choices[0]?.message?.content || '',
-      };
-      return carteDuCiel;
-    } catch (error) {
-      this.logger.error('[generateSkyChart] Erreur:', error);
-      throw new HttpException(
-        "Erreur lors de la génération de la carte du ciel",
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  private extractPositionsFromResponse(aiContent: string): PlanetPosition[] {
-    const positions: PlanetPosition[] = [];
-    const lines = aiContent.split('\n').map(l => l.trim()).filter(Boolean);
-
-    for (const line of lines) {
-      // Chercher les sections avec les positions planétaires
-      if (line.includes('SECTION 2 :') ||
-        line.includes('SECTION 3 :') ||
-        line.includes('SECTION 4 :')) {
-        continue; // Ce sont des titres de section
-      }
-
-      // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-      const pipeFormatMatch = this.parsePipeFormat(line);
-      if (pipeFormatMatch) {
-        positions.push(pipeFormatMatch);
-        continue;
-      }
-
-      // Format alternatif avec "Maison X"
-      const maisonFormatMatch = this.parseMaisonFormat(line);
-      if (maisonFormatMatch) {
-        positions.push(maisonFormatMatch);
-      }
-    }
-
-    return positions;
-  }
-
-  private parsePipeFormat(line: string): PlanetPosition | null {
-    // Format: "Soleil | Lion | 12° 44' 23'' | Maison 9 | Direct"
-    const pipePattern = /^([A-Za-zÀ-ÿ\s]+?)\s*\|\s*([A-Za-zÀ-ÿ]+)\s*\|\s*(?:[^|]*\|\s*)?Maison\s*(\d+)\s*\|\s*(Direct|Rétrograde)$/i;
-
-    const match = pipePattern.exec(line);
-    if (!match) return null;
-
-    const planete = match[1].trim();
-    const signe = match[2].trim();
-    const maison = parseInt(match[3], 10);
-    const retrograde = match[4].toLowerCase() === 'rétrograde';
-
-    return { planete, signe, maison, retrograde };
-  }
-
-  private parseMaisonFormat(line: string): PlanetPosition | null {
-    // Cherche pattern: [Planète] ... Maison [Numéro]
-    const maisonPattern = /([A-Za-zÀ-ÿ\s]+?)(?:\s*\||\s+-\s+|\s+)([A-Za-zÀ-ÿ]+)(?:[^|]*?)Maison\s*(\d+)/i;
-
-    const match = maisonPattern.exec(line);
-    if (!match) return null;
-
-    const planete = match[1].trim();
-    const signe = match[2].trim();
-    const maison = parseInt(match[3], 10);
-    const retrograde = line.toLowerCase().includes('rétrograde');
-
-    return { planete, signe, maison, retrograde };
-  }
-
-
 
 
   /**
@@ -588,40 +439,7 @@ PRÉNOMS: ${data.prenoms}
 DATE: ${data.dateNaissance}
 HEURE: ${data.heureNaissance}
 LIEU: ${data.villeNaissance}, ${data.paysNaissance}
-GENRE: ${data.gender}
-
-INSTRUCTIONS DE CALCUL:
-⚠️ CRITIQUE: Base-toi EXCLUSIVEMENT sur les Éphémérides de la NASA (Swiss Ephemeris / JPL Horizons) pour tous les calculs.
-Utilise les données astronomiques officielles de la NASA pour calculer les positions planétaires exactes à la date, heure et lieu spécifiés.
-Calcule la position géographique précise (latitude/longitude) pour déterminer l'Ascendant et les maisons astrologiques.
-Indique les planètes rétrogrades avec la mention [RÉTROGRADE].
-Les calculs doivent être basés sur les standards astronomiques de la NASA, pas sur des approximations.
-
-FORMAT DE RÉPONSE:
-Soleil en [Signe] - Maison [X]
-Ascendant en [Signe] - Maison 1
-Lune en [Signe] - Maison [X]
-Milieu du Ciel en [Signe] - Maison 10
-Mercure en [Signe] - Maison [X]
-Vénus en [Signe] - Maison [X]
-Mars en [Signe] - Maison [X]
-Jupiter [RÉTROGRADE] en [Signe] - Maison [X]
-Saturne [RÉTROGRADE] en [Signe] - Maison [X]
-Uranus [RÉTROGRADE] en [Signe] - Maison [X]
-Neptune [RÉTROGRADE] en [Signe] - Maison [X]
-Pluton [RÉTROGRADE] en [Signe] - Maison [X]
-Nœud Nord en [Signe] - Maison [X]
-Nœud Sud en [Signe] - Maison [X]
-Chiron en [Signe] - Maison [X]
-Vertex en [Signe] - Maison [X]
-Lilith Vraie [RÉTROGRADE] en [Signe] - Maison [X]
-Pallas en [Signe] - Maison [X]
-Vesta en [Signe] - Maison [X]
-Cérès en [Signe] - Maison [X]
-Part de Fortune en [Signe] - Maison [X]
-Junon en [Signe] - Maison [X]
-
-Réponds UNIQUEMENT avec la liste ci-dessus, sans texte supplémentaire.`;
+GENRE: ${data.gender}`;
   }
 
   /**

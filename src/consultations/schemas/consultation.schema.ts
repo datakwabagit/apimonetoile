@@ -1,4 +1,6 @@
-﻿import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+﻿// Ajout d'un champ virtuel pour le statut du bouton "Consulter"
+import { Schema as MongooseSchemaType } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
 import { Offering } from '@/offerings/schemas/offering.schema';
@@ -133,6 +135,7 @@ export class Consultation {
   @Prop({ required: false })
   prompt: string;
 
+ 
   @Prop({ type: Object, default: {} })
   formData: {
     firstName?: string;
@@ -257,6 +260,19 @@ export class Consultation {
 }
 
 export const ConsultationSchema = SchemaFactory.createForClass(Consultation);
+
+// Champ virtuel consultButtonStatus
+ConsultationSchema.virtual('consultButtonStatus').get(function (this: any) {
+  if (this.analysisNotified) {
+    return 'VOIR_L_ANALYSE';
+  } else if (this.resultData && (this.resultData.analyse || this.resultData.prompt)) {
+    return 'REPONSE_EN_ATTENTE';
+  } else if (this.status === 'PENDING' || this.status === 'ASSIGNED') {
+    return 'CONSULTER';
+  }
+  return 'CONSULTER';
+});
+ 
 
 // Indexes
 ConsultationSchema.index({ clientId: 1, createdAt: -1 });

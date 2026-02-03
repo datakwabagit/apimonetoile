@@ -260,6 +260,7 @@ export class ConsultationsController {
     try {
       const formData = this.extractUserFormData(user);
       const { aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
+     console.log('aspectsTexte généré:', aspectsTexte);
       await this.usersService.update(user._id.toString(), { aspectsTexte: aspectsTexte });
 
       return {
@@ -280,38 +281,7 @@ export class ConsultationsController {
   }
 
 
-    /**
-   * POST /consultations/generate-sky-chart-brute
-   * Génère la carte du ciel pour l'utilisateur courant
-   */
-  @Post('generate-sky-chart-brute')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: "Générer la carte du ciel de l'utilisateur courant",
-    description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
-  })
-  async generateSkyChartForCurrentUserbrute(@CurrentUser() user: UserDocument) {
-    try {
-      const formData = this.extractUserFormData(user);
-      const { aspectsTexte } = await this.deepseekService.generateSkyChartBrute(formData);
-      await this.usersService.update(user._id.toString(), { aspectsTexteBrute: aspectsTexte });
-
-      return {
-        success: true,
-        aspectsTexte: aspectsTexte,
-      };
-    } catch (error) {
-      console.error('[generateSkyChartForCurrentUser] Erreur:', error);
-      throw new HttpException(
-        {
-          success: false,
-          message: "Erreur lors de la génération de la carte du ciel",
-          error: error.message,
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
+  
 
   /**
    * POST /consultations/generate-for-rubrique
@@ -564,6 +534,14 @@ export class ConsultationsController {
       success: true,
       consultations: result.consultations.map((c: any) => {
         const cObj = c.toObject ? c.toObject() : c;
+        let consultButtonStatus: 'CONSULTER' | 'REPONSE_EN_ATTENTE' | 'VOIR_L_ANALYSE' = 'CONSULTER';
+        if (c.analysisNotified) {
+          consultButtonStatus = 'VOIR_L_ANALYSE';
+        } else if (c.resultData && (c.resultData.analyse || c.resultData.prompt)) {
+          consultButtonStatus = 'REPONSE_EN_ATTENTE';
+        } else if (c.status === 'PENDING' || c.status === 'ASSIGNED') {
+          consultButtonStatus = 'CONSULTER';
+        }
         return {
           id: c._id.toString(),
           consultationId: c._id.toString(),
@@ -573,6 +551,7 @@ export class ConsultationsController {
           dateNaissance: c.formData?.dateOfBirth || '',
           dateGeneration: cObj.createdAt || new Date(),
           statut: c.status,
+          consultButtonStatus,
         };
       }),
       total: result.total,
@@ -804,7 +783,16 @@ export class ConsultationsController {
     if (alternatives.length) {
       alternatives = await this.consultationsService.populateAlternatives(alternatives);
     }
- 
+
+    // Détermination du statut du bouton
+    let consultButtonStatus: 'CONSULTER' | 'REPONSE_EN_ATTENTE' | 'VOIR_L_ANALYSE' = 'CONSULTER';
+    if (consultation.analysisNotified) {
+      consultButtonStatus = 'VOIR_L_ANALYSE';
+    } else if (consultation.resultData && (consultation.resultData.analyse || consultation.resultData.prompt)) {
+      consultButtonStatus = 'REPONSE_EN_ATTENTE';
+    } else  {
+      consultButtonStatus = 'CONSULTER';
+    }
 
     return {
       success: true,
@@ -820,6 +808,7 @@ export class ConsultationsController {
         analyse,
         alternatives,
         prompt: consultation.prompt,
+        consultButtonStatus,
         ...consultationObj,
       },
     };
