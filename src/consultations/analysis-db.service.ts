@@ -9,7 +9,7 @@ export class AnalysisDbService {
   constructor(
     @InjectModel(Analysis.name)
     private readonly analysisModel: Model<Analysis>,
-  ) {}
+  ) { }
 
   async createAnalysis(dto: SaveAnalysisDto): Promise<Analysis> {
     // On ne prend que les champs pertinents pour Analysis
@@ -30,6 +30,9 @@ export class AnalysisDbService {
       status,
       title,
       completedDate,
+      prompt: dto.prompt,
+      dateGeneration: dto.dateGeneration,
+      metadata: dto.metadata,
     });
     return created.save();
   }

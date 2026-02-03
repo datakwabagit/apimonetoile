@@ -31,6 +31,7 @@ import { DeepseekService } from './deepseek.service';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
+import { PromptService } from './prompt.service';
 
 @ApiTags('Consultations')
 @Controller('consultations')
@@ -43,6 +44,7 @@ export class ConsultationsController {
     private readonly rubriqueService: RubriqueService,
     private readonly deepseekService: DeepseekService,
     private readonly usersService: UsersService,
+    private readonly promptService: PromptService,
   ) { }
 
  /**
@@ -255,12 +257,9 @@ export class ConsultationsController {
     description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
   })
   async generateSkyChartForCurrentUser(@CurrentUser() user: UserDocument) {
-    console.log('[generateSkyChartForCurrentUser] Début de la génération de la carte du ciel pour l\'utilisateur:', user);
     try {
       const formData = this.extractUserFormData(user);
-      console.log('[generateSkyChartForCurrentUser] formData:', formData);
       const { aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
-      console.log('[generateSkyChartForCurrentUser] aspectsTexte:', aspectsTexte);
       await this.usersService.update(user._id.toString(), { aspectsTexte: aspectsTexte });
 
       return {
@@ -292,12 +291,9 @@ export class ConsultationsController {
     description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
   })
   async generateSkyChartForCurrentUserbrute(@CurrentUser() user: UserDocument) {
-    console.log('[generateSkyChartForCurrentUserbrute] Début de la génération de la carte du ciel pour l\'utilisateur:', user);
     try {
       const formData = this.extractUserFormData(user);
-      console.log('[generateSkyChartForCurrentUser] formData:', formData);
       const { aspectsTexte } = await this.deepseekService.generateSkyChartBrute(formData);
-      console.log('[generateSkyChartForCurrentUser] aspectsTexte:', aspectsTexte);
       await this.usersService.update(user._id.toString(), { aspectsTexteBrute: aspectsTexte });
 
       return {
@@ -593,7 +589,6 @@ export class ConsultationsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
-    console.log(user);
     return this.consultationsService.findByClient(user._id.toString(), { page, limit });
   }
 
@@ -655,17 +650,11 @@ export class ConsultationsController {
         );
       }
 
-      let analysisData = null;
+      let analysisData = consultation.resultData.analyse;
 
       if (consultation.resultData) {
-        // Vérifier les différents types d'analyses
-        if (consultation.resultData.analyse) {
-          analysisData = consultation.resultData.analyse;
-        } else if (consultation.resultData.horoscope) {
-          analysisData = consultation.resultData.horoscope;
-        } else if (consultation.resultData.numerology) {
-          analysisData = consultation.resultData.numerology;
-        }
+         analysisData = consultation.resultData.analyse;
+        
       }
 
       if (!analysisData) {
@@ -815,6 +804,7 @@ export class ConsultationsController {
     if (alternatives.length) {
       alternatives = await this.consultationsService.populateAlternatives(alternatives);
     }
+ 
 
     return {
       success: true,
@@ -829,6 +819,7 @@ export class ConsultationsController {
         statut: consultation.status,
         analyse,
         alternatives,
+        prompt: consultation.prompt,
         ...consultationObj,
       },
     };

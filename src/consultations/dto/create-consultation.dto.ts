@@ -192,7 +192,6 @@ export class CreateConsultationDto {
   @IsOptional()
   @IsObject()
   resultData?: {
-    horoscope?: any;
     numerology?: any;
     astrology?: any;
     [key: string]: any;

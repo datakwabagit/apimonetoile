@@ -35,4 +35,10 @@ export class SaveAnalysisDto {
 
   @IsOptional()
   metadata?: any;
+
+  @IsOptional()
+  prompt?: string;
+
+  @IsOptional()
+  dateGeneration?: Date;
 }

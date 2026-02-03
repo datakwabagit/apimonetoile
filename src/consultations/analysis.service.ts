@@ -1,13 +1,12 @@
+import { UserDocument } from '@/users/schemas/user.schema';
 import { HttpException, HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
+import { AnalysisDbService } from './analysis-db.service';
 import { ConsultationsService } from './consultations.service';
-import { BirthData, DeepseekService } from './deepseek.service';
+import { BirthData } from './deepseek.service';
 import { PromptService } from './prompt.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
-import { AnalysisDbService } from './analysis-db.service';
-import { User, UserDocument } from '@/users/schemas/user.schema';
-import { Cons } from 'rxjs';
 
 @Injectable()
 export class AnalysisService {
@@ -22,7 +21,6 @@ export class AnalysisService {
     @Inject(forwardRef(() => PromptService))
     private promptService: PromptService,
     private analysisDbService: AnalysisDbService,
-    private deepseekService: DeepseekService,
   ) { }
 
   private async loadPromptFromDatabase(choiceId: string): Promise<string | null> {
@@ -75,10 +73,6 @@ export class AnalysisService {
     }
 
     return sections.join('').trim();
-  }
-
-  private getDefaultPrompt(): string {
-    return `Génère une analyse astrologique approfondie.`;
   }
 
   private extractBirthData(form: any): BirthData {
@@ -144,8 +138,6 @@ export class AnalysisService {
         max_tokens: this.DEFAULT_MAX_TOKENS,
       };
 
-
-      // Timeout helper for fetch
       const fetchWithTimeout = (url, options, timeoutMs = 60000) => {
         return Promise.race([
           fetch(url, options),
@@ -175,8 +167,7 @@ export class AnalysisService {
       let rawResponseText = '';
       try {
         rawResponseText = await response.clone().text();
-        console.debug('[DeepSeek] Réponse brute:', rawResponseText);
-      } catch (e) {
+       } catch (e) {
         console.warn('[DeepSeek] Impossible de lire la réponse brute:', e);
       }
 
@@ -224,36 +215,6 @@ export class AnalysisService {
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
-  }
-
-  private async saveAnalysisResults(
-    consultationId: string,
-    analysisData: any,
-  ): Promise<void> {
-    const resultDataKey = 'analyse';
-    await this.consultationsService.update(consultationId, {
-      resultData: { [resultDataKey]: analysisData }
-    });
-
-    // Récupérer la consultation pour enrichir l'analyse
-    const consultation = await this.consultationsService.findOne(consultationId);
-    if (!consultation) {
-      console.warn(`[AnalysisService] Consultation non trouvée pour enrichir l'analyse (${consultationId})`);
-      return;
-    }
-
-    // Préparer tous les champs pertinents pour l'analyse
-    const analysisToSave = {
-      consultationID: consultationId,
-      texte: analysisData.texte,
-      clientId: consultation.clientId?.toString?.() || consultation.clientId,
-      type: consultation.type,
-      status: consultation.status,
-      title: consultation.title,
-      completedDate: consultation.completedDate,
-    };
-
-    await this.analysisDbService.createAnalysis(analysisToSave as any);
   }
 
   private async recordUserChoices(consultation: any, userId: string): Promise<void> {
@@ -326,7 +287,7 @@ export class AnalysisService {
     return sections.join('\n');
   }
 
-    private buildUserPrompttiercenouveau(formData: any, user: UserDocument, tierce: any, consultation:any): string {
+  private buildUserPrompttiercenouveau(formData: any, user: UserDocument, tierce: any, consultation: any): string {
     // Si la consultation est pour une tierce personne uniquement
     if (
       consultation?.choice?.frequence === 'LIBRE' &&
@@ -408,10 +369,8 @@ export class AnalysisService {
       this.safeLine('Lieu de naissance de la personne tierce', lieuTierce, 'Non spécifié'),
       '',
     );
-    
 
-      const messections = sections.join('\n');
-      console.log('MES SECTIONS:', messections);
+    const messections = sections.join('\n');
     return messections;
   }
   safeLine(label: string, value: unknown, fallback = ""): string {
@@ -429,62 +388,6 @@ export class AnalysisService {
     // fallback: on garde tel quel (mais propre)
     return String(g).trim() || "Non spécifié";
   }
-
-  buildUserPrompttierce(formData: unknown, user: UserDocument, tierce: any): string {
-    const birthData = this.extractBirthData(formData);
-    this.validateBirthData(birthData);
-
-    const {
-      prenoms,
-      nom,
-      dateNaissance,
-      heureNaissance,
-      villeNaissance,
-      paysNaissance,
-      gender,
-    } = birthData;
-
-    const dateFormatee = this.formatDate(dateNaissance);
-    const genderFr = this.normalizeGenderFr(gender);
-    const genderTierceFr = this.normalizeGenderFr(tierce?.gender);
-    const final = "\nCarte du ciel brute utilisateur : \n" + user?.aspectsTexteBrute + "\ncarte du ciel brute personne tierce : \n" + tierce?.carteDuCielTexte;
-
-    // Pour éviter les "undefined, undefined"
-    const lieuUser = [villeNaissance, paysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
-    const lieuTierce = [tierce?.villeNaissance, tierce?.paysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
-
-    const sections: string[] = [
-      "## 👤 INFORMATIONS PERSONNELLES",
-      this.safeLine("Prénoms à utiliser", prenoms),
-      this.safeLine("Nom de famille", nom),
-      this.safeLine("Genre", genderFr),
-      "",
-      "## 🎂 DONNÉES DE NAISSANCE EXACTES",
-      this.safeLine("Date de naissance", dateFormatee, "Non spécifié"),
-      this.safeLine("Heure de naissance", heureNaissance, "Non spécifié"),
-      this.safeLine("Lieu de naissance", lieuUser, "Non spécifié"),
-      // "",
-      // "---",
-      // "",
-      // "## 🌌 CARTE DU CIEL CONJOINTE",
-      // final,
-      // "",
-      // "---",
-      // "",
-      // "## 👤 INFORMATIONS PERSONNELLES — PERSONNE TIERCe",
-      // this.safeLine("Prénoms de la personne tierce à utiliser", tierce?.prenoms),
-      // this.safeLine("Nom de famille de la personne tierce", tierce?.nom),
-      // this.safeLine("Genre de la personne tierce", genderTierceFr),
-      // "",
-      // "## 🎂 DONNÉES DE NAISSANCE EXACTES — PERSONNE TIERCe",
-      // this.safeLine("Lieu de naissance de la personne tierce", lieuTierce, "Non spécifié"),
-      // this.safeLine("Date de naissance de la personne tierce", tierce?.dateNaissance, "Non spécifié"),
-      // this.safeLine("Heure de naissance de la personne tierce", tierce?.heureNaissance, "Non spécifié"),
-    ];
-
-    return sections.join("\n");
-  }
-
 
   private buildUserPromptuser(formData: any, user: UserDocument): string {
     const birthData = this.extractBirthData(formData);
@@ -539,6 +442,42 @@ export class AnalysisService {
     return null;
   }
 
+  private async saveAnalysisResults(
+    consultationId: string,
+    analysisData: any, monprompt: string
+  ): Promise<void> {
+    const resultDataKey = 'analyse';
+    await this.consultationsService.update(consultationId, {
+      resultData: {
+        [resultDataKey]: analysisData,
+        prompt: analysisData.prompt,
+        numerology: analysisData.numerology,
+        astrology: analysisData.astrology
+      }
+    });
+
+    const consultation = await this.consultationsService.findOne(consultationId);
+    if (!consultation) {
+      console.warn(`[AnalysisService] Consultation non trouvée pour enrichir l'analyse (${consultationId})`);
+      return;
+    }
+
+    const analysisToSave = {
+      consultationID: consultationId,
+      texte: analysisData.texte,
+      clientId: consultation.clientId?.toString?.() || consultation.clientId,
+      type: consultation.type,
+      status: consultation.status,
+      title: consultation.title,
+      completedDate: consultation.completedDate,
+      prompt: monprompt,
+      dateGeneration: analysisData.dateGeneration,
+    };
+
+    await this.analysisDbService.createAnalysis(analysisToSave as any);
+  }
+
+
   async generateAnalysis(id: string, user: any) {
     try {
       const consultation = await this.consultationsService.findOne(id);
@@ -548,7 +487,7 @@ export class AnalysisService {
 
       const formData = consultation.formData || {};
 
-      let systemPrompt = this.getDefaultPrompt();
+      let systemPrompt = consultation.title;
       if (consultation.choice?._id) {
         const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
         if (customPrompt) {
@@ -558,48 +497,32 @@ export class AnalysisService {
       let userPrompt = null;
 
       if (consultation.tierce) {
-        console.log('Génération avec tierce personne');
         const tierceBirthData: BirthData = {
-              nom: consultation.tierce.nom || '',
-              prenoms: consultation.tierce.prenoms || '',
-              dateNaissance: consultation.tierce.dateNaissance || '',
-              heureNaissance: consultation.tierce.heureNaissance || '',
-              villeNaissance: consultation.tierce.villeNaissance || '',
-              paysNaissance: consultation.tierce.paysNaissance || consultation.tierce.country || '',
-              country: consultation.tierce.country || consultation.tierce.paysNaissance || '',
-              gender: consultation.tierce.gender || '',
-            };
-         userPrompt = this.buildUserPrompttiercenouveau(formData, user,tierceBirthData,consultation);
-        // Générer la carte du ciel de la personne tierce
-        // let carteDuCielTierce = '';
-        // if (consultation.tierce) {
-        //   try {
-        //     // S'assure que tous les champs requis sont présents pour BirthData
-            
-        //     const skyChart = await this.deepseekService.generateSkyChartTierce(tierceBirthData);
-        //     carteDuCielTierce = skyChart?.aspectsTexte || 'Carte du ciel de la personne tierce non disponible';
-        //   } catch (e) {
-        //     carteDuCielTierce = 'Carte du ciel de la personne tierce non disponible';
-        //   }
-        // }
-       
-        // userPrompt = this.buildUserPrompttierce(formData, user, {
-        //   ...consultation.tierce,
-        //   carteDuCielTexte: carteDuCielTierce,
-        // });
+          nom: consultation.tierce.nom || '',
+          prenoms: consultation.tierce.prenoms || '',
+          dateNaissance: consultation.tierce.dateNaissance || '',
+          heureNaissance: consultation.tierce.heureNaissance || '',
+          villeNaissance: consultation.tierce.villeNaissance || '',
+          paysNaissance: consultation.tierce.paysNaissance || consultation.tierce.country || '',
+          country: consultation.tierce.country || consultation.tierce.paysNaissance || '',
+          gender: consultation.tierce.gender || '',
+        };
+        userPrompt = this.buildUserPrompttiercenouveau(formData, user, tierceBirthData, consultation);
+
       } else {
         userPrompt = this.buildUserPrompt(formData, user);
       }
-      console.log('USER PROMPT NOUVEAU:', userPrompt);
+
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
         dateGeneration: new Date().toISOString(),
+        prompt: systemPrompt,
       };
 
-      await this.saveAnalysisResults(id, analysisDocument);
+      await this.saveAnalysisResults(id, analysisDocument, systemPrompt);
 
-      const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
+      const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED, prompt: systemPrompt });
 
       const userId = this.extractUserId(consultation.clientId);
       if (userId) {
@@ -613,7 +536,6 @@ export class AnalysisService {
         message: 'Analyse générée avec succès',
         consultation: updatedConsultation,
       };
-      // return null;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -630,6 +552,7 @@ export class AnalysisService {
     }
   }
 
+
   async generateAnalysisuser(id: string, user: UserDocument) {
     try {
       const consultation = await this.consultationsService.findOne(id);
@@ -639,7 +562,7 @@ export class AnalysisService {
 
       const formData = consultation.formData || {};
 
-      let systemPrompt = this.getDefaultPrompt();
+      let systemPrompt = consultation.title;
       if (consultation.choice?._id) {
         const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
         if (customPrompt) {
@@ -648,19 +571,16 @@ export class AnalysisService {
       }
 
       const userPrompt = this.buildUserPromptuser(formData, user);
-      console.log('USER PROMPT:', userPrompt);
-
-      console.log('SYSTEM PROMPT:', systemPrompt);
-
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
         dateGeneration: new Date().toISOString(),
+        prompt: systemPrompt,
       };
 
-      await this.saveAnalysisResults(id, analysisDocument);
+      await this.saveAnalysisResults(id, analysisDocument, systemPrompt);
 
-      const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED });
+      const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED, prompt: systemPrompt });
 
       const userId = this.extractUserId(consultation.clientId);
       if (userId) {

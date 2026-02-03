@@ -65,7 +65,6 @@ enum ConsultationType {
   NUMEROLOGIE = 'NUMEROLOGIE',
   CYCLES_PERSONNELS = 'CYCLES_PERSONNELS',
   NOMBRES_PERSONNELS = 'NOMBRES_PERSONNELS',
-  HOROSCOPE = 'HOROSCOPE',
   // ... autres types
 }
 ```
@@ -161,7 +160,7 @@ Pour les consultations sans compte utilisateur, incluant possiblement des donné
 
 **Processus:**
 1. Récupération de la consultation et validation des données
-2. Détermination du type d'analyse (numérologie, horoscope, etc.)
+2. Détermination du type d'analyse (numérologie,   etc.)
 3. Appel au service DeepSeek pour génération IA
 4. Création d'une `AstrologicalAnalysis` avec:
    - Carte du ciel (positions planétaires)
@@ -257,8 +256,7 @@ Génère les analyses astrologiques en utilisant l'IA.
 - `getAstrologicalAnalysis(consultationId)` - Récupérer une analyse existante
 
 **Types d'analyses supportés:**
-- Numérologie
-- Horoscope (quotidien, mensuel, annuel)
+- Numérologie 
 - Cycles personnels
 - Nombres personnels
 

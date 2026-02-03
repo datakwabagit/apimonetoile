@@ -13,7 +13,6 @@ export enum ConsultationStatus {
  * Types de consultations disponibles
  */
 export enum ConsultationType {
-  HOROSCOPE = 'HOROSCOPE',
   NUMEROLOGIE = 'NUMEROLOGIE',
   VIE_PERSONNELLE = 'VIE_PERSONNELLE',
   RELATIONS = 'RELATIONS',
@@ -24,4 +23,5 @@ export enum ConsultationType {
   CINQ_ETOILES = 'CINQ_ETOILES',
   CYCLES_PERSONNELS = 'CYCLES_PERSONNELS',
   NOMBRES_PERSONNELS = 'NOMBRES_PERSONNELS',
+    HOROSCOPE = 'HOROSCOPE',
 }

@@ -114,7 +114,6 @@ const categories = PromptsManager.getAllCategories();
 //   'MA_VIE_PERSONNELLE',
 //   'FAMILLE_AMITIE_ET_COUPLE',
 //   'MONDE_PROFESSIONNEL',
-//   'HOROSCOPE',
 //   'NUMEROLOGIE_NOMBRES_PERSONNELS',
 //   'NUMEROLOGIE_CYCLES_PERSONNELS'
 // ]

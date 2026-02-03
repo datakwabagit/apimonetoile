@@ -130,6 +130,9 @@ export class Consultation {
   @Prop({ required: true })
   description: string;
 
+  @Prop({ required: false })
+  prompt: string;
+
   @Prop({ type: Object, default: {} })
   formData: {
     firstName?: string;
@@ -200,12 +203,14 @@ export class Consultation {
   @Prop({ default: null })
   result: string; // Résultat de la consultation (texte long)
 
-  @Prop({ type: Object, default: null })
+  @Prop({
+    type: Object,
+    default: null,
+  })
   resultData: {
-    // Données structurées du résultat
-    horoscope?: any;
     numerology?: any;
     astrology?: any;
+    prompt?: string;
     [key: string]: any;
   };
 
@@ -242,8 +247,8 @@ export class Consultation {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Rubrique', required: true })
   rubriqueId: MongooseSchema.Types.ObjectId;
 
-   
-  
+
+
   /**
    * Indique si l'analyse a déjà été notifiée au client
    */

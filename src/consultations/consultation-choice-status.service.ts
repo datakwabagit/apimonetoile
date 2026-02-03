@@ -108,7 +108,7 @@ export class ConsultationChoiceStatusService {
   /**
    * Récupère les statuts pour une catégorie spécifique de consultation
    * @param userId - ID de l'utilisateur
-   * @param category - Catégorie des consultations (ex: 'horoscope', 'numerologie')
+   * @param category - Catégorie des consultations (ex:  , 'numerologie')
    * @returns Les statuts des choix de cette catégorie
    */
   async getUserChoicesStatusByCategory(

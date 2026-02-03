@@ -209,7 +209,6 @@ export class ConsultationsService {
     if (consultantId) filter.consultantId = consultantId;
     if (rubriqueId) filter.rubriqueId = rubriqueId;
 
-console.log('Consultation filter:', filter);
     // Récupérer les consultations
     const [consultations, total] = await Promise.all([
       this.consultationModel
@@ -223,8 +222,6 @@ console.log('Consultation filter:', filter);
         .exec(),
       this.consultationModel.countDocuments(filter).exec(),
     ]);
-
-   console.log('Found consultations:', consultations, 'Total:', total);
 
     return {
       consultations,
@@ -497,8 +494,6 @@ console.log('Consultation filter:', filter);
    */
   async findByClient(userId: string, query: { page?: number; limit?: number }) {
     // Utilise l'enum pour le statut
-    console.log('Finding consultations for client:', userId);
-    console.log('Query params:', query);
     return this.findAll({ ...query, clientId: userId, status: ConsultationStatus.COMPLETED });
   }
 

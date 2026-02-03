@@ -131,7 +131,6 @@ export class RubriqueService {
 
     // Sécurise la liste des choix
     const consultationChoices = Array.isArray(rubrique.consultationChoices) ? rubrique.consultationChoices : [];
-console.log("consultationChoices", consultationChoices);
     let choicesWithCount: ConsultationChoiceWithCountDto[] = await Promise.all(
       consultationChoices.map(async (choice) => {
         // Sécurise les champs essentiels
@@ -163,7 +162,6 @@ console.log("consultationChoices", consultationChoices);
         let consultationId: string | null = null;
 
         if (lastConsultation && lastConsultation.consultationId && typeof lastConsultation.consultationId === 'object') {
-         console.log("lastConsultation.consultationId", lastConsultation);
           const c = lastConsultation.consultationId as any;
           consultationId = lastConsultation._id?.toString?.() || null;
           if (c.status === 'COMPLETED') {
@@ -191,7 +189,6 @@ console.log("consultationChoices", consultationChoices);
 
     // Trie les choix par ordre croissant (robuste)
     choicesWithCount = choicesWithCount.sort((a, b) => (a.order || 0) - (b.order || 0));
-console.log("choicesWithCount", choicesWithCount);
     return {
       _id: rubrique._id && typeof rubrique._id !== 'string' && rubrique._id.toString ? rubrique._id.toString() : String(rubrique._id),
       titre: rubrique.titre || '',
@@ -212,154 +209,154 @@ console.log("choicesWithCount", choicesWithCount);
 
 
 
- 
 
 
 
-// Helper: transforme une valeur (ObjectId | string | objet populate) en string id
+
+  // Helper: transforme une valeur (ObjectId | string | objet populate) en string id
   toIdString(v: unknown): string | null {
-  if (!v) return null;
+    if (!v) return null;
 
-  if (typeof v === 'string') return v;
+    if (typeof v === 'string') return v;
 
-  if (typeof v === 'object') {
-    const anyV = v as any;
+    if (typeof v === 'object') {
+      const anyV = v as any;
 
-    // populate: { _id: ... }
-    if (anyV._id?.toString) return anyV._id.toString();
+      // populate: { _id: ... }
+      if (anyV._id?.toString) return anyV._id.toString();
 
-    // ObjectId direct
-    if (anyV.toString) return anyV.toString();
+      // ObjectId direct
+      if (anyV.toString) return anyV.toString();
+    }
+
+    return null;
   }
 
-  return null;
-}
-
-// Helper: récupère status / analysisNotified uniquement si consultationId est populated
+  // Helper: récupère status / analysisNotified uniquement si consultationId est populated
   getConsultationMeta(v: unknown): { status?: string; analysisNotified?: boolean } {
-  if (!v || typeof v !== 'object') return {};
-  const anyV = v as any;
-  // si ce n'est pas une consultation peuplée, ces champs n'existent pas
-  return {
-    status: typeof anyV.status === 'string' ? anyV.status : undefined,
-    analysisNotified: typeof anyV.analysisNotified === 'boolean' ? anyV.analysisNotified : undefined,
-  };
-}
+    if (!v || typeof v !== 'object') return {};
+    const anyV = v as any;
+    // si ce n'est pas une consultation peuplée, ces champs n'existent pas
+    return {
+      status: typeof anyV.status === 'string' ? anyV.status : undefined,
+      analysisNotified: typeof anyV.analysisNotified === 'boolean' ? anyV.analysisNotified : undefined,
+    };
+  }
 
   async getChoicesWithConsultationCount(
-  rubriqueId: string,
-  userId: string,
-): Promise<RubriqueWithChoiceCountDto> {
+    rubriqueId: string,
+    userId: string,
+  ): Promise<RubriqueWithChoiceCountDto> {
 
-type ButtonStatus = 'CONSULTER' | 'RÉPONSE EN ATTENTE' | "VOIR L'ANALYSE";
+    type ButtonStatus = 'CONSULTER' | 'RÉPONSE EN ATTENTE' | "VOIR L'ANALYSE";
 
-  const rubrique = await this.rubriqueModel
-    .findById(rubriqueId)
-    .populate('categorieId')
-    .exec();
+    const rubrique = await this.rubriqueModel
+      .findById(rubriqueId)
+      .populate('categorieId')
+      .exec();
 
-  if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
+    if (!rubrique) throw new NotFoundException('Rubrique non trouvée');
 
-  const consultationChoices = Array.isArray(rubrique.consultationChoices)
-    ? rubrique.consultationChoices
-    : [];
+    const consultationChoices = Array.isArray(rubrique.consultationChoices)
+      ? rubrique.consultationChoices
+      : [];
 
-  let choicesWithCount: ConsultationChoiceWithCountDto[] = await Promise.all(
-    consultationChoices.map(async (choice) => {
-      // Champs sécurisés
-      const choiceId = this.toIdString((choice as any)?._id) ?? null;
-      const order = typeof (choice as any)?.order === 'number' ? (choice as any).order : 0;
-      const title = (choice as any)?.title ?? '';
-      const description = (choice as any)?.description ?? '';
-      const frequence = (choice as any)?.frequence ?? 'LIBRE';
-      const participants = (choice as any)?.participants ?? null;
-      const offering = (choice as any)?.offering ?? {};
+    let choicesWithCount: ConsultationChoiceWithCountDto[] = await Promise.all(
+      consultationChoices.map(async (choice) => {
+        // Champs sécurisés
+        const choiceId = this.toIdString((choice as any)?._id) ?? null;
+        const order = typeof (choice as any)?.order === 'number' ? (choice as any).order : 0;
+        const title = (choice as any)?.title ?? '';
+        const description = (choice as any)?.description ?? '';
+        const frequence = (choice as any)?.frequence ?? 'LIBRE';
+        const participants = (choice as any)?.participants ?? null;
+        const offering = (choice as any)?.offering ?? {};
 
-      // Si pas d'id de choix: on renvoie un objet cohérent (évite crash)
-      if (!choiceId) {
+        // Si pas d'id de choix: on renvoie un objet cohérent (évite crash)
+        if (!choiceId) {
+          return {
+            _id: null,
+            title,
+            description,
+            frequence,
+            participants,
+            order,
+            offering,
+            consultationCount: 0,
+            showButtons: frequence !== 'UNE_FOIS_VIE',
+            buttonStatus: 'CONSULTER' as ButtonStatus,
+            consultationId: null,
+          };
+        }
+
+        // Compte le nombre de consultations associées à ce choix (user + choice)
+        const consultationCount = await this.userConsultationChoiceModel.countDocuments({
+          userId,
+          choiceId,
+        });
+
+        // Dernière liaison (user + choice) => consultation la plus récente pour ce choix
+        // IMPORTANT: on veut le consultationId (de Consultation) pas le _id du lien
+        const lastLink = await this.userConsultationChoiceModel
+          .findOne({ userId, choiceId })
+          .sort({ createdAt: -1 })
+          .populate({
+            path: 'consultationId',
+            model: 'Consultation',
+            select: '_id status analysisNotified', // on ne ramène que ce qu’on utilise
+          })
+          .lean() // perf + évite des getters coûteux
+          .exec();
+
+        let buttonStatus: ButtonStatus = 'CONSULTER';
+        let consultationId: string | null = null;
+
+        if (lastLink?.consultationId) {
+          // ✅ Bon ID: celui de la Consultation (populate ou non)
+          consultationId = this.toIdString(lastLink.consultationId);
+
+          // Si consultationId est populated, on peut lire status/analysisNotified
+          const meta = this.getConsultationMeta(lastLink.consultationId);
+          if (meta.status === 'COMPLETED') {
+            buttonStatus = "VOIR L'ANALYSE";
+          } else if (meta.status) {
+            // Tant que pas COMPLETED => réponse en attente
+            buttonStatus = 'RÉPONSE EN ATTENTE';
+          } else {
+            // Si pas populated (meta vide), on ne peut pas décider => on laisse CONSULTER
+            // (ou tu peux forcer "RÉPONSE EN ATTENTE" si tu sais que lastLink => consultation existante)
+            buttonStatus = 'CONSULTER';
+          }
+        }
+
         return {
-          _id: null,
+          _id: choiceId,
           title,
           description,
           frequence,
           participants,
           order,
           offering,
-          consultationCount: 0,
+          consultationCount,
           showButtons: frequence !== 'UNE_FOIS_VIE',
-          buttonStatus: 'CONSULTER' as ButtonStatus,
-          consultationId: null,
+          buttonStatus,
+          // ✅ ici c’est bien l’id de la consultation
+          consultationId,
         };
-      }
+      }),
+    );
 
-      // Compte le nombre de consultations associées à ce choix (user + choice)
-      const consultationCount = await this.userConsultationChoiceModel.countDocuments({
-        userId,
-        choiceId,
-      });
+    // Tri robuste par order
+    choicesWithCount = choicesWithCount.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-      // Dernière liaison (user + choice) => consultation la plus récente pour ce choix
-      // IMPORTANT: on veut le consultationId (de Consultation) pas le _id du lien
-      const lastLink = await this.userConsultationChoiceModel
-        .findOne({ userId, choiceId })
-        .sort({ createdAt: -1 })
-        .populate({
-          path: 'consultationId',
-          model: 'Consultation',
-          select: '_id status analysisNotified', // on ne ramène que ce qu’on utilise
-        })
-        .lean() // perf + évite des getters coûteux
-        .exec();
-
-      let buttonStatus: ButtonStatus = 'CONSULTER';
-      let consultationId: string | null = null;
-
-      if (lastLink?.consultationId) {
-        // ✅ Bon ID: celui de la Consultation (populate ou non)
-        consultationId = this.toIdString(lastLink.consultationId);
-
-        // Si consultationId est populated, on peut lire status/analysisNotified
-        const meta = this.getConsultationMeta(lastLink.consultationId);
-        if (meta.status === 'COMPLETED') {
-          buttonStatus = "VOIR L'ANALYSE";
-        } else if (meta.status) {
-          // Tant que pas COMPLETED => réponse en attente
-          buttonStatus = 'RÉPONSE EN ATTENTE';
-        } else {
-          // Si pas populated (meta vide), on ne peut pas décider => on laisse CONSULTER
-          // (ou tu peux forcer "RÉPONSE EN ATTENTE" si tu sais que lastLink => consultation existante)
-          buttonStatus = 'CONSULTER';
-        }
-      }
-
-      return {
-        _id: choiceId,
-        title,
-        description,
-        frequence,
-        participants,
-        order,
-        offering,
-        consultationCount,
-        showButtons: frequence !== 'UNE_FOIS_VIE',
-        buttonStatus,
-        // ✅ ici c’est bien l’id de la consultation
-        consultationId,
-      };
-    }),
-  );
-
-  // Tri robuste par order
-  choicesWithCount = choicesWithCount.sort((a, b) => (a.order || 0) - (b.order || 0));
-
-  return {
-    _id: this.toIdString((rubrique as any)._id) ?? String((rubrique as any)._id),
-    titre: rubrique.titre || '',
-    description: rubrique.description || '',
-    categorie: (rubrique as any).categorie,
-    typeconsultation: (rubrique as any).typeconsultation,
-    consultationChoices: choicesWithCount,
-  };
-}
+    return {
+      _id: this.toIdString((rubrique as any)._id) ?? String((rubrique as any)._id),
+      titre: rubrique.titre || '',
+      description: rubrique.description || '',
+      categorie: (rubrique as any).categorie,
+      typeconsultation: (rubrique as any).typeconsultation,
+      consultationChoices: choicesWithCount,
+    };
+  }
 
 }

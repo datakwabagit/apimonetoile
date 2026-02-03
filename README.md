@@ -445,7 +445,7 @@ getProfile(@CurrentUser() user: User) {
 
 ### Services Module
 - Catalogue des services offerts
-- Types : Horoscope, Numérologie, Vie personnelle, Relations, etc.
+- Types :  Numérologie, Vie personnelle, Relations, etc.
 - Prix, durée, description
 - Featured services
 
