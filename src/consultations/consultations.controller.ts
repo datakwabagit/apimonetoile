@@ -47,6 +47,44 @@ export class ConsultationsController {
     private readonly promptService: PromptService,
   ) { }
 
+
+ @Get('missing-choice-prompts')
+  @ApiOperation({ summary: 'Lister les choiceId sans prompt associé', description: 'Retourne les choiceId de toutes les rubriques qui ne sont pas présents dans la collection prompts.' })
+  async getMissingChoicePrompts() {
+    // Accès natif aux collections MongoDB
+    const db = this.consultationsService['consultationModel'].db;
+    const rubriques = await db.collection('rubriques').find({}).toArray();
+    const allChoiceIds = rubriques.flatMap(rub =>
+      (rub.consultationChoices || []).map(choice => choice._id?.toString())
+    ).filter(Boolean);
+    const prompts = await db.collection('prompts').find({}).toArray();
+    const promptChoiceIds = new Set(prompts.map(p => p.choiceId?.toString()));
+    const missingChoiceIds = allChoiceIds.filter(id => !promptChoiceIds.has(id));
+    // Récupérer les objets de choix de consultation correspondants
+    const missingChoices = [];
+    for (const rubrique of rubriques) {
+      for (const choice of (rubrique.consultationChoices || [])) {
+        const choiceId = choice._id?.toString();
+        if (missingChoiceIds.includes(choiceId)) {
+          missingChoices.push({
+            ...choice,
+            rubriqueId: rubrique._id?.toString?.() || rubrique._id,
+            rubriqueTitle: rubrique.title || rubrique.nom || '',
+          });
+        }
+      }
+    }
+    console.log('Missing choiceIds:', missingChoiceIds);
+    console.log('Missing choices:', missingChoices);
+    return {
+      success: true,
+      missingChoiceIds,
+      missingChoices,
+      total: missingChoiceIds.length,
+    };
+  }
+
+
  /**
    * PATCH /consultations/:id/analyse-texte
    * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
@@ -260,7 +298,7 @@ export class ConsultationsController {
     try {
       const formData = this.extractUserFormData(user);
       const { aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
-     console.log('aspectsTexte généré:', aspectsTexte);
+     console
       await this.usersService.update(user._id.toString(), { aspectsTexte: aspectsTexte });
 
       return {
