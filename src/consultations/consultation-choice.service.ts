@@ -1,3 +1,4 @@
+// ...existing code...
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -19,12 +20,9 @@ export class ConsultationChoiceService {
     if (!choice) {
       throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
     }
-    // Cherche le prompt associé si promptId existe
+ 
     let prompt = null;
-    if ((choice as any).promptId) {
-      const populated = await this.consultationChoiceModel.findById(id).populate('promptId').exec();
-      prompt = populated?.promptId || null;
-    }
+    
     return {
       _id: choice._id,
       title: choice.title,
@@ -35,7 +33,6 @@ export class ConsultationChoiceService {
       order: (choice as any)?.order ?? null,
       rubriqueId: (choice as any)?.rubriqueId ?? null,
       rubriqueTitle: (choice as any)?.rubriqueTitle ?? null,
-      promptId: (choice as any)?.promptId || null,
       prompt: prompt,
     };
   }
@@ -67,23 +64,23 @@ export class ConsultationChoiceService {
   }
 
   async findAll(): Promise<ConsultationChoice[]> {
-    return this.consultationChoiceModel.find().populate('promptId').exec();
+    return this.consultationChoiceModel.find().exec();
   }
 
   async findById(id: string): Promise<ConsultationChoice> {
-    const choice = await this.consultationChoiceModel.findById(id).populate('promptId').exec();
+    const choice = await this.consultationChoiceModel.findById(id).exec();
     if (!choice) {
       throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
     }
     return choice;
   }
 
-  async updatePrompt(id: string, promptId: string | null | undefined): Promise<ConsultationChoice> {
+  async updatePrompt(id: string, prompt: string | null | undefined): Promise<ConsultationChoice> {
     const choice = await this.consultationChoiceModel.findByIdAndUpdate(
       id,
-      { promptId: promptId || null },
+      { prompt: prompt || null },
       { new: true, runValidators: true }
-    ).populate('promptId').exec();
+    ).exec();
 
     if (!choice) {
       throw new NotFoundException(`Choix de consultation avec l'ID ${id} introuvable`);
@@ -93,46 +90,29 @@ export class ConsultationChoiceService {
   }
 
   async findAllWithPrompts(): Promise<any[]> {
-    // Récupérer toutes les rubriques avec leurs choix
     const rubriques = await this.rubriqueModel.find().populate('categorieId').exec();
-
-    // Extraire tous les choix de toutes les rubriques
     const allChoices: any[] = [];
 
     for (const rubrique of rubriques) {
       if (rubrique.consultationChoices && rubrique.consultationChoices.length > 0) {
         for (const choice of rubrique.consultationChoices) {
-          // Récupérer le prompt associé depuis ConsultationChoice si promptId existe
-          const choiceWithPrompt: any = {
-            _id: choice._id,
-            title: choice.title,
-            description: choice.description,
-            frequence: choice.frequence,
-            participants: choice.participants,
-            offering: choice.offering,
-            order: choice.order,
-            rubriqueId: rubrique._id,
-            rubriqueTitle: rubrique.titre,
-            promptId: choice.promptId,
-            prompt: choice.promptId,
-          };
-
-          // Chercher si ce choix a un prompt dans la collection ConsultationChoice
-          const consultationChoice = await this.consultationChoiceModel
-            .findById(choice._id)
-            .populate('promptId')
-            .exec();
-
-          if (consultationChoice?.promptId) {
-            choiceWithPrompt.promptId = consultationChoice.promptId;
-            choiceWithPrompt.prompt = consultationChoice.promptId;
+           if (choice?.prompt) {
+            allChoices.push({
+              _id: choice._id,
+              title: choice.title,
+              description: choice.description,
+              frequence: choice.frequence,
+              participants: choice.participants,
+              offering: choice.offering,
+              order: choice.order,
+              rubriqueId: rubrique._id,
+              rubriqueTitle: rubrique.titre,
+              prompt: choice.prompt,
+            });
           }
-
-          allChoices.push(choiceWithPrompt);
         }
       }
     }
-
     return allChoices;
   }
 }

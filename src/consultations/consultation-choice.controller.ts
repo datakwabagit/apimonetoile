@@ -23,7 +23,6 @@ export class ConsultationChoiceController {
 
   @Get(':id/raw')
   async getChoiceByIdRaw(@Param('id') id: string) {
-    // Retourne le choix sans populate du promptId
     return this.consultationChoiceService.findByIdRaw(id);
   }
 
@@ -57,8 +56,14 @@ export class ConsultationChoiceController {
   @ApiResponse({ status: 200, description: 'Prompt associé avec succès.' })
   async updatePrompt(
     @Param('id') id: string,
-    @Body() body: { promptId: string | null },
+    @Body() body: { prompt: string | null },
   ) {
-    return this.consultationChoiceService.updatePrompt(id, body.promptId);
+    return null;
   }
+
+
+
+
+
+
 }

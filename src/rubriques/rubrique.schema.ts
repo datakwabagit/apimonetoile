@@ -35,14 +35,14 @@ export class ConsultationChoice {
   @Prop({ type: 'ObjectId', auto: true })
   _id?: string;
 
-  @Prop({ type: 'ObjectId', ref: 'Prompt', required: false })
-  promptId?: string;
-
   @Prop({ required: true })
   title: string;
 
   @Prop({ required: true })
   description: string;
+
+  @Prop({ required: false })
+  prompt?: string;
 
   @Prop({ type: Number, default: 0 })
   order: number;

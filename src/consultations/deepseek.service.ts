@@ -96,7 +96,6 @@ export class DeepseekService {
 
   private readonly logger = new Logger(DeepseekService.name);
   private readonly DEEPSEEK_API_KEY: string;
-  // Pas de cache pour éviter la surcharge mémoire
   private apiCalls = 0;
 
   private readonly SYSTEM_PROMPTS = {
@@ -165,7 +164,6 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
     }
   }
 
-
   async generateSkyChart(data: BirthData): Promise<AnalysisResult['carteDuCiel']> {
     try {
       const prompt = this.buildCarteDuCielPrompt(data);
@@ -193,7 +191,6 @@ Format de réponse : clair, organisé en sections, avec des bullet points pour l
       );
     }
   }
-
 
   /**
    * Appelle l'API DeepSeek avec retry logic

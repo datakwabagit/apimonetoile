@@ -1,11 +1,10 @@
 import { UserDocument } from '@/users/schemas/user.schema';
-import { HttpException, HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
 import { AnalysisDbService } from './analysis-db.service';
 import { ConsultationsService } from './consultations.service';
 import { BirthData } from './deepseek.service';
-import { PromptService } from './prompt.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 
 @Injectable()
@@ -18,62 +17,8 @@ export class AnalysisService {
   constructor(
     private consultationsService: ConsultationsService,
     private userConsultationChoiceService: UserConsultationChoiceService,
-    @Inject(forwardRef(() => PromptService))
-    private promptService: PromptService,
     private analysisDbService: AnalysisDbService,
   ) { }
-
-  private async loadPromptFromDatabase(choiceId: string): Promise<string | null> {
-    try {
-      const prompt: any = await this.promptService.findByChoiceId(choiceId);
-      if (!prompt) return null;
-      return this.formatPromptSections(prompt);
-    } catch {
-      return null;
-    }
-  }
-
-  private formatPromptSections(prompt: any): string {
-    const sections: string[] = [];
-
-    if (prompt.title) sections.push(`${prompt.title}\n\n`);
-    if (prompt.description) sections.push(`${prompt.description}\n\n`);
-    if (prompt.role) sections.push(`Rôle : ${prompt.role}\n`);
-    if (prompt.objective) sections.push(`Objectif : ${prompt.objective}\n`);
-
-    if (prompt.styleAndTone?.length) {
-      sections.push(`Style et Ton :\n${prompt.styleAndTone.map(style => `- ${style}`).join('\n')}\n`);
-    }
-
-    if (prompt.structure) {
-      sections.push(`\nSTRUCTURE DE L'ANALYSE À RESPECTER\n`);
-
-      if (prompt.structure.introduction) {
-        sections.push(`Introduction : ${prompt.structure.introduction}\n`);
-      }
-
-      if (prompt.structure.sections?.length) {
-        prompt.structure.sections.forEach((section, idx) => {
-          if (section.title) sections.push(`${idx + 1}. ${section.title}\n`);
-          if (section.content) sections.push(`  • ${section.content}\n`);
-
-          if (section.guidelines?.length) {
-            section.guidelines.forEach(guide => sections.push(`    - ${guide}\n`));
-          }
-        });
-      }
-
-      if (prompt.structure.synthesis) {
-        sections.push(`\nSynthèse : ${prompt.structure.synthesis}\n`);
-      }
-
-      if (prompt.structure.conclusion) {
-        sections.push(`\nConclusion : ${prompt.structure.conclusion}\n`);
-      }
-    }
-
-    return sections.join('').trim();
-  }
 
   private extractBirthData(form: any): BirthData {
     return {
@@ -127,6 +72,12 @@ export class AnalysisService {
       throw new HttpException('Clé API DeepSeek non configurée', HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    if (!systemPrompt || !userPrompt) {
+      throw new HttpException(
+        `Impossible d'appeler DeepSeek : systemPrompt ou userPrompt manquant ou vide. (systemPrompt: '${systemPrompt}', userPrompt: '${userPrompt}')`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
     try {
       const requestBody = {
         model: this.DEFAULT_MODEL,
@@ -167,7 +118,7 @@ export class AnalysisService {
       let rawResponseText = '';
       try {
         rawResponseText = await response.clone().text();
-       } catch (e) {
+      } catch (e) {
         console.warn('[DeepSeek] Impossible de lire la réponse brute:', e);
       }
 
@@ -221,6 +172,7 @@ export class AnalysisService {
     if (!consultation.choice?._id) return;
 
     const { choice } = consultation;
+
     await this.userConsultationChoiceService.recordChoicesForConsultation(
       userId,
       consultation._id?.toString() || '',
@@ -256,7 +208,6 @@ export class AnalysisService {
     const dateFormatee = this.formatDate(dateNaissance);
     const sections: string[] = [];
 
-    // Format gender to French
     let genderFr = 'Non spécifié';
     if (gender) {
       const g = gender.toLowerCase();
@@ -288,12 +239,10 @@ export class AnalysisService {
   }
 
   private buildUserPrompttiercenouveau(formData: any, user: UserDocument, tierce: any, consultation: any): string {
-    // Si la consultation est pour une tierce personne uniquement
     if (
       consultation?.choice?.frequence === 'LIBRE' &&
       consultation?.choice?.participants === 'POUR_TIERS'
     ) {
-      // Tierce data extraction and formatting
       const tiercePrenoms = tierce?.prenoms || '';
       const tierceNom = tierce?.nom || '';
       const tierceDateNaissance = tierce?.dateNaissance || '';
@@ -320,14 +269,12 @@ export class AnalysisService {
       return sections.join('\n');
     }
 
-    // Sinon, comportement standard (utilisateur + tierce)
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
     const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
     const dateFormatee = this.formatDate(dateNaissance);
     const genderFr = this.normalizeGenderFr(gender);
 
-    // Tierce data extraction and formatting
     const tiercePrenoms = tierce?.prenoms || '';
     const tierceNom = tierce?.nom || '';
     const tierceDateNaissance = tierce?.dateNaissance || '';
@@ -341,7 +288,6 @@ export class AnalysisService {
 
     const sections: string[] = [];
 
-    // Utilisateur principal
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
       this.safeLine('Prénoms à utiliser', prenoms),
@@ -385,7 +331,6 @@ export class AnalysisService {
     if (v === "male" || v === "masculin" || v === "m" || v === "homme") return "Homme";
     if (v === "female" || v === "feminin" || v === "féminin" || v === "f" || v === "femme") return "Femme";
 
-    // fallback: on garde tel quel (mais propre)
     return String(g).trim() || "Non spécifié";
   }
 
@@ -477,7 +422,6 @@ export class AnalysisService {
     await this.analysisDbService.createAnalysis(analysisToSave as any);
   }
 
-
   async generateAnalysis(id: string, user: any) {
     try {
       const consultation = await this.consultationsService.findOne(id);
@@ -486,14 +430,8 @@ export class AnalysisService {
       }
 
       const formData = consultation.formData || {};
+      const systemPrompt = consultation.choice.prompt || consultation.title;
 
-      let systemPrompt = consultation.title;
-      if (consultation.choice?._id) {
-        const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
-        if (customPrompt) {
-          systemPrompt = customPrompt;
-        }
-      }
       let userPrompt = null;
 
       if (consultation.tierce) {
@@ -508,7 +446,6 @@ export class AnalysisService {
           gender: consultation.tierce.gender || '',
         };
         userPrompt = this.buildUserPrompttiercenouveau(formData, user, tierceBirthData, consultation);
-
       } else {
         userPrompt = this.buildUserPrompt(formData, user);
       }
@@ -552,23 +489,14 @@ export class AnalysisService {
     }
   }
 
-
   async generateAnalysisuser(id: string, user: UserDocument) {
     try {
       const consultation = await this.consultationsService.findOne(id);
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
       }
-
       const formData = consultation.formData || {};
-
-      let systemPrompt = consultation.title;
-      if (consultation.choice?._id) {
-        const customPrompt = await this.loadPromptFromDatabase(consultation.choice._id.toString());
-        if (customPrompt) {
-          systemPrompt = customPrompt;
-        }
-      }
+      const systemPrompt = consultation.choice.prompt || consultation.title;
 
       const userPrompt = this.buildUserPromptuser(formData, user);
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);

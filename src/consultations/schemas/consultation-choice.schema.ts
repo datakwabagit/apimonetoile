@@ -17,11 +17,11 @@ export class ConsultationChoice {
   @Prop({ required: true })
   participants: string;
 
+  @Prop({ required: false })
+  prompt?: string;
+
   @Prop({ type: Object, required: true })
   offering: any;
-
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Prompt', required: false })
-  promptId?: MongooseSchema.Types.ObjectId;
 }
 
 export const ConsultationChoiceSchema = SchemaFactory.createForClass(ConsultationChoice);

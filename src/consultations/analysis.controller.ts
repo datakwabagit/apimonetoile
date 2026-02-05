@@ -32,11 +32,7 @@ export class AnalysisController {
   async update(@Param('id') id: string, @Body() body: { texte: string }) {
     return this.analysisDbService['analysisModel'].findByIdAndUpdate(id, { texte: body.texte }, { new: true });
   }
-
-  /**
-   * PATCH /analyses/by-consultation/:consultationId/texte
-   * Met à jour le texte d'une analyse à partir du consultationID
-   */
+ 
   @Patch('by-consultation/:consultationId/texte')
   async updateTexteByConsultationId(
     @Param('consultationId') consultationId: string,

@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -18,8 +19,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { Public } from '../common/decorators/public.decorator';
-import { ConsultationStatus } from '../common/enums/consultation-status.enum';
-import { ConsultationType } from '../common/enums/consultation-status.enum';
+import { ConsultationStatus, ConsultationType } from '../common/enums/consultation-status.enum';
 import { Permission } from '../common/enums/permission.enum';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -31,7 +31,7 @@ import { DeepseekService } from './deepseek.service';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { PromptService } from './prompt.service';
+import { UpdateChoicePromptDto } from './dto/update-choice-prompt.dto';
 
 @ApiTags('Consultations')
 @Controller('consultations')
@@ -44,8 +44,11 @@ export class ConsultationsController {
     private readonly rubriqueService: RubriqueService,
     private readonly deepseekService: DeepseekService,
     private readonly usersService: UsersService,
-    private readonly promptService: PromptService,
   ) { }
+
+
+
+  
 
 
  @Get('missing-choice-prompts')
@@ -74,9 +77,7 @@ export class ConsultationsController {
         }
       }
     }
-    console.log('Missing choiceIds:', missingChoiceIds);
-    console.log('Missing choices:', missingChoices);
-    return {
+     return {
       success: true,
       missingChoiceIds,
       missingChoices,
@@ -129,7 +130,7 @@ export class ConsultationsController {
         if (!user.paysNaissance) { user.paysNaissance = 'Côte d’Ivoire'; }
         const choiceDto = {
           _id: choix._id ?? '',
-          promptId: choix.promptId,
+          prompt: choix.prompt,
           title: choix.title,
           description: choix.description,
           order: choix.order,
@@ -224,7 +225,7 @@ export class ConsultationsController {
 
       const choiceDto = {
         _id: choix._id ?? '',
-        promptId: choix.promptId,
+        prompt: choix.prompt,
         title: choix.title,
         description: choix.description,
         order: choix.order,
@@ -353,7 +354,7 @@ export class ConsultationsController {
         }
         const choiceDto = {
           _id: choix._id ?? '',
-          promptId: choix.promptId,
+          prompt: choix.prompt,
           title: choix.title,
           description: choix.description,
           order: choix.order,
@@ -1063,4 +1064,58 @@ export class ConsultationsController {
     const isNotified = await this.consultationsService.isAnalysisNotified(id);
     return { consultationId: id, analysisNotified: isNotified };
   }
+
+
+
+/**
+   * GET /consultation-choices/:id/with-prompt
+   * Récupère un choix de consultation avec son prompt (si non nul)
+   */
+  @Get(':id/with-prompt')
+  async getChoiceWithPrompt(@Param('id') id: string) {
+    // Récupérer toutes les rubriques
+    // const rubriques = await this.rubriqueModel.find().populate('categorieId').exec();
+ 
+    const rubriques = await this.rubriqueService.findAll();
+    for (const rubrique of rubriques) {
+      if (rubrique.consultationChoices && rubrique.consultationChoices.length > 0) {
+        for (const choice of rubrique.consultationChoices) {
+          if (choice._id?.toString() === id && choice.prompt) {
+            return {
+              _id: choice._id,
+              title: choice.title,
+              description: choice.description,
+              frequence: choice.frequence,
+              participants: choice.participants,
+              offering: choice.offering,
+              order: choice.order,
+              rubriqueId: rubrique._id,
+              rubriqueTitle: rubrique.titre,
+              prompt: choice.prompt,
+            };
+          }
+        }
+      }
+    }
+    throw new NotFoundException(`Aucun choix de consultation avec l'ID ${id} et un prompt non nul trouvé.`);
+  }
+
+
+
+  
+
+
+@Patch("choice/:id/prompt")
+  async updateChoicePrompt(@Param("id") id: string, @Body() body: UpdateChoicePromptDto) {
+    const prompt = (body?.prompt ?? "").trim();
+
+    const choice = await this.rubriqueService.updateChoicePrompt(id, prompt);
+    return {
+      success: true,
+      message: `Prompt mis à jour pour le choix ${id}`,
+      choice,
+    };
+  }
+
+
 }

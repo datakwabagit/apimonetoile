@@ -1,12 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Consultation, ConsultationDocument } from '../consultations/schemas/consultation.schema';
 import { UserConsultationChoice, UserConsultationChoiceDocument } from '../consultations/schemas/user-consultation-choice.schema';
 import { ReorderChoicesDto } from './dto/reorder-choices.dto';
 import { ConsultationChoiceWithCountDto, RubriqueWithChoiceCountDto } from './dto/rubrique-with-count.dto';
 import { RubriqueDto } from './dto/rubrique.dto';
 import { ConsultationChoice, Rubrique, RubriqueDocument } from './rubrique.schema';
+
+
+type UpdatedChoiceResponse = {
+  _id: string;
+  title?: string;
+  description?: string;
+  frequence?: string;
+  participants?: string;
+  offering?: unknown;
+  order?: number;
+  prompt: string;
+  promptId?: string | null;
+  rubriqueId: string;
+  rubriqueTitle: string;
+};
 
 @Injectable()
 export class RubriqueService {
@@ -62,7 +77,7 @@ export class RubriqueService {
       }
       // Nettoyage strict des propriétés non attendues (pas de _id, choiceId, etc.)
       return {
-        promptId: choice.promptId,
+        prompt: choice.prompt,
         title: choice.title,
         description: choice.description,
         frequence,
@@ -77,7 +92,7 @@ export class RubriqueService {
   cleanConsultationChoices(choices: any[]): ConsultationChoice[] {
     return choices.map(choice => ({
       _id: choice._id,
-      promptId: choice.promptId,
+      prompt: choice.prompt,
       title: choice.title,
       description: choice.description,
       order: choice.order,
@@ -271,6 +286,7 @@ export class RubriqueService {
         const frequence = (choice as any)?.frequence ?? 'LIBRE';
         const participants = (choice as any)?.participants ?? null;
         const offering = (choice as any)?.offering ?? {};
+        const prompt= (choice as any)?.prompt ?? '';
 
         // Si pas d'id de choix: on renvoie un objet cohérent (évite crash)
         if (!choiceId) {
@@ -286,6 +302,7 @@ export class RubriqueService {
             showButtons: frequence !== 'UNE_FOIS_VIE',
             buttonStatus: 'CONSULTER' as ButtonStatus,
             consultationId: null,
+            prompt
           };
         }
 
@@ -342,13 +359,14 @@ export class RubriqueService {
           buttonStatus,
           // ✅ ici c’est bien l’id de la consultation
           consultationId,
+          prompt
         };
       }),
     );
 
     // Tri robuste par order
     choicesWithCount = choicesWithCount.sort((a, b) => (a.order || 0) - (b.order || 0));
-
+ 
     return {
       _id: this.toIdString((rubrique as any)._id) ?? String((rubrique as any)._id),
       titre: rubrique.titre || '',
@@ -358,5 +376,73 @@ export class RubriqueService {
       consultationChoices: choicesWithCount,
     };
   }
+
+
+
+
+
+
+   async updateChoicePrompt(choiceId: string, promptRaw: string): Promise<UpdatedChoiceResponse> {
+    const prompt = (promptRaw ?? "").trim();
+    if (!prompt) {
+      throw new NotFoundException("Le prompt ne peut pas être vide.");
+    }
+
+    // ✅ CAST ObjectId si possible (évite mismatch string/ObjectId)
+    const choiceObjectId = Types.ObjectId.isValid(choiceId)
+      ? new Types.ObjectId(choiceId)
+      : choiceId;
+
+    const updatedRubrique = await this.rubriqueModel
+      .findOneAndUpdate(
+        { "consultationChoices._id": choiceObjectId },
+        {
+          $set: { "consultationChoices.$.prompt": prompt },
+          $currentDate: { updatedAt: true }, // bump updatedAt (timestamps)
+        },
+        {
+          new: true,
+          projection: { titre: 1, consultationChoices: 1 },
+          runValidators: true,
+        },
+      )
+      .lean()
+      .exec();
+
+    if (!updatedRubrique) {
+      throw new NotFoundException(
+        `Aucun choix de consultation avec l'ID ${choiceId} trouvé.`,
+      );
+    }
+
+    const rubriqueId = this.toIdString((updatedRubrique as any)._id) ?? "";
+    const rubriqueTitle = ((updatedRubrique as any).titre as string) ?? "";
+
+    const choice = ((updatedRubrique as any).consultationChoices ?? []).find((c: any) => {
+      const cId = this.toIdString(c?._id);
+      return cId === choiceId;
+    });
+
+    if (!choice) {
+      throw new NotFoundException(
+        `Choix ${choiceId} non retrouvé après mise à jour (incohérence).`,
+      );
+    }
+
+    return {
+      _id: this.toIdString(choice._id) ?? choiceId,
+      title: choice.title,
+      description: choice.description,
+      frequence: choice.frequence,
+      participants: choice.participants,
+      offering: choice.offering,
+      order: choice.order,
+      prompt: choice.prompt ?? prompt,
+      promptId: this.toIdString(choice.promptId),
+      rubriqueId,
+      rubriqueTitle,
+    };
+  }
+ 
 
 }

@@ -23,8 +23,10 @@ export class Analysis extends Document {
 
     @Prop({ required: false })
     completedDate?: Date; 
+    
     @Prop({ required: false, type: Object })
     metadata?: any;
+
     @Prop({ required: false })
     prompt?: string;
 

@@ -25,6 +25,9 @@ export class ConsultationChoice {
   @Prop({ required: true })
   description: string;
 
+  @Prop({ required: false })
+  prompt?: string;
+
   @Prop({ required: true })
   frequence: string;
 
@@ -135,7 +138,7 @@ export class Consultation {
   @Prop({ required: false })
   prompt: string;
 
- 
+
   @Prop({ type: Object, default: {} })
   formData: {
     firstName?: string;
@@ -272,7 +275,7 @@ ConsultationSchema.virtual('consultButtonStatus').get(function (this: any) {
   }
   return 'CONSULTER';
 });
- 
+
 
 // Indexes
 ConsultationSchema.index({ clientId: 1, createdAt: -1 });

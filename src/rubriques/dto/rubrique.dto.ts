@@ -22,9 +22,7 @@ class ConsultationOfferingWrapperDto {
 class ConsultationChoiceDto {
   @IsOptional()
   order?: number;
-  @IsOptional()
-  @IsString()
-  promptId?: string;
+  
 
   @IsOptional()
   @IsString()
@@ -65,6 +63,9 @@ class ConsultationChoiceDto {
   offering: {
     alternatives: ConsultationOfferingDto[];
   };
+    @IsString()
+  @IsOptional()
+  prompt?: string;
 }
 
 export class RubriqueDto {

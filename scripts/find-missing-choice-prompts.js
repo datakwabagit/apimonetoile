@@ -19,11 +19,7 @@ async function main() {
 
   // Filtrer les choiceId sans prompt
   const missingChoiceIds = allChoiceIds.filter(id => !promptChoiceIds.has(id));
-
-  console.log('ChoiceIds sans prompt associé :');
-  console.log(missingChoiceIds);
-  console.log(`Total : ${missingChoiceIds.length}`);
-
+ 
   await mongoose.disconnect();
 }
 

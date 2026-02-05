@@ -45,4 +45,8 @@ export class UpdatePromptDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  promptfinal?: string;
 }

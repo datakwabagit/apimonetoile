@@ -14,6 +14,9 @@ export class UserConsultationChoice {
   @Prop({ required: true })
   choiceTitle: string;
 
+  @Prop({ required: false })
+  prompt?: string;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ConsultationChoice', required: true })
   choiceId: MongooseSchema.Types.ObjectId;
 
