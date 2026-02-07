@@ -3,10 +3,15 @@ services:
     name: mon-etoile-backend
     env: node
     plan: free
-    buildCommand: NODE_OPTIONS="--max-old-space-size=1024" npm install && npm run build
-    startCommand: NODE_OPTIONS="--max-old-space-size=1024" npm run start:prod
+    region: frankfurt
+    buildCommand: NODE_OPTIONS="--max-old-space-size=512" npm ci --omit=dev && npm run build
+    startCommand: NODE_OPTIONS="--max-old-space-size=512" node dist/main
+    healthCheckPath: /api/v1/config/stats
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
-        value: --max-old-space-size=1024
+        value: --max-old-space-size=512
+      - key: PORT
+        value: 3001
