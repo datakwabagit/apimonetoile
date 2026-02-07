@@ -411,6 +411,7 @@ export class AnalysisService {
       consultationID: consultationId,
       texte: analysisData.texte,
       clientId: consultation.clientId?.toString?.() || consultation.clientId,
+      choiceId: consultation.choice?._id?.toString?.() || consultation.choice?._id,
       type: consultation.type,
       status: consultation.status,
       title: consultation.title,
@@ -471,6 +472,7 @@ export class AnalysisService {
         consultationId: id,
         statut: ConsultationStatus.COMPLETED,
         message: 'Analyse générée avec succès',
+        analyse: analysisDocument,
         consultation: updatedConsultation,
       };
     } catch (error) {

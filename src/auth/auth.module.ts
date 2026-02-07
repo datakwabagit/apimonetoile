@@ -14,12 +14,18 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRATION', '7d'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        // Get values from env or use defaults in seconds
+        const jwtSecret = configService.get<string>('JWT_SECRET') || 'fallback-secret';
+        const jwtExpiration = configService.get<number>('JWT_EXPIRATION') || 604800; // 7 days
+        
+        return {
+          secret: jwtSecret,
+          signOptions: {
+            expiresIn: jwtExpiration,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),

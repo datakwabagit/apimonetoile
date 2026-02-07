@@ -13,7 +13,7 @@ import {
   Post,
   Put,
   Query,
-  UseGuards
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -37,36 +37,34 @@ import { UpdateChoicePromptDto } from './dto/update-choice-prompt.dto';
 @Controller('consultations')
 @UseGuards(JwtAuthGuard)
 export class ConsultationsController {
- 
   constructor(
     private readonly consultationsService: ConsultationsService,
     private readonly analysisService: AnalysisService,
     private readonly rubriqueService: RubriqueService,
     private readonly deepseekService: DeepseekService,
     private readonly usersService: UsersService,
-  ) { }
+  ) {}
 
-
-
-  
-
-
- @Get('missing-choice-prompts')
-  @ApiOperation({ summary: 'Lister les choiceId sans prompt associé', description: 'Retourne les choiceId de toutes les rubriques qui ne sont pas présents dans la collection prompts.' })
+  @Get('missing-choice-prompts')
+  @ApiOperation({
+    summary: 'Lister les choiceId sans prompt associé',
+    description:
+      'Retourne les choiceId de toutes les rubriques qui ne sont pas présents dans la collection prompts.',
+  })
   async getMissingChoicePrompts() {
     // Accès natif aux collections MongoDB
     const db = this.consultationsService['consultationModel'].db;
     const rubriques = await db.collection('rubriques').find({}).toArray();
-    const allChoiceIds = rubriques.flatMap(rub =>
-      (rub.consultationChoices || []).map(choice => choice._id?.toString())
-    ).filter(Boolean);
+    const allChoiceIds = rubriques
+      .flatMap((rub) => (rub.consultationChoices || []).map((choice) => choice._id?.toString()))
+      .filter(Boolean);
     const prompts = await db.collection('prompts').find({}).toArray();
-    const promptChoiceIds = new Set(prompts.map(p => p.choiceId?.toString()));
-    const missingChoiceIds = allChoiceIds.filter(id => !promptChoiceIds.has(id));
+    const promptChoiceIds = new Set(prompts.map((p) => p.choiceId?.toString()));
+    const missingChoiceIds = allChoiceIds.filter((id) => !promptChoiceIds.has(id));
     // Récupérer les objets de choix de consultation correspondants
     const missingChoices = [];
     for (const rubrique of rubriques) {
-      for (const choice of (rubrique.consultationChoices || [])) {
+      for (const choice of rubrique.consultationChoices || []) {
         const choiceId = choice._id?.toString();
         if (missingChoiceIds.includes(choiceId)) {
           missingChoices.push({
@@ -77,7 +75,7 @@ export class ConsultationsController {
         }
       }
     }
-     return {
+    return {
       success: true,
       missingChoiceIds,
       missingChoices,
@@ -85,32 +83,29 @@ export class ConsultationsController {
     };
   }
 
-
- /**
+  /**
    * PATCH /consultations/:id/analyse-texte
    * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
    */
   @Patch(':id/analyse-texte')
-  async updateAnalyseTexte(
-    @Param('id') id: string,
-    @Body('texte') texte: string
-  ) {
+  async updateAnalyseTexte(@Param('id') id: string, @Body('texte') texte: string) {
     return this.consultationsService.updateAnalyseTexte(id, texte);
   }
 
   /**
-    * POST /consultations/generate-consultations-for-rubrique
-    * Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant (sans générer d'analyse).
-    */
+   * POST /consultations/generate-consultations-for-rubrique
+   * Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant (sans générer d'analyse).
+   */
   @Post('generate-consultations-for-rubrique')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: "Créer consultations pour chaque choix d'une rubrique",
-    description: "Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant, sans générer d'analyse."
+    description:
+      "Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant, sans générer d'analyse.",
   })
   async generateConsultationsForRubrique(
     @Body('rubriqueId') rubriqueId: string,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() user: UserDocument,
   ) {
     try {
       // Supprimer toutes les consultations de la rubrique pour l'utilisateur courant
@@ -122,12 +117,17 @@ export class ConsultationsController {
       const rubrique = await this.rubriqueService.findOne(rubriqueId);
       const choixConsultations = rubrique.consultationChoices;
       if (!choixConsultations || choixConsultations.length === 0) {
-        throw new HttpException('Aucun choix de consultation pour cette rubrique', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          'Aucun choix de consultation pour cette rubrique',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       const results = [];
       for (const choix of choixConsultations) {
-        if (!user.paysNaissance) { user.paysNaissance = 'Côte d’Ivoire'; }
+        if (!user.paysNaissance) {
+          user.paysNaissance = 'Côte d’Ivoire';
+        }
         const choiceDto = {
           _id: choix._id ?? '',
           prompt: choix.prompt,
@@ -201,19 +201,22 @@ export class ConsultationsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: "Générer une analyse pour un choix de consultation d'une rubrique",
-    description: "Crée une consultation et génère une analyse pour un choix de consultation d'une rubrique pour l'utilisateur courant."
+    description:
+      "Crée une consultation et génère une analyse pour un choix de consultation d'une rubrique pour l'utilisateur courant.",
   })
   async generateAnalysisForChoice(
     @Body('rubriqueId') rubriqueId: string,
     @Body('choiceId') choiceId: string,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() user: UserDocument,
   ) {
     try {
       const rubrique = await this.rubriqueService.findOne(rubriqueId);
       if (!rubrique || !rubrique.consultationChoices) {
         throw new HttpException('Rubrique ou choix non trouvés', HttpStatus.NOT_FOUND);
       }
-      const choix = rubrique.consultationChoices.find((c: any) => c._id?.toString() === choiceId || c._id === choiceId);
+      const choix = rubrique.consultationChoices.find(
+        (c: any) => c._id?.toString() === choiceId || c._id === choiceId,
+      );
       if (!choix) {
         throw new HttpException('Choix de consultation non trouvé', HttpStatus.NOT_FOUND);
       }
@@ -293,13 +296,13 @@ export class ConsultationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Générer la carte du ciel de l'utilisateur courant",
-    description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté."
+    description: "Génère et retourne la carte du ciel complète pour l'utilisateur connecté.",
   })
   async generateSkyChartForCurrentUser(@CurrentUser() user: UserDocument) {
     try {
       const formData = this.extractUserFormData(user);
       const { aspectsTexte } = await this.deepseekService.generateSkyChart(formData);
-     console
+      console;
       await this.usersService.update(user._id.toString(), { aspectsTexte: aspectsTexte });
 
       return {
@@ -311,16 +314,13 @@ export class ConsultationsController {
       throw new HttpException(
         {
           success: false,
-          message: "Erreur lors de la génération de la carte du ciel",
+          message: 'Erreur lors de la génération de la carte du ciel',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
-
-
-  
 
   /**
    * POST /consultations/generate-for-rubrique
@@ -330,20 +330,26 @@ export class ConsultationsController {
   @Post('generate-for-rubrique')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: "Générer consultations et analyses pour une rubrique",
-    description: "Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant, puis génère une analyse pour chacune."
+    summary: 'Générer consultations et analyses pour une rubrique',
+    description:
+      "Crée une consultation pour chaque choix de consultation d'une rubrique pour l'utilisateur courant, puis génère une analyse pour chacune.",
   })
-
   async generateForRubrique(
     @Body('rubriqueId') rubriqueId: string,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() user: UserDocument,
   ) {
     try {
       const rubrique = await this.rubriqueService.findOne(rubriqueId);
       const choixConsultations = rubrique.consultationChoices;
       if (!choixConsultations || choixConsultations.length === 0) {
-        console.warn('[generateForRubrique] Aucun choix de consultation pour cette rubrique:', rubriqueId);
-        throw new HttpException('Aucun choix de consultation pour cette rubrique', HttpStatus.NOT_FOUND);
+        console.warn(
+          '[generateForRubrique] Aucun choix de consultation pour cette rubrique:',
+          rubriqueId,
+        );
+        throw new HttpException(
+          'Aucun choix de consultation pour cette rubrique',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       const results = [];
@@ -458,7 +464,6 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
   async notifyUser(@Param('id') id: string) {
     try {
-
       const consultation: any = await this.consultationsService.findOne(id);
 
       if (!consultation || !consultation.clientId) {
@@ -476,15 +481,19 @@ export class ConsultationsController {
   }
 
   /**
-     * GET /consultations/rubrique/:rubriqueId
-     * Récupérer toutes les consultations de l'utilisateur connecté pour une rubrique donnée (filtrage par rubriqueId)
-     */
+   * GET /consultations/rubrique/:rubriqueId
+   * Récupérer toutes les consultations de l'utilisateur connecté pour une rubrique donnée (filtrage par rubriqueId)
+   */
   @Get('rubrique/:rubriqueId')
   @ApiOperation({
     summary: "Consultations de l'utilisateur connecté par rubriqueId",
-    description: "Retourne toutes les consultations de l'utilisateur connecté pour une rubrique donnée (filtrage par rubriqueId).",
+    description:
+      "Retourne toutes les consultations de l'utilisateur connecté pour une rubrique donnée (filtrage par rubriqueId).",
   })
-  @ApiResponse({ status: 200, description: "Liste des consultations de l'utilisateur pour la rubrique." })
+  @ApiResponse({
+    status: 200,
+    description: "Liste des consultations de l'utilisateur pour la rubrique.",
+  })
   async getMyConsultationsByRubrique(
     @CurrentUser() user: UserDocument,
     @Param('rubriqueId') rubriqueId: string,
@@ -573,7 +582,8 @@ export class ConsultationsController {
       success: true,
       consultations: result.consultations.map((c: any) => {
         const cObj = c.toObject ? c.toObject() : c;
-        let consultButtonStatus: 'CONSULTER' | 'REPONSE_EN_ATTENTE' | 'VOIR_L_ANALYSE' = 'CONSULTER';
+        let consultButtonStatus: 'CONSULTER' | 'REPONSE_EN_ATTENTE' | 'VOIR_L_ANALYSE' =
+          'CONSULTER';
         if (c.analysisNotified) {
           consultButtonStatus = 'VOIR_L_ANALYSE';
         } else if (c.resultData && (c.resultData.analyse || c.resultData.prompt)) {
@@ -671,8 +681,7 @@ export class ConsultationsController {
       let analysisData = consultation.resultData.analyse;
 
       if (consultation.resultData) {
-         analysisData = consultation.resultData.analyse;
-        
+        analysisData = consultation.resultData.analyse;
       }
 
       if (!analysisData) {
@@ -736,10 +745,7 @@ export class ConsultationsController {
   })
   @ApiResponse({ status: 200, description: 'Analyse sauvegardée avec succès.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
-  async updateAnalysis(
-    @Param('id') id: string,
-    @Body() analysisData: any,
-  ) {
+  async updateAnalysis(@Param('id') id: string, @Body() analysisData: any) {
     try {
       // Vérifier que la consultation existe
       const consultation = await this.consultationsService.findOne(id);
@@ -817,7 +823,7 @@ export class ConsultationsController {
     const consultation: any = await this.consultationsService.findOne(id);
     const consultationObj = consultation.toObject();
 
-    let analyse = consultation.resultData;
+    const analyse = consultation.resultData;
     let alternatives = consultation.alternatives || consultationObj.alternatives || [];
     if (alternatives.length) {
       alternatives = await this.consultationsService.populateAlternatives(alternatives);
@@ -827,9 +833,12 @@ export class ConsultationsController {
     let consultButtonStatus: 'CONSULTER' | 'REPONSE_EN_ATTENTE' | 'VOIR_L_ANALYSE' = 'CONSULTER';
     if (consultation.analysisNotified) {
       consultButtonStatus = 'VOIR_L_ANALYSE';
-    } else if (consultation.resultData && (consultation.resultData.analyse || consultation.resultData.prompt)) {
+    } else if (
+      consultation.resultData &&
+      (consultation.resultData.analyse || consultation.resultData.prompt)
+    ) {
       consultButtonStatus = 'REPONSE_EN_ATTENTE';
-    } else  {
+    } else {
       consultButtonStatus = 'CONSULTER';
     }
 
@@ -889,12 +898,10 @@ export class ConsultationsController {
   @ApiResponse({ status: 400, description: 'Données invalides.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
-  async generateAnalysis(
-    @Param('id') id: string,
-    @CurrentUser() user: UserDocument,
-  ) {
+  async generateAnalysis(@Param('id') id: string, @CurrentUser() user: UserDocument) {
     try {
-      return await this.analysisService.generateAnalysis(id, user);
+      const analyse = await this.analysisService.generateAnalysis(id, user);
+      return analyse;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       throw new HttpException(
@@ -908,11 +915,10 @@ export class ConsultationsController {
     }
   }
 
-
   /**
-    * POST /consultations/:id/generate-analysis
-    * Générer l'analyse astrologique complète via DeepSeek (Authentifié)
-    */
+   * POST /consultations/:id/generate-analysis
+   * Générer l'analyse astrologique complète via DeepSeek (Authentifié)
+   */
   @Post(':id/generate-analysis-user')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -923,10 +929,7 @@ export class ConsultationsController {
   @ApiResponse({ status: 400, description: 'Données invalides.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
-  async generateAnalysisuser(
-    @Param('id') id: string,
-    @CurrentUser() user: UserDocument,
-  ) {
+  async generateAnalysisuser(@Param('id') id: string, @CurrentUser() user: UserDocument) {
     try {
       return await this.analysisService.generateAnalysisuser(id, user);
     } catch (error) {
@@ -1065,9 +1068,7 @@ export class ConsultationsController {
     return { consultationId: id, analysisNotified: isNotified };
   }
 
-
-
-/**
+  /**
    * GET /consultation-choices/:id/with-prompt
    * Récupère un choix de consultation avec son prompt (si non nul)
    */
@@ -1075,7 +1076,7 @@ export class ConsultationsController {
   async getChoiceWithPrompt(@Param('id') id: string) {
     // Récupérer toutes les rubriques
     // const rubriques = await this.rubriqueModel.find().populate('categorieId').exec();
- 
+
     const rubriques = await this.rubriqueService.findAll();
     for (const rubrique of rubriques) {
       if (rubrique.consultationChoices && rubrique.consultationChoices.length > 0) {
@@ -1097,17 +1098,14 @@ export class ConsultationsController {
         }
       }
     }
-    throw new NotFoundException(`Aucun choix de consultation avec l'ID ${id} et un prompt non nul trouvé.`);
+    throw new NotFoundException(
+      `Aucun choix de consultation avec l'ID ${id} et un prompt non nul trouvé.`,
+    );
   }
 
-
-
-  
-
-
-@Patch("choice/:id/prompt")
-  async updateChoicePrompt(@Param("id") id: string, @Body() body: UpdateChoicePromptDto) {
-    const prompt = (body?.prompt ?? "").trim();
+  @Patch('choice/:id/prompt')
+  async updateChoicePrompt(@Param('id') id: string, @Body() body: UpdateChoicePromptDto) {
+    const prompt = (body?.prompt ?? '').trim();
 
     const choice = await this.rubriqueService.updateChoicePrompt(id, prompt);
     return {
@@ -1116,6 +1114,4 @@ export class ConsultationsController {
       choice,
     };
   }
-
-
 }

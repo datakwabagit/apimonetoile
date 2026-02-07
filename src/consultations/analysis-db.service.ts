@@ -17,23 +17,35 @@ export class AnalysisDbService {
       consultationID,
       texte,
       clientId,
+      choiceId,
       type,
       status,
       title,
       completedDate,
     } = dto;
-    const created = new this.analysisModel({
-      consultationID,
-      texte,
-      clientId,
-      type,
-      status,
-      title,
-      completedDate,
-      prompt: dto.prompt,
-      dateGeneration: dto.dateGeneration,
-      metadata: dto.metadata,
-    });
-    return created.save();
+
+    if (!consultationID) {
+      throw new Error('consultationID is required to create or update an analysis');
+    }
+
+    return this.analysisModel.findOneAndUpdate(
+      { consultationID },
+      {
+        $set: {
+          consultationID,
+          texte,
+          clientId,
+          choiceId,
+          type,
+          status,
+          title,
+          completedDate,
+          prompt: dto.prompt,
+          dateGeneration: dto.dateGeneration,
+          metadata: dto.metadata,
+        },
+      },
+      { new: true, upsert: true },
+    );
   }
 }

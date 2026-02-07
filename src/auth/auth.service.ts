@@ -134,12 +134,12 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get<string>('JWT_EXPIRATION', '7d'),
+      expiresIn: this.configService.get<number>('JWT_EXPIRATION') || 604800, // 7 days
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION', '30d'),
+      expiresIn: this.configService.get<number>('JWT_REFRESH_EXPIRATION') || 2592000, // 30 days
     });
 
     return {

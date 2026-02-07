@@ -1,4 +1,4 @@
-import { IsObject, IsEnum, IsOptional } from 'class-validator';
+import { IsObject, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum AnalysisStatus {
   COMPLETED = 'completed',
@@ -14,6 +14,10 @@ export class SaveAnalysisDto {
 
   @IsOptional()
   consultationID?: string;
+
+  @IsOptional()
+  @IsString()
+  choiceId?: string;
 
   @IsOptional()
   texte?: string;

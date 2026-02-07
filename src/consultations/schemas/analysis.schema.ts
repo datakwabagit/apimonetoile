@@ -13,6 +13,9 @@ export class Analysis extends Document {
     clientId?: string;   
 
     @Prop({ required: false })
+    choiceId?: string;
+
+    @Prop({ required: false })
     type?: string;
 
     @Prop({ required: false })

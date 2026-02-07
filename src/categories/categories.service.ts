@@ -18,6 +18,9 @@ export class CategoriesService {
   }
 
   async findOne(id: string, userId?: string) {
+    if (!id || id === 'undefined' || !Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('ID de catégorie invalide');
+    }
     const cat = await this.categorieModel.findById(id).populate({ path: 'rubriques', model: 'Rubrique' });
     if (!cat) throw new NotFoundException('Catégorie non trouvée');
     
@@ -108,6 +111,9 @@ export class CategoriesService {
    * Retourne une catégorie avec id, nom, description et ses rubriques (id, nom, titre, description, categorieId)
    */
   async getCategorieWithRubriques(id: string) {
+    if (!id || id === 'undefined' || !Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('ID de catégorie invalide');
+    }
     const cat = await this.categorieModel.findById(id).populate({ path: 'rubriques', model: 'Rubrique' }).exec();
     if (!cat) throw new NotFoundException('Catégorie non trouvée');
 
