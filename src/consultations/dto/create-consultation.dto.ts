@@ -182,6 +182,10 @@ export class CreateConsultationDto {
   @IsOptional()
   tierce?: any;
 
+  @IsObject()
+  @IsOptional()
+  tierces?: any;
+
   @IsOptional()
   analysisNotified?: boolean;
 

@@ -1,9 +1,9 @@
-﻿// Ajout d'un champ virtuel pour le statut du bouton "Consulter"
-import { Schema as MongooseSchemaType } from 'mongoose';
+﻿/* eslint-disable */
+// Ajout d'un champ virtuel pour le statut du bouton "Consulter"
+import { Offering } from '@/offerings/schemas/offering.schema';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { ConsultationStatus, ConsultationType } from '../../common/enums/consultation-status.enum';
-import { Offering } from '@/offerings/schemas/offering.schema';
 
 @Schema({ _id: false })
 export class ConsultationChoice {
@@ -195,6 +195,24 @@ export class Consultation {
     heureNaissance?: string;
     [key: string]: any;
   };
+
+
+ /**
+   * Données tierces personnes (pour AVEC_TIERS multiple)
+   */
+  @Prop({ type: [Object], required: false, default: [] })
+  tierces?: Array<{
+    nom?: string;
+    prenoms?: string;
+    dateNaissance?: string;
+    villeNaissance?: string;
+    heureNaissance?: string;
+    paysNaissance?: string;
+    genre?: string;
+    gender?: string;
+    [key: string]: any;
+  }>;
+
 
 
   @Prop({ type: RequiredOffering, required: false, default: null })

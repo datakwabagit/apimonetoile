@@ -101,8 +101,10 @@ export class ConsultationsService {
       requiredOffering,
       requiredOfferingsDetails,
       tierce,
+      tierces,
       rubriqueId
     } = createConsultationDto;
+
 
     // Mapping des alternatives et choix
     let mappedAlternatives = alternatives || [];
@@ -122,6 +124,7 @@ export class ConsultationsService {
       rubriqueId,
       formData: mappedFormData,
       tierce: tierce || null,
+      tierces: tierces || null,
       status: status || ConsultationStatus.PENDING,
       alternatives: mappedAlternatives,
       requiredOffering: requiredOffering || null,
@@ -144,6 +147,7 @@ export class ConsultationsService {
     ).exec();
 
     const populatedConsultation = await consultation.populate(['clientId', 'serviceId']);
+
     return {
       ...populatedConsultation.toObject(),
       id: populatedConsultation._id.toString(),
