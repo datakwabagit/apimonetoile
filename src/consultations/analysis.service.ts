@@ -540,12 +540,11 @@ export class AnalysisService {
 
       if (consultation.tierces) {
         userPrompt = this.buildUserPrompttiercesnouveau(formData, user, consultation);
-      } else
-        if (consultation.tierce) {
-          userPrompt = this.buildUserPrompttiercenouveau(formData, user, consultation);
-        } else {
-          userPrompt = this.buildUserPrompt(formData, user);
-        }
+      } else if (consultation.tierce) {
+        userPrompt = this.buildUserPrompttiercenouveau(formData, user, consultation);
+      } else {
+        userPrompt = this.buildUserPrompt(formData, user);
+      }
 
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
