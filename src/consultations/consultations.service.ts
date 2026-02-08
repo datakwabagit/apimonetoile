@@ -11,6 +11,7 @@ import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { AnalysisDbService } from './analysis-db.service';
 
 @Injectable()
 export class ConsultationsService {
@@ -47,6 +48,7 @@ export class ConsultationsService {
     private notificationsService: NotificationsService,
     private offeringsService: OfferingsService,
     private userConsultationChoiceService: UserConsultationChoiceService,
+    private analysisDbService: AnalysisDbService,
   ) { }
 
   /**
@@ -285,6 +287,8 @@ export class ConsultationsService {
             id,
             currentConsultation.title,
           );
+          // Marquer l'analyse comme notifiée
+          await this.analysisDbService.markAnalysisAsNotified(id);
         } catch (error) {
           console.error('Erreur lors de la création de la notification:', error);
           // Ne pas bloquer la mise à jour si la notification échoue
@@ -415,6 +419,8 @@ export class ConsultationsService {
             id,
             consultation.title,
           );
+          // Marquer l'analyse comme notifiée dans la collection analyses
+          await this.analysisDbService.markAnalysisAsNotified(id);
         } catch (error) {
           console.error('[ConsultationService] Erreur création notification:', error);
         }

@@ -48,4 +48,15 @@ export class AnalysisDbService {
       { new: true, upsert: true },
     );
   }
+
+  /**
+   * Marquer une analyse comme notifiée
+   */
+  async markAnalysisAsNotified(consultationID: string): Promise<Analysis> {
+    return this.analysisModel.findOneAndUpdate(
+      { consultationID },
+      { $set: { analysisNotified: true } },
+      { new: true },
+    );
+  }
 }

@@ -46,7 +46,6 @@ export class AdminService {
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
     const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
 
-    // Créer l'utilisateur
     const user = new this.userModel({
       ...rest,
       username,
@@ -58,7 +57,6 @@ export class AdminService {
 
     await user.save();
 
-    // Retourner sans le password
     const userObject = user.toObject();
     delete userObject.password;
 
@@ -370,23 +368,21 @@ export class AdminService {
     page?: number;
     limit?: number;
   }) {
-    const { search, status = 'all', type = 'all', page = 1, limit = 18 } = options || {};
+    const { search, status = 'all', type = 'all', page = 1, limit = 10 } = options || {};
 
     const filter: any = { type: { $ne: 'CINQ_ETOILES' } };
 
     if (search && search.trim().length > 0) {
-      const re = new RegExp(search.trim(), 'i');
+      const searchTerm = search.trim();
+      // Utiliser text search pour la performance
       filter.$or = [
-        { title: re },
-        { description: re },
-        { 'formData.firstName': re },
-        { 'formData.lastName': re },
-        { 'formData.question': re },
+        { $text: { $search: searchTerm } },
+        { 'formData.nom': { $regex: searchTerm, $options: 'i' } },
+        { 'formData.prenoms': { $regex: searchTerm, $options: 'i' } },
       ];
     }
 
     if (status && status !== 'all') {
-      // Map frontend statuses to stored statuses
       filter.status = status.toUpperCase();
     }
 
@@ -400,7 +396,9 @@ export class AdminService {
       this.consultationModel.countDocuments(filter).exec(),
       this.consultationModel
         .find(filter)
-        .populate('clientId', 'firstName lastName email phone')
+        .select('_id title description status type price createdAt clientId consultantId formData.nom formData.prenoms formData.phone analysisNotified completedDate')
+        .populate('clientId', 'firstName lastName phone email')
+        .collation({ locale: 'fr' })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -408,15 +406,10 @@ export class AdminService {
         .exec(),
     ]);
 
-    const consultations = docs.map((c: any) => {
-      const { _id, ...consultationData } = c;
-
-      return {
-        ...consultationData,
-        id: _id.toString(),
-
-      };
-    });
+    const consultations = docs.map((c: any) => ({
+      ...c,
+      id: c._id.toString(),
+    }));
 
     return { consultations, total };
   }

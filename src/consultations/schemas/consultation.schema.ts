@@ -271,8 +271,6 @@ export class Consultation {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Rubrique', required: true })
   rubriqueId: MongooseSchema.Types.ObjectId;
 
-
-
   /**
    * Indique si l'analyse a déjà été notifiée au client
    */
@@ -294,9 +292,12 @@ ConsultationSchema.virtual('consultButtonStatus').get(function (this: any) {
   return 'CONSULTER';
 });
 
-
 // Indexes
 ConsultationSchema.index({ clientId: 1, createdAt: -1 });
 ConsultationSchema.index({ consultantId: 1, status: 1 });
 ConsultationSchema.index({ status: 1 });
 ConsultationSchema.index({ type: 1 });
+// Performance indexes for getConsultations
+ConsultationSchema.index({ createdAt: -1 });
+ConsultationSchema.index({ title: 'text', description: 'text' });
+ConsultationSchema.index({ 'formData.nom': 1, 'formData.prenoms': 1 });

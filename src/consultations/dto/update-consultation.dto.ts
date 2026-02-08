@@ -13,7 +13,8 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   @IsOptional()
   tierce?: any;
 
- 
+  @IsOptional()
+  tierces?: any;
 
   @IsOptional()
   @IsString()
@@ -30,5 +31,5 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   @IsOptional()
   @IsString()
   prompt?: string;
-  
+
 }

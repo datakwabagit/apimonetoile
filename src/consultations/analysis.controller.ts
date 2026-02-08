@@ -1,9 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AnalysisDbService } from './analysis-db.service';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserDocument } from '../users/schemas/user.schema';
 
 @Controller('analyses')
 export class AnalysisController {
@@ -31,15 +29,14 @@ export class AnalysisController {
 
   @Get('by-choice/:choiceId')
   @UseGuards(JwtAuthGuard)
-  async getByChoiceId(@Param('choiceId') choiceId: string, @CurrentUser() user: UserDocument) {
+  async getByChoiceId(@Param('choiceId') choiceId: string) {
     const analyses = await this.analysisDbService['analysisModel']
-      .find({ choiceId, clientId: user._id.toString() })
+      .find({ choiceId})
       .sort({ createdAt: -1 })
       .exec();
     return {
       success: true,
       choiceId,
-      userId: user._id.toString(),
       total: analyses.length,
       analyses,
     };

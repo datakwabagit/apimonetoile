@@ -232,13 +232,27 @@ export class AnalysisService {
 
     sections.push(
       '## CARTE DU CIEL :\n',
-      user.aspectsTexte,
+      formData.aspectsTexte || user.aspectsTexte,
     );
 
     return sections.join('\n');
   }
 
-  private buildUserPrompttiercenouveau(formData: any, user: UserDocument, tierce: any, consultation: any): string {
+  private buildUserPrompttiercenouveau(formData: any, user: UserDocument, consultation: any): string {
+
+    const tierce: BirthData = {
+      nom: consultation.tierce.nom || '',
+      prenoms: consultation.tierce.prenoms || '',
+      dateNaissance: consultation.tierce.dateNaissance || '',
+      heureNaissance: consultation.tierce.heureNaissance || '',
+      villeNaissance: consultation.tierce.villeNaissance || '',
+      paysNaissance: consultation.tierce.paysNaissance || consultation.tierce.country || '',
+      country: consultation.tierce.country || consultation.tierce.paysNaissance || '',
+      gender: consultation.tierce.gender || '',
+    };
+
+
+
     if (
       consultation?.choice?.frequence === 'LIBRE' &&
       consultation?.choice?.participants === 'POUR_TIERS'
@@ -300,7 +314,7 @@ export class AnalysisService {
       this.safeLine('Lieu de naissance', lieuUser, 'Non spécifié'),
       '',
       '## 🌌 CARTE DU CIEL UTILISATEUR',
-      user.aspectsTexte || 'Non disponible',
+      formData.aspectsTexte || user.aspectsTexte || 'Non disponible',
       '',
       '---',
       '',
@@ -319,6 +333,94 @@ export class AnalysisService {
     const messections = sections.join('\n');
     return messections;
   }
+
+  private buildUserPrompttiercesnouveau(formData: any, user: UserDocument, consultation: any): string {
+    const tierces = consultation.tierces || [];
+
+    if (!Array.isArray(tierces) || tierces.length === 0) {
+      throw new HttpException('Aucune personne tierce trouvée dans la consultation', HttpStatus.BAD_REQUEST);
+    }
+
+    if (
+      consultation?.choice?.frequence === 'LIBRE' &&
+      consultation?.choice?.participants === 'POUR_TIERS'
+    ) {
+      const sections: string[] = [];
+
+      tierces.forEach((tierce: any, index: number) => {
+        const tierceGender = this.normalizeGenderFr(tierce?.gender);
+        const tierceDateFormatee = this.formatDate(tierce?.dateNaissance);
+        const lieuTierce = [tierce?.villeNaissance, tierce?.paysNaissance || tierce?.country]
+          .filter(Boolean).join(", ").trim() || "Non spécifié";
+
+        if (index > 0) sections.push('', '---', '');
+
+        sections.push(
+          `## 👤 INFORMATIONS PERSONNELLES ${tierces.length > 1 ? `— PERSONNE ${index + 1}` : ''}`,
+          this.safeLine('Prénoms à utiliser', tierce?.prenoms),
+          this.safeLine('Nom de famille', tierce?.nom),
+          this.safeLine('Genre', tierceGender),
+          '',
+          '## 🎂 DONNÉES DE NAISSANCE EXACTES',
+          this.safeLine('Date de naissance', tierceDateFormatee, 'Non spécifié'),
+          this.safeLine('Heure de naissance', tierce?.heureNaissance, 'Non spécifié'),
+          this.safeLine('Lieu de naissance', lieuTierce, 'Non spécifié'),
+        );
+      });
+
+      return sections.join('\n');
+    }
+
+    const birthData = this.extractBirthData(formData);
+    this.validateBirthData(birthData);
+    const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
+    const dateFormatee = this.formatDate(dateNaissance);
+    const genderFr = this.normalizeGenderFr(gender);
+    const lieuUser = [villeNaissance, paysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
+
+    const sections: string[] = [];
+
+    sections.push(
+      '## 👤 INFORMATIONS PERSONNELLES — UTILISATEUR',
+      this.safeLine('Prénoms à utiliser', prenoms),
+      this.safeLine('Nom de famille', nom),
+      this.safeLine('Genre', genderFr),
+      '',
+      '## 🎂 DONNÉES DE NAISSANCE EXACTES — UTILISATEUR',
+      this.safeLine('Date de naissance', dateFormatee, 'Non spécifié'),
+      this.safeLine('Heure de naissance', heureNaissance, 'Non spécifié'),
+      this.safeLine('Lieu de naissance', lieuUser, 'Non spécifié'),
+      '',
+      '## 🌌 CARTE DU CIEL UTILISATEUR',
+      formData.aspectsTexte || user.aspectsTexte || 'Non disponible',
+      '',
+    );
+
+    tierces.forEach((tierce: any, index: number) => {
+      const tierceGender = this.normalizeGenderFr(tierce?.gender);
+      const tierceDateFormatee = this.formatDate(tierce?.dateNaissance);
+      const lieuTierce = [tierce?.villeNaissance, tierce?.paysNaissance || tierce?.country]
+        .filter(Boolean).join(", ").trim() || "Non spécifié";
+
+      sections.push(
+        '---',
+        '',
+        `## 👤 INFORMATIONS PERSONNELLES — PERSONNE TIERCE ${tierces.length > 1 ? `${index + 1}` : ''}`,
+        this.safeLine('Prénoms de la personne tierce à utiliser', tierce?.prenoms),
+        this.safeLine('Nom de famille de la personne tierce', tierce?.nom),
+        this.safeLine('Genre de la personne tierce', tierceGender),
+        '',
+        `## 🎂 DONNÉES DE NAISSANCE EXACTES — PERSONNE TIERCE ${tierces.length > 1 ? `${index + 1}` : ''}`,
+        this.safeLine('Date de naissance de la personne tierce', tierceDateFormatee, 'Non spécifié'),
+        this.safeLine('Heure de naissance de la personne tierce', tierce?.heureNaissance, 'Non spécifié'),
+        this.safeLine('Lieu de naissance de la personne tierce', lieuTierce, 'Non spécifié'),
+        '',
+      );
+    });
+
+    return sections.join('\n');
+  }
+
   safeLine(label: string, value: unknown, fallback = ""): string {
     const v = typeof value === "string" ? value.trim() : value == null ? "" : String(value);
     return `• **${label}** : ${v || fallback}`;
@@ -425,6 +527,7 @@ export class AnalysisService {
 
   async generateAnalysis(id: string, user: any) {
     try {
+
       const consultation = await this.consultationsService.findOne(id);
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
@@ -435,21 +538,14 @@ export class AnalysisService {
 
       let userPrompt = null;
 
-      if (consultation.tierce) {
-        const tierceBirthData: BirthData = {
-          nom: consultation.tierce.nom || '',
-          prenoms: consultation.tierce.prenoms || '',
-          dateNaissance: consultation.tierce.dateNaissance || '',
-          heureNaissance: consultation.tierce.heureNaissance || '',
-          villeNaissance: consultation.tierce.villeNaissance || '',
-          paysNaissance: consultation.tierce.paysNaissance || consultation.tierce.country || '',
-          country: consultation.tierce.country || consultation.tierce.paysNaissance || '',
-          gender: consultation.tierce.gender || '',
-        };
-        userPrompt = this.buildUserPrompttiercenouveau(formData, user, tierceBirthData, consultation);
-      } else {
-        userPrompt = this.buildUserPrompt(formData, user);
-      }
+      if (consultation.tierces) {
+        userPrompt = this.buildUserPrompttiercesnouveau(formData, user, consultation);
+      } else
+        if (consultation.tierce) {
+          userPrompt = this.buildUserPrompttiercenouveau(formData, user, consultation);
+        } else {
+          userPrompt = this.buildUserPrompt(formData, user);
+        }
 
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {

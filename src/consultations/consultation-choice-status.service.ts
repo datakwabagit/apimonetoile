@@ -43,7 +43,7 @@ export class ConsultationChoiceStatusService {
       .exec();
 
     // Cas 1: Aucune consultation OU consultation non payée
-    if (!consultation || !consultation.isPaid) {
+    if (!consultation) {
       return {
         choiceId,
         choiceTitle: choice.title,
@@ -54,7 +54,7 @@ export class ConsultationChoiceStatusService {
     }
 
     // Cas 2: Consultation payée mais analyse non notifiée
-    if (consultation.isPaid && !consultation.analysisNotified) {
+    if (!consultation.analysisNotified) {
       return {
         choiceId,
         choiceTitle: consultation.choice?.title || choice.title,

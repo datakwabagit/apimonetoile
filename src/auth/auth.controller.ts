@@ -1,22 +1,18 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UserDocument } from '../users/schemas/user.schema';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('Authentification')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {} 
 
-  /**
-   * POST /auth/register
-   * Inscription d'un nouvel utilisateur
-   */
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -25,11 +21,7 @@ export class AuthController {
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
-
-  /**
-   * POST /auth/login
-   * Connexion d'un utilisateur
-   */
+ 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)

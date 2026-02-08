@@ -10,7 +10,7 @@ export class Analysis extends Document {
     texte: string;
 
     @Prop({ required: false })
-    clientId?: string;   
+    clientId?: string;
 
     @Prop({ required: false })
     choiceId?: string;
@@ -22,11 +22,11 @@ export class Analysis extends Document {
     status?: string;
 
     @Prop({ required: false })
-    title?: string;    
+    title?: string;
 
     @Prop({ required: false })
-    completedDate?: Date; 
-    
+    completedDate?: Date;
+
     @Prop({ required: false, type: Object })
     metadata?: any;
 
@@ -35,6 +35,12 @@ export class Analysis extends Document {
 
     @Prop({ required: false })
     dateGeneration?: Date;
+
+    /**
+ * Indique si l'analyse a déjà été notifiée au client
+ */
+    @Prop({ type: Boolean, default: false })
+    analysisNotified: boolean;
 }
 
 export const AnalysisSchema = SchemaFactory.createForClass(Analysis);
