@@ -13,6 +13,7 @@ async function bootstrap() {
     origin: [
       'https://www.monetoile.org',
       'https://monetoile.org',
+      'https://plancosmique.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
     ],
