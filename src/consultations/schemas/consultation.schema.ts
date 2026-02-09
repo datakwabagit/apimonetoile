@@ -231,12 +231,6 @@ export class Consultation {
     type: Object,
     default: null,
   })
-  resultData: {
-    numerology?: any;
-    astrology?: any;
-    prompt?: string;
-    [key: string]: any;
-  };
 
   @Prop({ default: null })
   scheduledDate: Date; // Date programmée pour la consultation
@@ -284,9 +278,9 @@ export const ConsultationSchema = SchemaFactory.createForClass(Consultation);
 ConsultationSchema.virtual('consultButtonStatus').get(function (this: any) {
   if (this.analysisNotified) {
     return 'VOIR_L_ANALYSE';
-  } else if (this.resultData && (this.resultData.analyse || this.resultData.prompt)) {
-    return 'REPONSE_EN_ATTENTE';
   } else if (this.status === 'PENDING' || this.status === 'ASSIGNED') {
+    return 'REPONSE_EN_ATTENTE';
+  } else {
     return 'CONSULTER';
   }
   return 'CONSULTER';

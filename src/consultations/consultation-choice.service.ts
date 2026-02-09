@@ -91,11 +91,9 @@ export class ConsultationChoiceService {
   async findAllWithPrompts(): Promise<any[]> {
     const rubriques = await this.rubriqueModel.find().populate('categorieId').exec();
     const allChoices: any[] = [];
-
     for (const rubrique of rubriques) {
       if (rubrique.consultationChoices && rubrique.consultationChoices.length > 0) {
-        for (const choice of rubrique.consultationChoices) {
-           if (choice?.prompt) {
+        for (const choice of rubrique.consultationChoices) {        
             allChoices.push({
               _id: choice._id,
               title: choice.title,
@@ -108,7 +106,7 @@ export class ConsultationChoiceService {
               rubriqueTitle: rubrique.titre,
               prompt: choice.prompt,
             });
-          }
+           
         }
       }
     }

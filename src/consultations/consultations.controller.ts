@@ -43,7 +43,7 @@ export class ConsultationsController {
     private readonly rubriqueService: RubriqueService,
     private readonly deepseekService: DeepseekService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   @Get('missing-choice-prompts')
   @ApiOperation({
@@ -81,15 +81,6 @@ export class ConsultationsController {
       missingChoices,
       total: missingChoiceIds.length,
     };
-  }
-
-  /**
-   * PATCH /consultations/:id/analyse-texte
-   * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
-   */
-  @Patch(':id/analyse-texte')
-  async updateAnalyseTexte(@Param('id') id: string, @Body('texte') texte: string) {
-    return this.consultationsService.updateAnalyseTexte(id, texte);
   }
 
   /**
@@ -173,7 +164,6 @@ export class ConsultationsController {
           tierce: null,
           analysisNotified: false,
           result: null,
-          resultData: null,
           visible: false,
         };
 
@@ -270,7 +260,6 @@ export class ConsultationsController {
         tierce: null,
         analysisNotified: false,
         result: null,
-        resultData: null,
       };
 
       const consultation = await this.consultationsService.create(user._id.toString(), ledto);
@@ -404,7 +393,6 @@ export class ConsultationsController {
           tierce: null,
           analysisNotified: false,
           result: null,
-          resultData: null,
         };
 
         const consultation = await this.consultationsService.create(user._id.toString(), ledto);
@@ -586,9 +574,9 @@ export class ConsultationsController {
           'CONSULTER';
         if (c.analysisNotified) {
           consultButtonStatus = 'VOIR_L_ANALYSE';
-        } else if (c.resultData && (c.resultData.analyse || c.resultData.prompt)) {
-          consultButtonStatus = 'REPONSE_EN_ATTENTE';
         } else if (c.status === 'PENDING' || c.status === 'ASSIGNED') {
+          consultButtonStatus = 'REPONSE_EN_ATTENTE';
+        } else {
           consultButtonStatus = 'CONSULTER';
         }
         return {
@@ -666,25 +654,9 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Analyse non trouvée.' })
   async getAnalysisByConsultationId(@Param('consultationId') consultationId: string) {
     try {
-      const consultation: any = await this.consultationsService.findOne(consultationId);
+      const analysis = await this.analysisService.findByConsultationId(consultationId);
 
-      if (!consultation) {
-        throw new HttpException(
-          {
-            success: false,
-            message: 'Consultation non trouvée',
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      let analysisData = consultation.resultData.analyse;
-
-      if (consultation.resultData) {
-        analysisData = consultation.resultData.analyse;
-      }
-
-      if (!analysisData) {
+      if (!analysis) {
         throw new HttpException(
           {
             success: false,
@@ -697,9 +669,9 @@ export class ConsultationsController {
       return {
         success: true,
         consultationId,
-        analyse: analysisData,
-        analysisNotified: consultation.analysisNotified ?? false,
-        consultationType: consultation.type,
+        analyse: analysis.texte || analysis,
+        analysisNotified: analysis.analysisNotified ?? false,
+        consultationType: analysis.type,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -823,7 +795,6 @@ export class ConsultationsController {
     const consultation: any = await this.consultationsService.findOne(id);
     const consultationObj = consultation.toObject();
 
-    const analyse = consultation.resultData;
     let alternatives = consultation.alternatives || consultationObj.alternatives || [];
     if (alternatives.length) {
       alternatives = await this.consultationsService.populateAlternatives(alternatives);
@@ -834,8 +805,7 @@ export class ConsultationsController {
     if (consultation.analysisNotified) {
       consultButtonStatus = 'VOIR_L_ANALYSE';
     } else if (
-      consultation.resultData &&
-      (consultation.resultData.analyse || consultation.resultData.prompt)
+      consultation.status === 'PENDING'
     ) {
       consultButtonStatus = 'REPONSE_EN_ATTENTE';
     } else {
@@ -853,7 +823,6 @@ export class ConsultationsController {
         dateNaissance: consultation.formData?.dateOfBirth || '',
         dateGeneration: consultationObj.createdAt || new Date(),
         statut: consultation.status,
-        analyse,
         alternatives,
         prompt: consultation.prompt,
         consultButtonStatus,
@@ -899,8 +868,9 @@ export class ConsultationsController {
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
   async generateAnalysis(@Param('id') id: string, @CurrentUser() user: UserDocument) {
+ 
     try {
-      const analyse = await this.analysisService.generateAnalysis(id, user);
+      const analyse = await this.analysisService.generateAnalysis(id);
       return analyse;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -960,30 +930,25 @@ export class ConsultationsController {
   @ApiResponse({ status: 404, description: 'Analyse non trouvée ou pas encore générée.' })
   async getGeneratedAnalysis(@Param('id') id: string) {
     try {
-      const consultation: any = await this.consultationsService.findOne(id);
+      const analysis = await this.analysisService.findByConsultationId(id);
 
-      if (!consultation) {
-        throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
+      if (!analysis) {
+        throw new HttpException(
+          {
+            success: false,
+            message: 'Analyse pas encore générée',
+            statut: 'pending',
+          },
+          HttpStatus.NOT_FOUND,
+        );
       }
 
-      if (consultation.resultData && consultation.resultData.analyse) {
-        return {
-          success: true,
-          consultationId: id,
-          statut: ConsultationStatus.COMPLETED,
-          analyse: consultation.resultData.analyse,
-          consultation: consultation,
-        };
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Analyse pas encore générée',
-          statut: 'pending',
-        },
-        HttpStatus.NOT_FOUND,
-      );
+      return {
+        success: true,
+        consultationId: id,
+        statut: ConsultationStatus.COMPLETED,
+        analyse: analysis,
+      };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -993,8 +958,7 @@ export class ConsultationsController {
       throw new HttpException(
         {
           success: false,
-          error: 'Erreur lors de la récupération des analyses',
-          consultation: null,
+          error: 'Erreur lors de la récupération de l\'analyse',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );

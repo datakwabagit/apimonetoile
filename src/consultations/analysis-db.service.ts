@@ -59,4 +59,11 @@ export class AnalysisDbService {
       { new: true },
     );
   }
+
+  /**
+   * Récupérer une analyse par son consultationID
+   */
+  async findByConsultationId(consultationID: string): Promise<Analysis | null> {
+    return this.analysisModel.findOne({ consultationID }).exec();
+  }
 }

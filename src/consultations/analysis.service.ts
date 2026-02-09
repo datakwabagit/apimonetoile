@@ -6,6 +6,7 @@ import { AnalysisDbService } from './analysis-db.service';
 import { ConsultationsService } from './consultations.service';
 import { BirthData } from './deepseek.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AnalysisService {
@@ -18,6 +19,7 @@ export class AnalysisService {
     private consultationsService: ConsultationsService,
     private userConsultationChoiceService: UserConsultationChoiceService,
     private analysisDbService: AnalysisDbService,
+    private usersService: UsersService,
   ) { }
 
   private extractBirthData(form: any): BirthData {
@@ -199,6 +201,13 @@ export class AnalysisService {
     } catch {
       return String(date);
     }
+  }
+
+  /**
+   * Récupérer une analyse par son consultationID
+   */
+  async findByConsultationId(consultationId: string): Promise<any> {
+    return this.analysisDbService.findByConsultationId(consultationId);
   }
 
   private buildUserPrompt(formData: any, user: UserDocument): string {
@@ -493,15 +502,7 @@ export class AnalysisService {
     consultationId: string,
     analysisData: any, monprompt: string
   ): Promise<void> {
-    const resultDataKey = 'analyse';
-    await this.consultationsService.update(consultationId, {
-      resultData: {
-        [resultDataKey]: analysisData,
-        prompt: analysisData.prompt,
-        numerology: analysisData.numerology,
-        astrology: analysisData.astrology
-      }
-    });
+  
 
     const consultation = await this.consultationsService.findOne(consultationId);
     if (!consultation) {
@@ -525,12 +526,33 @@ export class AnalysisService {
     await this.analysisDbService.createAnalysis(analysisToSave as any);
   }
 
-  async generateAnalysis(id: string, user: any) {
+  async generateAnalysis(id: string, providedUser?: UserDocument) {
     try {
 
       const consultation = await this.consultationsService.findOne(id);
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
+      }
+
+      let user: UserDocument | null = providedUser || null;
+      
+      // Si l'utilisateur n'est pas fourni, essayer de le récupérer de la consultation
+      if (!user) {
+        const userId = this.extractUserId(consultation.clientId);
+        if (userId) {
+          try {
+            user = await this.usersService.findOne(userId) as UserDocument;
+          } catch (error) {
+            console.warn(`[AnalysisService] Impossible de récupérer l'utilisateur ${userId}:`, error.message);
+          }
+        }
+      }
+
+      // Si l'utilisateur n'est toujours pas trouvé, créer un objet partiel à partir des données de formData
+      if (!user) {
+        user = {
+          aspectsTexte: consultation.formData?.aspectsTexte,
+        } as UserDocument;
       }
 
       const formData = consultation.formData || {};
@@ -557,7 +579,7 @@ export class AnalysisService {
 
       const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED, prompt: systemPrompt });
 
-      const userId = this.extractUserId(consultation.clientId);
+      const userId = providedUser?.id?.toString?.() || providedUser?._id?.toString?.() || this.extractUserId(consultation.clientId);
       if (userId) {
         await this.recordUserChoices(updatedConsultation, userId);
       }

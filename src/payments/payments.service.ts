@@ -802,11 +802,9 @@ export class PaymentsService {
         dateGeneration: new Date().toISOString(),
       };
 
-     
 
       await this.consultationsService.update(consultationId, {
         status: ConsultationStatus.COMPLETED,
-        resultData: analyseComplete,
         isPaid: true,
         paymentId: payment._id,
       } as any);

@@ -12,28 +12,11 @@ import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { AnalysisDbService } from './analysis-db.service';
+import { Analysis } from './schemas/analysis.schema';
 
 @Injectable()
 export class ConsultationsService {
-  /**
-   * Met à jour uniquement le champ resultData.analyse.texte d'une consultation
-   */
-  async updateAnalyseTexte(id: string, texte: string) {
-    const consultation = await this.consultationModel.findById(id).exec();
-    if (!consultation) {
-      throw new NotFoundException('Consultation not found');
-    }
-    if (!consultation.resultData) {
-      consultation.resultData = {};
-    }
-    if (!consultation.resultData.analyse) {
-      consultation.resultData.analyse = {};
-    }
-    consultation.resultData.analyse.texte = texte;
-    await consultation.save();
-    return consultation;
-  }
-
+  
   /**
    * Supprimer plusieurs consultations selon un filtre
    */
@@ -279,21 +262,13 @@ export class ConsultationsService {
     if (newStatus === ConsultationStatus.COMPLETED) {
       updateConsultationDto['completedDate'] = new Date();
 
-      // Créer une notification si un résultat a été ajouté
-      if (updateConsultationDto.result || updateConsultationDto.resultData) {
-        try {
-          await this.notificationsService.createConsultationResultNotification(
+  await this.notificationsService.createConsultationResultNotification(
             currentConsultation.clientId.toString(),
             id,
             currentConsultation.title,
           );
           // Marquer l'analyse comme notifiée
-          await this.analysisDbService.markAnalysisAsNotified(id);
-        } catch (error) {
-          console.error('Erreur lors de la création de la notification:', error);
-          // Ne pas bloquer la mise à jour si la notification échoue
-        }
-      }
+          await this.analysisDbService.markAnalysisAsNotified(id);    
     }
 
     // Gérer les changements de statut affectant les compteurs
@@ -387,7 +362,6 @@ export class ConsultationsService {
     }
 
     // Mettre à jour avec l'analyse
-    consultation.resultData = saveAnalysisDto.analyse;
     consultation.status =
       saveAnalysisDto.statut === 'completed'
         ? ConsultationStatus.COMPLETED
@@ -519,21 +493,23 @@ export class ConsultationsService {
    * Marquer une analyse comme notifiée
    * Utilisé lorsqu'une notification est envoyée à l'utilisateur
    */
-  async markAnalysisAsNotified(consultationId: string): Promise<Consultation> {
+  async markAnalysisAsNotified(consultationId: string): Promise<Analysis> {
     const consultation = await this.consultationModel.findById(consultationId).exec();
 
     if (!consultation) {
       throw new NotFoundException('Consultation not found');
     }
 
-    if (!consultation.result && !consultation.resultData) {
-      throw new ForbiddenException('Cannot mark as notified: analysis not yet generated');
+    const analysis = await this.analysisDbService.markAnalysisAsNotified(consultationId);
+
+    if (!analysis) {
+      throw new NotFoundException('Analysis not found');
     }
 
     consultation.analysisNotified = true;
     await consultation.save();
 
-    return consultation;
+    return analysis;
   }
 
   /**

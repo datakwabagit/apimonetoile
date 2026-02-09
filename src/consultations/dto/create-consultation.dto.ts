@@ -192,12 +192,4 @@ export class CreateConsultationDto {
   @IsOptional()
   @IsString()
   result?: string;
-
-  @IsOptional()
-  @IsObject()
-  resultData?: {
-    numerology?: any;
-    astrology?: any;
-    [key: string]: any;
-  };
 }

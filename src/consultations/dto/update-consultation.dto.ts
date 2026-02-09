@@ -21,15 +21,6 @@ export class UpdateConsultationDto extends PartialType(CreateConsultationDto) {
   result?: string;
 
   @IsOptional()
-  @IsObject()
-  resultData?: {
-    numerology?: any;
-    astrology?: any;
-    [key: string]: any;
-  };
-
-  @IsOptional()
   @IsString()
   prompt?: string;
-
 }
