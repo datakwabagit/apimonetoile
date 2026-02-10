@@ -28,6 +28,7 @@ import { UserDocument } from '../users/schemas/user.schema';
 import { AnalysisService } from './analysis.service';
 import { ConsultationsService } from './consultations.service';
 import { DeepseekService } from './deepseek.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
@@ -43,6 +44,7 @@ export class ConsultationsController {
     private readonly rubriqueService: RubriqueService,
     private readonly deepseekService: DeepseekService,
     private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   @Get('missing-choice-prompts')
@@ -210,11 +212,7 @@ export class ConsultationsController {
       if (!choix) {
         throw new HttpException('Choix de consultation non trouvé', HttpStatus.NOT_FOUND);
       }
-
-      // Patch temporaire pour test : renseigne paysNaissance si manquant
-      // if (!user.paysNaissance) {
-      //   user.paysNaissance = 'Côte d’Ivoire';
-      // }
+ 
 
       const choiceDto = {
         _id: choix._id ?? '',
@@ -263,7 +261,7 @@ export class ConsultationsController {
       };
 
       const consultation = await this.consultationsService.create(user._id.toString(), ledto);
-      const analysis = await this.analysisService.generateAnalysis(consultation.id, user);
+      const analysis = await this.analysisService.generateAnalysisWithConsultation(consultation);
 
       return {
         success: true,
@@ -397,7 +395,7 @@ export class ConsultationsController {
 
         const consultation = await this.consultationsService.create(user._id.toString(), ledto);
 
-        const analysis = await this.analysisService.generateAnalysis(consultation.id, user);
+        const analysis = await this.analysisService.generateAnalysisWithConsultation(consultation);
 
         results.push({
           consultation,
@@ -458,6 +456,28 @@ export class ConsultationsController {
         console.error('Consultation ou utilisateur non trouvé', { consultation });
         throw new HttpException('Consultation ou utilisateur non trouvé', HttpStatus.NOT_FOUND);
       }
+
+      const analysis = await this.analysisService.findByConsultationId(id);
+      if (!analysis) {
+        throw new HttpException('Analyse non trouvée', HttpStatus.NOT_FOUND);
+      }
+
+      if (consultation.analysisNotified || analysis.analysisNotified) {
+        await this.consultationsService.markAnalysisAsNotified(id);
+        return {
+          success: true,
+          message: "L'analyse a déjà été notifiée.",
+        };
+      }
+
+      await this.notificationsService.createConsultationResultNotification(
+        consultation.clientId.toString(),
+        id,
+        consultation.title,
+      );
+
+      await this.consultationsService.markAnalysisAsNotified(id);
+
       return {
         success: true,
         message: "Notification envoyée à l'utilisateur.",
@@ -867,8 +887,8 @@ export class ConsultationsController {
   @ApiResponse({ status: 400, description: 'Données invalides.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 404, description: 'Consultation non trouvée.' })
-  async generateAnalysis(@Param('id') id: string, @CurrentUser() user: UserDocument) {
- 
+  async generateAnalysis(@Param('id') id: string) {
+
     try {
       const analyse = await this.analysisService.generateAnalysis(id);
       return analyse;

@@ -7,6 +7,7 @@ import { ConsultationsService } from './consultations.service';
 import { BirthData } from './deepseek.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
 import { UsersService } from '../users/users.service';
+import { Consultation } from './schemas/consultation.schema';
 
 @Injectable()
 export class AnalysisService {
@@ -210,7 +211,8 @@ export class AnalysisService {
     return this.analysisDbService.findByConsultationId(consultationId);
   }
 
-  private buildUserPrompt(formData: any, user: UserDocument): string {
+  private buildUserPrompt(consultation: any): string {
+    const formData = consultation.formData || {};
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
     const { prenoms, nom, dateNaissance, heureNaissance, villeNaissance, paysNaissance, gender } = birthData;
@@ -241,13 +243,14 @@ export class AnalysisService {
 
     sections.push(
       '## CARTE DU CIEL :\n',
-      formData.aspectsTexte || user.aspectsTexte,
+      formData.aspectsTexte,
     );
 
     return sections.join('\n');
   }
 
-  private buildUserPrompttiercenouveau(formData: any, user: UserDocument, consultation: any): string {
+  private buildUserPrompttiercenouveau(consultation: any): string {
+    const formData = consultation.formData || {};
 
     const tierce: BirthData = {
       nom: consultation.tierce.nom || '',
@@ -323,7 +326,7 @@ export class AnalysisService {
       this.safeLine('Lieu de naissance', lieuUser, 'Non spécifié'),
       '',
       '## 🌌 CARTE DU CIEL UTILISATEUR',
-      formData.aspectsTexte || user.aspectsTexte || 'Non disponible',
+      formData.aspectsTexte || 'Non disponible',
       '',
       '---',
       '',
@@ -343,7 +346,8 @@ export class AnalysisService {
     return messections;
   }
 
-  private buildUserPrompttiercesnouveau(formData: any, user: UserDocument, consultation: any): string {
+  private buildUserPrompttiercesnouveau(consultation: any): string {
+    const formData = consultation.formData || {};
     const tierces = consultation.tierces || [];
 
     if (!Array.isArray(tierces) || tierces.length === 0) {
@@ -401,7 +405,7 @@ export class AnalysisService {
       this.safeLine('Lieu de naissance', lieuUser, 'Non spécifié'),
       '',
       '## 🌌 CARTE DU CIEL UTILISATEUR',
-      formData.aspectsTexte || user.aspectsTexte || 'Non disponible',
+      formData.aspectsTexte || 'Non disponible',
       '',
     );
 
@@ -445,7 +449,17 @@ export class AnalysisService {
     return String(g).trim() || "Non spécifié";
   }
 
-  private buildUserPromptuser(formData: any, user: UserDocument): string {
+  private buildUserPromptByType(consultation: any): string {
+    if (consultation.tierces) {
+      return this.buildUserPrompttiercesnouveau(consultation);
+    } else if (consultation.tierce) {
+      return this.buildUserPrompttiercenouveau(consultation);
+    } else {
+      return this.buildUserPrompt(consultation);
+    }
+  }
+
+  private buildUserPromptuser(formData: any): string {
     const birthData = this.extractBirthData(formData);
     this.validateBirthData(birthData);
 
@@ -470,7 +484,7 @@ export class AnalysisService {
 
     sections.push(
       '## CARTE DU CIEL\n',
-      user.aspectsTexte,
+      formData.aspectsTexte,
     );
 
     return sections.join('\n');
@@ -502,7 +516,7 @@ export class AnalysisService {
     consultationId: string,
     analysisData: any, monprompt: string
   ): Promise<void> {
-  
+
 
     const consultation = await this.consultationsService.findOne(consultationId);
     if (!consultation) {
@@ -526,48 +540,16 @@ export class AnalysisService {
     await this.analysisDbService.createAnalysis(analysisToSave as any);
   }
 
-  async generateAnalysis(id: string, providedUser?: UserDocument) {
+  async generateAnalysis(id: string) {
     try {
-
       const consultation = await this.consultationsService.findOne(id);
+      console.log(`[AnalysisService] Génération d'analyse pour consultation ${id} - Consultation trouvée:`, !!consultation);
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
       }
-
-      let user: UserDocument | null = providedUser || null;
-      
-      // Si l'utilisateur n'est pas fourni, essayer de le récupérer de la consultation
-      if (!user) {
-        const userId = this.extractUserId(consultation.clientId);
-        if (userId) {
-          try {
-            user = await this.usersService.findOne(userId) as UserDocument;
-          } catch (error) {
-            console.warn(`[AnalysisService] Impossible de récupérer l'utilisateur ${userId}:`, error.message);
-          }
-        }
-      }
-
-      // Si l'utilisateur n'est toujours pas trouvé, créer un objet partiel à partir des données de formData
-      if (!user) {
-        user = {
-          aspectsTexte: consultation.formData?.aspectsTexte,
-        } as UserDocument;
-      }
-
-      const formData = consultation.formData || {};
+      const userId = this.extractUserId(consultation.clientId);
       const systemPrompt = consultation.choice.prompt || consultation.title;
-
-      let userPrompt = null;
-
-      if (consultation.tierces) {
-        userPrompt = this.buildUserPrompttiercesnouveau(formData, user, consultation);
-      } else if (consultation.tierce) {
-        userPrompt = this.buildUserPrompttiercenouveau(formData, user, consultation);
-      } else {
-        userPrompt = this.buildUserPrompt(formData, user);
-      }
-
+      const userPrompt = this.buildUserPromptByType(consultation);
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,
@@ -576,17 +558,51 @@ export class AnalysisService {
       };
 
       await this.saveAnalysisResults(id, analysisDocument, systemPrompt);
-
       const updatedConsultation = await this.consultationsService.update(id, { status: ConsultationStatus.COMPLETED, prompt: systemPrompt });
-
-      const userId = providedUser?.id?.toString?.() || providedUser?._id?.toString?.() || this.extractUserId(consultation.clientId);
-      if (userId) {
-        await this.recordUserChoices(updatedConsultation, userId);
-      }
-
+      await this.recordUserChoices(updatedConsultation, userId);
+      console.log(`[AnalysisService] Analyse générée et sauvegardée pour consultation ${id}`);
       return {
         success: true,
         consultationId: id,
+        statut: ConsultationStatus.COMPLETED,
+        message: 'Analyse générée avec succès',
+        analyse: analysisDocument,
+        consultation: updatedConsultation,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          error: `Erreur lors de la génération: ${error.message}`,
+          statut: 'error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async generateAnalysisWithConsultation(consultation: any) {
+    try {
+      const userId = this.extractUserId(consultation.clientId);
+      const systemPrompt = consultation.choice.prompt || consultation.title;
+      const userPrompt = this.buildUserPromptByType(consultation);
+      const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, consultation._id);
+      const analysisDocument = {
+        consultationId: consultation._id, ...analyseComplete,
+        dateGeneration: new Date().toISOString(),
+        prompt: systemPrompt,
+      };
+
+      await this.saveAnalysisResults(consultation._id, analysisDocument, systemPrompt);
+      const updatedConsultation = await this.consultationsService.update(consultation._id, { status: ConsultationStatus.COMPLETED, prompt: systemPrompt });
+      await this.recordUserChoices(updatedConsultation, userId);
+      return {
+        success: true,
+        consultationId: consultation._id,
         statut: ConsultationStatus.COMPLETED,
         message: 'Analyse générée avec succès',
         analyse: analysisDocument,
@@ -614,10 +630,9 @@ export class AnalysisService {
       if (!consultation) {
         throw new HttpException('Consultation non trouvée', HttpStatus.NOT_FOUND);
       }
-      const formData = consultation.formData || {};
       const systemPrompt = consultation.choice.prompt || consultation.title;
 
-      const userPrompt = this.buildUserPromptuser(formData, user);
+      const userPrompt = this.buildUserPromptuser(consultation);
       const analyseComplete = await this.callDeepSeekAPI(systemPrompt, userPrompt, id);
       const analysisDocument = {
         consultationId: id, ...analyseComplete,

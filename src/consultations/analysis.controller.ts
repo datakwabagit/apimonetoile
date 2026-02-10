@@ -1,11 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AnalysisDbService } from './analysis-db.service';
+import { AnalysisService } from './analysis.service';
 import { SaveAnalysisDto } from './dto/save-analysis.dto';
 
 @Controller('analyses')
 export class AnalysisController {
-  constructor(private readonly analysisDbService: AnalysisDbService) {}
+  constructor(
+    private readonly analysisDbService: AnalysisDbService,
+    private readonly analysisService: AnalysisService,
+  ) {}
 
   @Post()
   async create(@Body() dto: SaveAnalysisDto) {
@@ -24,7 +28,13 @@ export class AnalysisController {
 
   @Get('by-consultation/:consultationId')
   async getByConsultationId(@Param('consultationId') consultationId: string) {
-    return this.analysisDbService['analysisModel'].findOne({ consultationID: consultationId });
+    const existing = await this.analysisDbService.findByConsultationId(consultationId);
+    if (existing) {
+      return existing;
+    }
+
+    const generated = await this.analysisService.generateAnalysis(consultationId);
+    return generated?.analyse ?? generated;
   }
 
   @Get('by-choice/:choiceId')
