@@ -101,6 +101,9 @@ export class ConsultationsController {
     @CurrentUser() user: UserDocument,
   ) {
     try {
+      // Récupérer la carte du ciel de l'utilisateur
+      const aspectsTexte = user.aspectsTexte;
+
       // Supprimer toutes les consultations de la rubrique pour l'utilisateur courant
       await this.consultationsService.deleteMany({
         clientId: user._id.toString(),
@@ -156,6 +159,7 @@ export class ConsultationsController {
             email: user.email || '',
             phone: user.phone || '',
             premium: user.premium || false,
+            aspectsTexte: aspectsTexte,
           },
           status: 'PENDING',
           scheduledDate: null,
@@ -182,103 +186,8 @@ export class ConsultationsController {
       console.error('[generateConsultationsForRubrique] ERROR:', err);
       throw err;
     }
-  }
-
-  /**
-   * POST /consultations/generate-analysis-for-choice
-   * Génère une consultation et une analyse pour un choix de consultation d'une rubrique pour l'utilisateur courant
-   * Body: { rubriqueId: string, choiceId: string }
-   */
-  @Post('generate-analysis-for-choice')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: "Générer une analyse pour un choix de consultation d'une rubrique",
-    description:
-      "Crée une consultation et génère une analyse pour un choix de consultation d'une rubrique pour l'utilisateur courant.",
-  })
-  async generateAnalysisForChoice(
-    @Body('rubriqueId') rubriqueId: string,
-    @Body('choiceId') choiceId: string,
-    @CurrentUser() user: UserDocument,
-  ) {
-    try {
-      const rubrique = await this.rubriqueService.findOne(rubriqueId);
-      if (!rubrique || !rubrique.consultationChoices) {
-        throw new HttpException('Rubrique ou choix non trouvés', HttpStatus.NOT_FOUND);
-      }
-      const choix = rubrique.consultationChoices.find(
-        (c: any) => c._id?.toString() === choiceId || c._id === choiceId,
-      );
-      if (!choix) {
-        throw new HttpException('Choix de consultation non trouvé', HttpStatus.NOT_FOUND);
-      }
- 
-
-      const choiceDto = {
-        _id: choix._id ?? '',
-        prompt: choix.prompt,
-        title: choix.title,
-        description: choix.description,
-        order: choix.order,
-        frequence: choix.frequence,
-        participants: choix.participants,
-        offering: {
-          alternatives: (choix.offering?.alternatives || []).map((alt: any) => ({
-            _id: alt._id ?? '',
-            category: alt.category,
-            offeringId: alt.offeringId,
-            quantity: alt.quantity ?? 1,
-          })),
-        },
-      };
-
-      const ledto: CreateConsultationDto = {
-        rubriqueId,
-        choice: choiceDto,
-        title: choiceDto.title,
-        description: choiceDto.description,
-        formData: {
-          nom: user.nom,
-          prenoms: user.prenoms,
-          dateNaissance: user.dateNaissance,
-          heureNaissance: user.heureNaissance,
-          villeNaissance: user.villeNaissance,
-          paysNaissance: user.paysNaissance || 'Côte d’Ivoire',
-          genre: user.genre || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          premium: user.premium || false,
-        },
-        status: 'PENDING',
-        scheduledDate: null,
-        price: 0,
-        alternatives: choiceDto.offering.alternatives,
-        requiredOffering: null,
-        requiredOfferingsDetails: [],
-        tierce: null,
-        analysisNotified: false,
-        result: null,
-      };
-
-      const consultation = await this.consultationsService.create(user._id.toString(), ledto);
-      const analysis = await this.analysisService.generateAnalysisWithConsultation(consultation);
-
-      return {
-        success: true,
-        message: `Consultation et analyse générées pour le choix ${choiceId} de la rubrique ${rubriqueId}`,
-        consultation,
-        analysis,
-      };
-    } catch (err) {
-      console.error('[generateAnalysisForChoice] ERROR:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * POST /consultations/generate-sky-chart
-   * Génère la carte du ciel pour l'utilisateur courant
-   */
+  } 
+  
   @Post('generate-sky-chart')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
