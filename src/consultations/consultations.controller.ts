@@ -101,10 +101,7 @@ export class ConsultationsController {
     @CurrentUser() user: UserDocument,
   ) {
     try {
-      // Récupérer la carte du ciel de l'utilisateur
       const aspectsTexte = user.aspectsTexte;
-
-      // Supprimer toutes les consultations de la rubrique pour l'utilisateur courant
       await this.consultationsService.deleteMany({
         clientId: user._id.toString(),
         rubriqueId,
@@ -186,8 +183,8 @@ export class ConsultationsController {
       console.error('[generateConsultationsForRubrique] ERROR:', err);
       throw err;
     }
-  } 
-  
+  }
+
   @Post('generate-sky-chart')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

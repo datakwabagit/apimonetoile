@@ -12,7 +12,6 @@ export class AnalysisDbService {
   ) { }
 
   async createAnalysis(dto: SaveAnalysisDto): Promise<Analysis> {
-    // On ne prend que les champs pertinents pour Analysis
     const {
       consultationID,
       texte,
