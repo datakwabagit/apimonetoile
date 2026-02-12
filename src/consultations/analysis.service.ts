@@ -2,12 +2,11 @@ import { UserDocument } from '@/users/schemas/user.schema';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { ConsultationStatus } from '../common/enums/consultation-status.enum';
+import { UsersService } from '../users/users.service';
 import { AnalysisDbService } from './analysis-db.service';
 import { ConsultationsService } from './consultations.service';
 import { BirthData } from './deepseek.service';
 import { UserConsultationChoiceService } from './user-consultation-choice.service';
-import { UsersService } from '../users/users.service';
-import { Consultation } from './schemas/consultation.schema';
 
 @Injectable()
 export class AnalysisService {
@@ -227,6 +226,18 @@ export class AnalysisService {
       else genderFr = gender;
     }
 
+      // Récupérer la date et l'heure UTC actuelle
+    const nowUTC = new Date().toISOString();
+    const [dateUTC, timeUTC] = nowUTC.split('T');
+    const heureUTC = timeUTC.split('.')[0]; // Enlever les millisecondes et le Z
+
+    sections.push(
+      '## 👤 Date d\'aujourd\'hui - UTC',
+      `• **date du jour** : ${dateUTC}`,
+      `• **heure de la requête** : ${heureUTC}`,
+    );
+
+
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
       `• **Prénoms à utiliser** : ${prenoms || ''}`,
@@ -280,6 +291,17 @@ export class AnalysisService {
       const lieuTierce = [tierceVilleNaissance, tiercePaysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
 
       const sections: string[] = [];
+        // Récupérer la date et l'heure UTC actuelle
+    const nowUTC = new Date().toISOString();
+    const [dateUTC, timeUTC] = nowUTC.split('T');
+    const heureUTC = timeUTC.split('.')[0]; // Enlever les millisecondes et le Z
+
+    sections.push(
+      '## 👤 Date d\'aujourd\'hui - UTC',
+      `• **date du jour** : ${dateUTC}`,
+      `• **heure de la requête** : ${heureUTC}`,
+    );
+
       sections.push(
         '## 👤 INFORMATIONS PERSONNELLES',
         this.safeLine('Prénoms à utiliser', tiercePrenoms),
@@ -313,6 +335,16 @@ export class AnalysisService {
     const lieuTierce = [tierceVilleNaissance, tiercePaysNaissance].filter(Boolean).join(", ").trim() || "Non spécifié";
 
     const sections: string[] = [];
+  // Récupérer la date et l'heure UTC actuelle
+    const nowUTC = new Date().toISOString();
+    const [dateUTC, timeUTC] = nowUTC.split('T');
+    const heureUTC = timeUTC.split('.')[0]; // Enlever les millisecondes et le Z
+
+    sections.push(
+      '## 👤 Date d\'aujourd\'hui - UTC',
+      `• **date du jour** : ${dateUTC}`,
+      `• **heure de la requête** : ${heureUTC}`,
+    );
 
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
@@ -368,6 +400,18 @@ export class AnalysisService {
 
         if (index > 0) sections.push('', '---', '');
 
+          // Récupérer la date et l'heure UTC actuelle
+    const nowUTC = new Date().toISOString();
+    const [dateUTC, timeUTC] = nowUTC.split('T');
+    const heureUTC = timeUTC.split('.')[0]; // Enlever les millisecondes et le Z
+
+    sections.push(
+      '## 👤 Date d\'aujourd\'hui - UTC',
+      `• **date du jour** : ${dateUTC}`,
+      `• **heure de la requête** : ${heureUTC}`,
+    );
+
+
         sections.push(
           `## 👤 INFORMATIONS PERSONNELLES ${tierces.length > 1 ? `— PERSONNE ${index + 1}` : ''}`,
           this.safeLine('Prénoms à utiliser', tierce?.prenoms),
@@ -414,6 +458,18 @@ export class AnalysisService {
       const tierceDateFormatee = this.formatDate(tierce?.dateNaissance);
       const lieuTierce = [tierce?.villeNaissance, tierce?.paysNaissance || tierce?.country]
         .filter(Boolean).join(", ").trim() || "Non spécifié";
+
+          // Récupérer la date et l'heure UTC actuelle
+    const nowUTC = new Date().toISOString();
+    const [dateUTC, timeUTC] = nowUTC.split('T');
+    const heureUTC = timeUTC.split('.')[0]; // Enlever les millisecondes et le Z
+
+    sections.push(
+      '## 👤 Date d\'aujourd\'hui - UTC',
+      `• **date du jour** : ${dateUTC}`,
+      `• **heure de la requête** : ${heureUTC}`,
+    );
+
 
       sections.push(
         '---',
@@ -467,6 +523,19 @@ export class AnalysisService {
     const dateFormatee = this.formatDate(dateNaissance);
 
     const sections: string[] = [];
+
+    // Récupérer la date et l'heure UTC actuelle
+    const nowUTC = new Date().toISOString();
+    const [dateUTC, timeUTC] = nowUTC.split('T');
+    const heureUTC = timeUTC.split('.')[0]; // Enlever les millisecondes et le Z
+
+    sections.push(
+      '## 👤 Date d\'aujourd\'hui - UTC',
+      `• **date du jour** : ${dateUTC}`,
+      `• **heure de la requête** : ${heureUTC}`,
+    );
+
+
     sections.push(
       '## 👤 INFORMATIONS PERSONNELLES',
       `• **Prénoms à utiliser** : ${prenoms || ''}`,
